@@ -1,0 +1,38 @@
+.container {
+    align-items: center;
+    background-color: var(--secondary-background-color);
+    border-bottom-color: var(--primary-border-color);
+    border-bottom-style: solid;
+    border-bottom-width: 2px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+}
+
+.container * h2 {
+    text-align: center;
+}
+
+@keyframes popIn {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.contentContainer {
+    animation: popIn 2.3s;
+    padding: 4rem 2rem;
+    max-width: 1000px;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .contentContainer {
+        padding: 8rem 2rem;
+    }
+}

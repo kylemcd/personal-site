@@ -1,0 +1,22 @@
+.primaryHeading {
+    font-size: 2rem;
+    line-height: 3.5rem;
+}
+
+.paragraph {
+    font-size: 1rem;
+    line-height: 1.5rem;
+}
+
+.heroHeading {
+    font-size: 3.25rem;
+    line-height: 3.5rem;
+    letter-spacing: -2px;
+}
+
+@media (min-width: 768px) {
+    .heroHeading {
+        font-size: 5.75rem;
+        line-height: 6rem;
+    }
+}

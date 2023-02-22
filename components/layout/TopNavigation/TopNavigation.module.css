@@ -1,0 +1,21 @@
+.container {
+    align-items: center;
+    background-color: var(--primary-background-color);
+    border-bottom-color: var(--primary-border-color);
+    border-bottom-style: solid;
+    border-bottom-width: 2px;
+    display: flex;
+    justify-content: space-between;
+    padding: 1.5em 2rem;
+    width: 100%;
+}
+
+.filler {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .filler {
+        display: block;
+    }
+}
