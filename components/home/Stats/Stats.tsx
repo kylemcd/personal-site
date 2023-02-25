@@ -1,9 +1,8 @@
-import { RawDataFromAirtable } from '@/types/stats';
-import { statsTranformer } from '@/helpers/dataHelper';
+import { FormattedStats } from '@/types/stats';
+import { ErrorResponse } from '@/types/global';
 
-const Stats = ({ stats }: { stats: RawDataFromAirtable }) => {
-    const formattedStats = statsTranformer({ stats });
-    return <div>{JSON.stringify(formattedStats)}</div>;
+const Stats = ({ stats }: { stats: FormattedStats | ErrorResponse }) => {
+    return <div>{JSON.stringify(stats)}</div>;
 };
 
 export default Stats;

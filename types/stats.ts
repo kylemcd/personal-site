@@ -1,9 +1,12 @@
+import { ErrorResponse } from './global';
+
 export interface AirtableRecord {
     id: string;
     createdTime: string;
     fields: {
         Name: string;
         Amount: string;
+        Type: string;
     };
 }
 
@@ -11,11 +14,15 @@ export interface RawDataFromAirtable {
     records: AirtableRecord[];
 }
 
+export type FormattedStatType = 'stat' | 'track';
+
 export interface FormattedStat {
     name?: string;
-    amount?: string;
+    value?: string;
+    type?: FormattedStatType;
 }
 
 export interface FormattedStats {
-    stats: FormattedStat[] | [];
+    stats?: FormattedStat[] | [];
+    error?: ErrorResponse;
 }
