@@ -10,8 +10,8 @@ type Type = 'a' | 'button' | 'Link';
 
 interface ButtonPropsGeneric<T extends Type> {
     type: T;
-    color?: Color;
-    size?: Size;
+    color: Color;
+    size: Size;
     children: React.ReactElement | string;
     [key: string]: any; // ...otherProps
 }
@@ -36,17 +36,10 @@ const getColorStyle = ({
 }): { backgroundImage: string; color: string; borderColor: string } => {
     const type = color.startsWith('--') ? 'variable' : 'hsl';
 
-    let hslString = null;
-
     // Get CSS Variable from string that was passed in
-    if (type === 'variable') {
-        hslString = getComputedStyle(document.documentElement)?.getPropertyValue(color);
-    }
+    const hslString = getComputedStyle(document.documentElement)?.getPropertyValue(color) ?? color;
 
-    if (type === 'hsl') {
-        hslString = color;
-    }
-
+    // Default back up just in case
     if (typeof window === 'undefined' || !hslString) {
         return {
             backgroundImage: `linear-gradient(to top, var(--primary-font-color), var(--secondary-font-color))`,

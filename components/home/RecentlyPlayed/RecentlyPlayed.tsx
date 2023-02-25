@@ -26,7 +26,7 @@ const RecentlyPlayed = ({ data }: { data: FormattedSpotifyData }) => {
                 />
                 <SecondaryHeading color={`--primary-font-color`}>{data?.songName}</SecondaryHeading>
                 <Paragraph color={`--secondary-font-color`}>{data?.artistName}</Paragraph>
-                <Button type="a" href={data?.href!} target="_blank" color={'--primary-color'}>
+                <Button type="a" href={data?.href!} target="_blank" color={'--primary-color'} size="sm">
                     Open on Spotify
                 </Button>
             </>
