@@ -6,18 +6,9 @@
     --tertiary-font-color: hsl(0, 0%, 96%);
     --primary-background-color: hsl(0, 100%, 100%);
     --secondary-background-color: hsl(0, 0%, 98%);
+    --tertiary-background-color: hsl(0, 0%, 84%);
     --primary-border-color: hsl(0, 0%, 95%);
 }
-
-/* @media (prefers-color-scheme: dark) {
-    :root {
-        --primary-font-color: hsl(0, 0%, 98%);
-        --secondary-font-color: hsl(0, 100%, 100%);
-        --primary-background-color: hsl(0, 0%, 4%);
-        --secondary-background-color: hsl(0, 0%, 0%);
-        --primary-border-color: hsl(0, 0%, 40%);
-    }
-} */
 
 * {
     box-sizing: border-box;

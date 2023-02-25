@@ -2,11 +2,10 @@
 import React from 'react';
 import Link from 'next/link';
 
+import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
 import styles from './Button.module.css';
 
-type CSSVariable = `--${string}`;
-type HSLString = `hsl(${string})`;
-type Color = CSSVariable | HSLString;
+import { HSLString, Color } from '@/types/colors';
 
 type Size = 'xs' | 'sm' | 'md' | 'lg';
 type Type = 'a' | 'button' | 'Link';
@@ -101,10 +100,6 @@ const getSizeClassName = ({ size }: { size: Size }) => {
     }
 };
 
-const getHSLValueFromCSSVariable = ({ cssVar }: { cssVar: CSSVariable }): HSLString => {
-    return getComputedStyle(document.documentElement)?.getPropertyValue(cssVar) as HSLString;
-};
-
 const Button = ({
     type = 'button',
     color: colorProp,
@@ -115,38 +110,7 @@ const Button = ({
     children,
     ...otherProps
 }: ButtonProps) => {
-    // If CSS Variable, convert it into an HSL
-    // value for later
-    const [color, setColor] = React.useState(
-        colorProp.startsWith('--')
-            ? getHSLValueFromCSSVariable({ cssVar: colorProp as CSSVariable })
-            : (colorProp as HSLString)
-    );
-
-    // If the type of color passed in is a CSS variable,
-    // listen to changes so we can update the button color
-    React.useEffect(() => {
-        if (colorProp.startsWith('--')) {
-            const observer = new MutationObserver((mutations: MutationRecord[]) => {
-                console.log(mutations[0]);
-                const currentElement = mutations[0].target as HTMLElement;
-                const currentColorValue = currentElement.style.getPropertyValue(colorProp) as HSLString;
-
-                if (currentColorValue !== color) {
-                    setColor(currentColorValue);
-                }
-            });
-
-            observer.observe(document.documentElement, {
-                attributes: true,
-                attributeFilter: ['style'],
-            });
-
-            return () => {
-                observer.disconnect();
-            };
-        }
-    }, []);
+    const color = useCSSVariableObserver(colorProp);
 
     if (type === 'Link') {
         return (

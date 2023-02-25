@@ -1,4 +1,8 @@
 .menuContainer {
+    position: relative;
+}
+
+.menuButtonContainer {
     --menu-tranition-animation: cubic-bezier(0.4, 0, 0.2, 1);
     display: block;
     height: 21px;
@@ -6,21 +10,21 @@
     width: 25px;
 }
 
-.menuContainerOpen {
+.menuButtonContainerOpen {
     transform: translateX(1px);
     transition: transform 0.3s var(--menu-tranition-animation);
 }
 
-.menuContainerOpen > .menuBar1 {
+.menuButtonContainerOpen > .menuBar1 {
     transform-origin: center center;
     transform: rotate(45deg) translateY(7px) translateX(6px) scale(1);
 }
 
-.menuContainerOpen > .menuBar2 {
+.menuButtonContainerOpen > .menuBar2 {
     opacity: 0;
 }
 
-.menuContainerOpen > .menuBar3 {
+.menuButtonContainerOpen > .menuBar3 {
     transform-origin: center center;
     transform: rotate(-45deg) translateY(-7px) translateX(6px) scale(1);
 }
@@ -58,4 +62,73 @@
     transform: scaleX(0.8);
     transition: transform 0.3s var(--menu-tranition-animation);
     width: 25px;
+}
+
+.menu {
+    background-color: var(--primary-background-color);
+    border-color: var(--primary-border-color);
+    border-radius: 1rem;
+    border-style: solid;
+    border-width: 1px;
+    top: 4rem;
+    box-shadow: 0 4px 1px var(--primary-border-color);
+    min-width: 250px;
+    position: absolute;
+    right: 0;
+}
+
+.menuList {
+    list-style: none;
+    margin: 0;
+    padding: 1.5rem;
+}
+
+.menuList > li {
+    margin-bottom: 1rem;
+}
+
+.menuList > li:last-child {
+    margin-bottom: 0;
+}
+
+.themesContainer {
+    border-top-width: 1px;
+    border-top-style: solid;
+    border-top-color: var(--primary-border-color);
+    display: flex;
+    gap: 0.5rem;
+    padding: 1.5rem;
+}
+
+.themeBubble {
+    appearance: none;
+    border: none;
+    border-radius: 100%;
+    cursor: pointer;
+    outline-width: 4px;
+    outline-style: solid;
+    outline-color: transparent;
+    height: 24px;
+    padding: 2px;
+    position: relative;
+    width: 24px;
+}
+
+.themeBubbleActive {
+    /* border-color: var(--primary-border-color); */
+    outline-color: var(--tertiary-background-color);
+}
+
+.themeBubbleActive:before {
+    content: '';
+    border-radius: 100%;
+    border-width: 2px;
+    border-style: solid;
+    border-color: var(--primary-background-color);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    height: 24px;
+    width: 24px;
 }

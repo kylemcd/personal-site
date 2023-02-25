@@ -1,12 +1,18 @@
 .container {
     align-items: center;
+    backdrop-filter: blur(100px);
     background-color: var(--primary-background-color);
     border-bottom-color: var(--primary-border-color);
     border-bottom-style: solid;
     border-bottom-width: 2px;
+    box-shadow: 0 0 0 transparent;
     display: flex;
     justify-content: space-between;
+    opacity: 0.98;
     padding: 1.5em 2rem;
+    position: sticky;
+    top: 0;
+    left: 0;
     width: 100%;
 }
 
@@ -18,4 +24,8 @@
     .filler {
         display: block;
     }
+}
+
+.stub {
+    background-color: var(--primary-background-color);
 }
