@@ -1,0 +1,61 @@
+.menuContainer {
+    --menu-tranition-animation: cubic-bezier(0.4, 0, 0.2, 1);
+    display: block;
+    height: 21px;
+    position: relative;
+    width: 25px;
+}
+
+.menuContainerOpen {
+    transform: translateX(1px);
+    transition: transform 0.3s var(--menu-tranition-animation);
+}
+
+.menuContainerOpen > .menuBar1 {
+    transform-origin: center center;
+    transform: rotate(45deg) translateY(7px) translateX(6px) scale(1);
+}
+
+.menuContainerOpen > .menuBar2 {
+    opacity: 0;
+}
+
+.menuContainerOpen > .menuBar3 {
+    transform-origin: center center;
+    transform: rotate(-45deg) translateY(-7px) translateX(6px) scale(1);
+}
+
+.menuBar1 {
+    display: block;
+    background-color: var(--secondary-font-color);
+    height: 2px;
+    position: absolute;
+    top: 0;
+    transform: scaleX(0.8);
+    transition: transform 0.3s var(--menu-tranition-animation);
+    transform-origin: center left;
+    width: 25px;
+}
+
+.menuBar2 {
+    display: block;
+    background-color: var(--secondary-font-color);
+    height: 2px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: opacity 0.1s ease-in;
+    width: 25px;
+}
+
+.menuBar3 {
+    display: block;
+    background-color: var(--secondary-font-color);
+    height: 2px;
+    position: absolute;
+    bottom: 0;
+    transform-origin: center right;
+    transform: scaleX(0.8);
+    transition: transform 0.3s var(--menu-tranition-animation);
+    width: 25px;
+}

@@ -19,7 +19,7 @@
 
 .button:focus {
     outline: none;
-    filter: brightness(1.25) saturate(110%);
+    filter: brightness(1.1) saturate(110%);
 }
 
 .largeSize {
@@ -34,5 +34,10 @@
 
 .smallSize {
     font-size: 0.75rem;
+    padding: 0.75rem;
+}
+
+.extraSmallSize {
+    font-size: 0.5rem;
     padding: 0.5rem;
 }

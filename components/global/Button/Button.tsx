@@ -5,13 +5,14 @@ import Link from 'next/link';
 import styles from './Button.module.css';
 
 type Color = `--${string}` | `hsl(${string})`;
-type Size = 'sm' | 'md' | 'lg';
+type Size = 'xs' | 'sm' | 'md' | 'lg';
 type Type = 'a' | 'button' | 'Link';
 
 interface ButtonPropsGeneric<T extends Type> {
     type: T;
     color: Color;
     size: Size;
+    lightnessModifier?: number;
     children: React.ReactElement | string;
     [key: string]: any; // ...otherProps
 }
@@ -26,18 +27,24 @@ interface ButtonPropsButton extends ButtonPropsGeneric<'button'> {
 
 type ButtonProps = ButtonPropsButton | ButtonPropsLink;
 
-const LIGHTNESS_MODIFIER = 6;
+const DEFAULT_LIGHTNESS_MODIFIER = 6;
 const LIGHTNESS_FONT_MINIMUM = 65;
 
 const getColorStyle = ({
     color,
+    lightnessModifier,
 }: {
     color: Color;
+    lightnessModifier: number;
 }): { backgroundImage: string; color: string; borderColor: string } => {
     const type = color.startsWith('--') ? 'variable' : 'hsl';
 
     // Get CSS Variable from string that was passed in
-    const hslString = getComputedStyle(document.documentElement)?.getPropertyValue(color) ?? color;
+    let hslString = color;
+
+    if (type === 'variable') {
+        hslString = getComputedStyle(document.documentElement)?.getPropertyValue(color) as Color;
+    }
 
     // Default back up just in case
     if (typeof window === 'undefined' || !hslString) {
@@ -64,7 +71,7 @@ const getColorStyle = ({
         .map((each, index) => {
             if (index === 2) {
                 lightness = parseInt(each.split('%')[0]);
-                return `${lightness + LIGHTNESS_MODIFIER}%`;
+                return `${lightness + lightnessModifier}%`;
             }
             return each;
         })
@@ -96,6 +103,8 @@ const getSizeClassName = ({ size }: { size: Size }) => {
             return styles.mediumSize;
         case 'sm':
             return styles.smallSize;
+        case 'xs':
+            return styles.extraSmallSize;
         default:
             return styles.mediumSize;
     }
@@ -103,8 +112,9 @@ const getSizeClassName = ({ size }: { size: Size }) => {
 
 const Button = ({
     type = 'button',
-    color = '--primary-color',
+    color,
     size = 'md',
+    lightnessModifier = DEFAULT_LIGHTNESS_MODIFIER,
     href,
     onClick,
     children,
@@ -114,7 +124,7 @@ const Button = ({
         return (
             <Link
                 href={href}
-                style={getColorStyle({ color })}
+                style={getColorStyle({ color, lightnessModifier })}
                 className={styles.button + ' ' + getSizeClassName({ size })}
                 {...otherProps}
             >
@@ -127,7 +137,7 @@ const Button = ({
         return (
             <a
                 href={href}
-                style={getColorStyle({ color })}
+                style={getColorStyle({ color, lightnessModifier })}
                 className={styles.button + ' ' + getSizeClassName({ size })}
                 {...otherProps}
             >
@@ -139,7 +149,7 @@ const Button = ({
     return (
         <button
             onClick={onClick}
-            style={getColorStyle({ color })}
+            style={getColorStyle({ color, lightnessModifier })}
             className={styles.button + ' ' + getSizeClassName({ size })}
             {...otherProps}
         >

@@ -1,13 +1,11 @@
 import Image, { ImageLoaderProps } from 'next/image';
-import dynamic from 'next/dynamic';
 
 import { FormattedSpotifyData } from '@/types/spotify';
 
 import styles from './RecentlyPlayed.module.css';
 import { StatsContainer } from '@/components/home/StatsContainer';
 import { SecondaryHeading, Paragraph } from '@/components/global/Typography';
-const Button = dynamic(() => import('../../global/Button/Button'), { ssr: false });
-// import { Button } from '@/components/global/Button';
+import { Button } from '@/components/global/Button';
 
 const RecentlyPlayed = ({ data }: { data: FormattedSpotifyData }) => {
     if (data?.error) {
@@ -15,8 +13,8 @@ const RecentlyPlayed = ({ data }: { data: FormattedSpotifyData }) => {
     }
 
     return (
-        <StatsContainer className={styles.container}>
-            <>
+        <StatsContainer>
+            <div className={styles.container}>
                 <Image
                     src={data?.albumArt?.url!}
                     width={data?.albumArt?.width}
@@ -26,10 +24,10 @@ const RecentlyPlayed = ({ data }: { data: FormattedSpotifyData }) => {
                 />
                 <SecondaryHeading color={`--primary-font-color`}>{data?.songName}</SecondaryHeading>
                 <Paragraph color={`--secondary-font-color`}>{data?.artistName}</Paragraph>
-                <Button type="a" href={data?.href!} target="_blank" color={'--primary-color'} size="sm">
+                {/* <Button type="a" href={data?.href!} target="_blank" color={'--primary-color'} size="sm">
                     Open on Spotify
-                </Button>
-            </>
+                </Button> */}
+            </div>
         </StatsContainer>
     );
 };

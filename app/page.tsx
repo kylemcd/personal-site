@@ -7,6 +7,8 @@ import { RawDataFromAirtable } from '@/types/stats';
 
 import { RawSpotifyTrack } from '@/types/spotify';
 
+import style from './page.module.css';
+
 const fetchStats = async () => {
     const res = await fetch('https://api.airtable.com/v0/appj2WcmuBbTqQa3r/Stats', {
         headers: { Authorization: `Bearer ${process.env.AIRTABLE_TOKEN}` },
@@ -83,8 +85,13 @@ const Home = async () => {
     return (
         <>
             <Hero />
-            <Stats stats={stats!} />
-            <RecentlyPlayed data={track!} />
+            <div className={style.statsContainer}>
+                {/* <Stats stats={stats!} /> */}
+                <RecentlyPlayed data={track!} />
+                <RecentlyPlayed data={track!} />
+                <RecentlyPlayed data={track!} />
+                <RecentlyPlayed data={track!} />
+            </div>
         </>
     );
 };

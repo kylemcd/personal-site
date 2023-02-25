@@ -1,0 +1,24 @@
+.statsContainer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 2rem;
+    width: 100%;
+}
+
+.statsContainer > div {
+    flex-basis: 100%;
+}
+
+@media (min-width: 768px) {
+    .statsContainer > div {
+        flex-basis: calc(50% - 1rem);
+    }
+}
+
+@media (min-width: 1280px) {
+    .statsContainer > div {
+        flex-basis: calc(25% - 1rem);
+    }
+}
