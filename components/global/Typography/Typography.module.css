@@ -20,3 +20,8 @@
         line-height: 6rem;
     }
 }
+
+.secondaryHeading {
+    font-size: 2rem;
+    line-height: 2.25rem;
+}
