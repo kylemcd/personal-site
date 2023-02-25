@@ -1,10 +1,13 @@
 'use client';
-
+import React from 'react';
 import Link from 'next/link';
 
 import styles from './Button.module.css';
 
-type Color = `--${string}` | `hsl(${string})`;
+type CSSVariable = `--${string}`;
+type HSLString = `hsl(${string})`;
+type Color = CSSVariable | HSLString;
+
 type Size = 'xs' | 'sm' | 'md' | 'lg';
 type Type = 'a' | 'button' | 'Link';
 
@@ -31,21 +34,12 @@ const DEFAULT_LIGHTNESS_MODIFIER = 6;
 const LIGHTNESS_FONT_MINIMUM = 65;
 
 const getColorStyle = ({
-    color,
+    hslString,
     lightnessModifier,
 }: {
-    color: Color;
+    hslString: HSLString;
     lightnessModifier: number;
 }): { backgroundImage: string; color: string; borderColor: string } => {
-    const type = color.startsWith('--') ? 'variable' : 'hsl';
-
-    // Get CSS Variable from string that was passed in
-    let hslString = color;
-
-    if (type === 'variable') {
-        hslString = getComputedStyle(document.documentElement)?.getPropertyValue(color) as Color;
-    }
-
     // Default back up just in case
     if (typeof window === 'undefined' || !hslString) {
         return {
@@ -82,11 +76,8 @@ const getColorStyle = ({
         fontColor = `var(--tertiary-font-color)`;
     }
 
-    const backgroundImage =
-        type === 'variable'
-            ? `linear-gradient(to top, var(${color}), ${lighterHsl})`
-            : `linear-gradient(to top, ${color}, ${lighterHsl})`;
-    const borderColor = type === 'variable' ? `var(${color})` : color;
+    const backgroundImage = `linear-gradient(to top, ${hslString}, ${lighterHsl})`;
+    const borderColor = hslString;
 
     return {
         backgroundImage,
@@ -110,9 +101,13 @@ const getSizeClassName = ({ size }: { size: Size }) => {
     }
 };
 
+const getHSLValueFromCSSVariable = ({ cssVar }: { cssVar: CSSVariable }): HSLString => {
+    return getComputedStyle(document.documentElement)?.getPropertyValue(cssVar) as HSLString;
+};
+
 const Button = ({
     type = 'button',
-    color,
+    color: colorProp,
     size = 'md',
     lightnessModifier = DEFAULT_LIGHTNESS_MODIFIER,
     href,
@@ -120,11 +115,44 @@ const Button = ({
     children,
     ...otherProps
 }: ButtonProps) => {
+    // If CSS Variable, convert it into an HSL
+    // value for later
+    const [color, setColor] = React.useState(
+        colorProp.startsWith('--')
+            ? getHSLValueFromCSSVariable({ cssVar: colorProp as CSSVariable })
+            : (colorProp as HSLString)
+    );
+
+    // If the type of color passed in is a CSS variable,
+    // listen to changes so we can update the button color
+    React.useEffect(() => {
+        if (colorProp.startsWith('--')) {
+            const observer = new MutationObserver((mutations: MutationRecord[]) => {
+                console.log(mutations[0]);
+                const currentElement = mutations[0].target as HTMLElement;
+                const currentColorValue = currentElement.style.getPropertyValue(colorProp) as HSLString;
+
+                if (currentColorValue !== color) {
+                    setColor(currentColorValue);
+                }
+            });
+
+            observer.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['style'],
+            });
+
+            return () => {
+                observer.disconnect();
+            };
+        }
+    }, []);
+
     if (type === 'Link') {
         return (
             <Link
                 href={href}
-                style={getColorStyle({ color, lightnessModifier })}
+                style={getColorStyle({ hslString: color, lightnessModifier })}
                 className={styles.button + ' ' + getSizeClassName({ size })}
                 {...otherProps}
             >
@@ -137,7 +165,7 @@ const Button = ({
         return (
             <a
                 href={href}
-                style={getColorStyle({ color, lightnessModifier })}
+                style={getColorStyle({ hslString: color, lightnessModifier })}
                 className={styles.button + ' ' + getSizeClassName({ size })}
                 {...otherProps}
             >
@@ -149,7 +177,7 @@ const Button = ({
     return (
         <button
             onClick={onClick}
-            style={getColorStyle({ color, lightnessModifier })}
+            style={getColorStyle({ hslString: color, lightnessModifier })}
             className={styles.button + ' ' + getSizeClassName({ size })}
             {...otherProps}
         >
