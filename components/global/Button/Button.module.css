@@ -22,22 +22,6 @@
     filter: brightness(1.25) saturate(110%);
 }
 
-.primaryColor {
-    background-image: linear-gradient(
-        to top,
-        hsl(var(--primary-color-h), var(--primary-color-s), var(--primary-color-l)),
-        hsl(var(--primary-color-h), var(--primary-color-s), calc(var(--primary-color-l) + 10%))
-    );
-    color: var(--tertiary-font-color);
-    border-color: var(--secondary-color);
-}
-
-.defaultColor {
-    background-image: linear-gradient(to top, var(--primary-font-color), var(--secondary-font-color));
-    color: var(--tertiary-font-color);
-    border-color: var(--secondary-font-color);
-}
-
 .largeSize {
     font-size: 1.25rem;
     padding: 1.25rem 2rem;
