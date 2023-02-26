@@ -5,6 +5,7 @@ import { Button } from '@/components/global/Button';
 
 import styles from './Menu.module.css';
 import useOnClickOutside from '@/hooks/useOnClickOutside';
+import { formatClassNames } from '@/helpers/jsxHelpers';
 
 const THEMES = ['hsl(24, 100%, 60%)', 'hsl(143, 87%, 23%)', 'hsl(356, 87%, 23%)'];
 
@@ -31,36 +32,31 @@ const Menu = () => {
                     <span className={styles.menuBar3 + ' menuBar3'} />
                 </span>
             </Button>
-            {isMenuOpen && (
-                <div className={styles.menu}>
-                    <ul className={styles.menuList}>
-                        <li>About</li>
-                        <li>Uses</li>
-                        <li>Uses</li>
-                    </ul>
-                    <div className={styles.themesContainer}>
-                        {THEMES.map((theme, index) => (
-                            <button
-                                className={`${styles.themeBubble} ${
-                                    theme === activeTheme ? styles.themeBubbleActive : ''
-                                }`}
-                                style={{ backgroundColor: theme }}
-                                onClick={() => {
-                                    document.documentElement.style.setProperty('--primary-color', theme);
-                                    console.log(
-                                        document.documentElement.style.getPropertyValue('--tertiary-background-color')
-                                    );
-                                    console.log(
-                                        document.documentElement.style.getPropertyValue('--primary-font-color')
-                                    );
-                                    setActiveTheme(theme);
-                                }}
-                                key={index}
-                            />
-                        ))}
-                    </div>
+
+            <div className={formatClassNames([[styles.menu], [styles.menuOpen, isMenuOpen]])}>
+                <ul className={styles.menuList}>
+                    <li>About</li>
+                    <li>Uses</li>
+                    <li>Uses</li>
+                </ul>
+                <div className={styles.themesContainer}>
+                    {THEMES.map((theme, index) => (
+                        <button
+                            className={`${styles.themeBubble} ${theme === activeTheme ? styles.themeBubbleActive : ''}`}
+                            style={{ backgroundColor: theme }}
+                            onClick={() => {
+                                document.documentElement.style.setProperty('--primary-color', theme);
+                                console.log(
+                                    document.documentElement.style.getPropertyValue('--tertiary-background-color')
+                                );
+                                console.log(document.documentElement.style.getPropertyValue('--primary-font-color'));
+                                setActiveTheme(theme);
+                            }}
+                            key={index}
+                        />
+                    ))}
                 </div>
-            )}
+            </div>
         </div>
     );
 };
