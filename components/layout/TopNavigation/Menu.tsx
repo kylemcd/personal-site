@@ -1,21 +1,34 @@
 'use client';
 import React from 'react';
 
-import { Button } from '@/components/global/Button';
+import { HuePicker } from 'react-color';
 
+import { Button } from '@/components/global/Button';
+import usePersistedState from '@/hooks/usePersistedState';
 import styles from './Menu.module.css';
 import useOnClickOutside from '@/hooks/useOnClickOutside';
 import { formatClassNames } from '@/helpers/jsxHelpers';
+import { HSLString } from '@/types/colors';
 
-const THEMES = ['hsl(24, 100%, 60%)', 'hsl(143, 87%, 23%)', 'hsl(356, 87%, 23%)'];
+type Themes = HSLString[];
+
+const THEMES: Themes = ['hsl(24, 100%, 60%)', 'hsl(143, 87%, 23%)', 'hsl(356, 87%, 23%)'];
 
 const Menu = () => {
     const menuContainer = React.useRef<HTMLDivElement>(null);
 
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-    const [activeTheme, setActiveTheme] = React.useState(THEMES[0]);
+    const [activeTheme, setActiveTheme] = usePersistedState('theme', THEMES[0]);
+
+    React.useEffect(() => {
+        document.documentElement.style.setProperty('--primary-color', activeTheme);
+    }, [activeTheme]);
 
     useOnClickOutside({ ref: menuContainer, handler: () => setIsMenuOpen(false) });
+
+    const handleThemeSet = (theme: HSLString) => {
+        setActiveTheme(theme);
+    };
 
     return (
         <div className={styles.menuContainer} ref={menuContainer}>
@@ -32,7 +45,6 @@ const Menu = () => {
                     <span className={styles.menuBar3 + ' menuBar3'} />
                 </span>
             </Button>
-
             <div className={formatClassNames([[styles.menu], [styles.menuOpen, isMenuOpen]])}>
                 <ul className={styles.menuList}>
                     <li>About</li>
@@ -44,17 +56,20 @@ const Menu = () => {
                         <button
                             className={`${styles.themeBubble} ${theme === activeTheme ? styles.themeBubbleActive : ''}`}
                             style={{ backgroundColor: theme }}
-                            onClick={() => {
-                                document.documentElement.style.setProperty('--primary-color', theme);
-                                console.log(
-                                    document.documentElement.style.getPropertyValue('--tertiary-background-color')
-                                );
-                                console.log(document.documentElement.style.getPropertyValue('--primary-font-color'));
-                                setActiveTheme(theme);
-                            }}
+                            onClick={() => handleThemeSet(theme)}
                             key={index}
                         />
                     ))}
+                    <div className={styles.colorPickerContainer}>
+                        <HuePicker
+                            color={activeTheme}
+                            width={'100px'}
+                            onChange={(color: any) => {
+                                const hslString: HSLString = `hsl(${color.hsl.h},80%,50%)` as HSLString;
+                                setActiveTheme(hslString);
+                            }}
+                        />
+                    </div>
                 </div>
             </div>
         </div>

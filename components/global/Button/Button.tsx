@@ -5,7 +5,8 @@ import Link from 'next/link';
 import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
 import styles from './Button.module.css';
 
-import { HSLString, Color } from '@/types/colors';
+import { HSLString, Color, isHSLString, HexString, isHexString } from '@/types/colors';
+import { hexToHSL } from '@/helpers/colorHelper';
 
 type Size = 'xs' | 'sm' | 'md' | 'lg';
 type Type = 'a' | 'button' | 'Link';
@@ -33,12 +34,13 @@ const DEFAULT_LIGHTNESS_MODIFIER = 6;
 const LIGHTNESS_FONT_MINIMUM = 65;
 
 const getColorStyle = ({
-    hslString,
+    hslString: initialHslString,
     lightnessModifier,
 }: {
     hslString: HSLString;
     lightnessModifier: number;
 }): { backgroundImage: string; color: string; borderColor: string } => {
+    let hslString = initialHslString;
     // Default back up just in case
     if (typeof window === 'undefined' || !hslString) {
         return {
@@ -47,6 +49,22 @@ const getColorStyle = ({
             borderColor: `var(--primary-font-color))`,
         };
     }
+    console.log(hslString);
+
+    if (isHexString(hslString)) {
+        const hslFromHex = hexToHSL(hslString as HexString);
+        if (!hslFromHex) {
+            return {
+                backgroundImage: `linear-gradient(to top, var(--primary-font-color), var(--secondary-font-color))`,
+                color: `var(--tertiary-font-color)`,
+                borderColor: `var(--primary-font-color))`,
+            };
+        }
+
+        hslString = hslFromHex;
+    }
+
+    console.log(hslString);
 
     let lightness = 50;
     let fontColor = `var(--primary-font-color)`;
@@ -111,6 +129,7 @@ const Button = ({
     ...otherProps
 }: ButtonProps) => {
     const color = useCSSVariableObserver(colorProp);
+    console.log(color, href);
 
     if (type === 'Link') {
         return (

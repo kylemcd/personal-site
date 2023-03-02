@@ -138,3 +138,12 @@
     height: 24px;
     width: 24px;
 }
+
+.colorPickerContainer * div {
+    border-radius: 1rem !important;
+    height: 24px !important;
+}
+
+.colorPickerContainer div:last-child:not(:has(> div)) {
+    width: 24px !important;
+}

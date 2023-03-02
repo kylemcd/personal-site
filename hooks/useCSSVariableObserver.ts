@@ -1,6 +1,5 @@
 import React from 'react';
-import { CSSVariable, HSLString, Color, isCSSVariable } from '@/types/colors';
-import { CLIENT_RENEG_LIMIT } from 'tls';
+import { CSSVariable, HSLString, Color, isCSSVariable, isHSLString } from '@/types/colors';
 
 const getHSLValueFromCSSVariable = ({ cssVar }: { cssVar: CSSVariable }): HSLString => {
     return getComputedStyle(document.documentElement)?.getPropertyValue(cssVar) as HSLString;
@@ -21,7 +20,7 @@ const useCSSVariableObserver = (colorProp: Color): HSLString => {
             const observer = new MutationObserver((mutations: MutationRecord[]) => {
                 const currentElement = mutations[0].target as HTMLElement;
                 const currentColorValue = currentElement.style.getPropertyValue(colorProp) as HSLString;
-                if (currentColorValue && currentColorValue !== color) {
+                if (currentColorValue && currentColorValue !== color && isHSLString(currentColorValue)) {
                     setColor(currentColorValue as HSLString);
                 }
             });

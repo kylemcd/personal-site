@@ -13,7 +13,7 @@ const TopNavigation = () => {
             <div className={formatClassNames([[styles.container]])}>
                 <div className={styles.filler} />
                 <PrimaryHeading color={'--primary-color'}>KPM</PrimaryHeading>
-                <div>
+                <div className={styles.menuContainer}>
                     <Menu />
                 </div>
             </div>

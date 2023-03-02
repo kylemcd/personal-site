@@ -29,3 +29,7 @@
 .stub {
     background-color: var(--primary-background-color);
 }
+
+.menuContainer {
+    width: 51px;
+}
