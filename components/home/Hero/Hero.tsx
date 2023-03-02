@@ -10,7 +10,7 @@ const Hero = () => {
         <div className={styles.container}>
             <div className={styles.contentContainer}>
                 <HeroHeading className={playfairDisplay.className} style={{ fontWeight: '500' }}>
-                    Director of Engineering at Foxtrot. Just putzing around.
+                    Director of Engineering at Foxtrot. Just <span>putzing</span> around.
                 </HeroHeading>
             </div>
         </div>
