@@ -1,38 +1,59 @@
 import fetchAirTableStats from '@/api/fetchAirTableStats';
 import fetchSpotifyData from '@/api/fetchSpotifyData';
+import fetchGitHubData from '@/api/fetchGitHubData';
 
 import { Hero } from '@/components/home/Hero';
 import { Stats } from '@/components/home/Stats';
 import { RecentlyPlayed } from '@/components/home/RecentlyPlayed';
 
-import { statsTranformer, spotifyTransformer } from '@/helpers/dataHelper';
-import { RawDataFromAirtable } from '@/types/stats';
+import { statsTranformer, spotifyTransformer, gitHubTransformer } from '@/helpers/dataHelper';
 
-import { RawSpotifyTrack } from '@/types/spotify';
+import { FormattedGitHubData } from '@/types/github';
+import { RawDataFromAirtable, FormattedStats } from '@/types/stats';
+import { RawSpotifyTrack, FormattedSpotifyData } from '@/types/spotify';
 
 import style from './page.module.css';
 
-const fetchAndFormatData = async () => {
+interface FetchAndFormatResult {
+    track: FormattedSpotifyData | null;
+    stats: FormattedStats | null;
+    github: FormattedGitHubData | null;
+    error: boolean;
+}
+
+const fetchAndFormatData = async (): Promise<FetchAndFormatResult> => {
+    const result: FetchAndFormatResult = {
+        track: null,
+        stats: null,
+        github: null,
+        error: false,
+    };
+
     const stats: RawDataFromAirtable = await fetchAirTableStats();
     const formattedStats = statsTranformer({ stats });
 
     if (formattedStats.error) {
-        return { error: true };
+        result.error = true;
     }
+
+    result.stats = formattedStats;
 
     const trackId = formattedStats.stats!.find((stat) => stat.type === 'track' && stat.value !== '');
 
     if (trackId) {
         const track: RawSpotifyTrack = await fetchSpotifyData(trackId?.value!);
 
-        return { track: spotifyTransformer({ track }), stats: formattedStats, error: false };
+        result.track = spotifyTransformer({ track });
     }
 
-    return { stats: formattedStats, error: false };
+    const gitHubData = await fetchGitHubData();
+    result.github = gitHubTransformer({ gitHubData });
+
+    return result;
 };
 
 const Home = async () => {
-    const { track, stats, error } = await fetchAndFormatData();
+    const { track, stats, github, error } = await fetchAndFormatData();
 
     if (error) {
         return null;
@@ -43,9 +64,7 @@ const Home = async () => {
             <Hero />
             <div className={style.statsContainer}>
                 {/* <Stats stats={stats!} /> */}
-                <RecentlyPlayed data={track!} />
-                <RecentlyPlayed data={track!} />
-                <RecentlyPlayed data={track!} />
+
                 <RecentlyPlayed data={track!} />
             </div>
         </>
