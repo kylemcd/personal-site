@@ -10,16 +10,32 @@
     border-radius: 0.5rem;
     border-width: 1px;
     border-style: solid;
-    transition: filter 0.2s ease-in-out;
+    transition: filter 0.2s ease-in-out, box-shadow 0.3s linear;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+    box-shadow: var(--box-shadow);
 }
 
 .button:hover {
     filter: brightness(1.1) saturate(105%);
+    box-shadow: var(--box-shadow-hover);
 }
 
 .button:focus {
     outline: none;
     filter: brightness(1.1) saturate(110%);
+    box-shadow: var(--box-shadow-hover);
+}
+
+.shadowless {
+    box-shadow: none;
+}
+
+.shadowless:hover {
+    box-shadow: none;
+}
+
+.shadowless:focus {
+    box-shadow: none;
 }
 
 .largeSize {

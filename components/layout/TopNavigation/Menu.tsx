@@ -38,6 +38,7 @@ const Menu = () => {
                 size="sm"
                 color={`--tertiary-background-color`}
                 lightnessModifier={2}
+                shadowless={true}
             >
                 <span className={`${styles.menuButtonContainer} ${isMenuOpen ? styles.menuButtonContainerOpen : ''}`}>
                     <span className={styles.menuBar1 + ' menuBar1'} />

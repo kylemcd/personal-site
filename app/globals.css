@@ -8,6 +8,13 @@
     --secondary-background-color: hsl(0, 0%, 98%);
     --tertiary-background-color: hsl(0, 0%, 84%);
     --primary-border-color: hsl(0, 0%, 95%);
+
+    --box-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+        rgba(168, 168, 168, 0.08) 0px 1px 1px 0px, rgba(195, 195, 195, 0.08) 0px 6px 6px 0px,
+        rgba(255, 255, 255, 0.14) 0px 0.5px 8px 2px inset, rgba(255, 255, 255, 0.08) 0px -5px 0px -4px inset;
+    --box-shadow-hover: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px,
+        rgba(168, 168, 168, 0.08) 0px 1px 1px 0px, rgba(195, 195, 195, 0.08) 0px 6px 6px 0px,
+        rgba(255, 255, 255, 0.14) 0px 0.5px 8px 2px inset, rgba(255, 255, 255, 0.08) 0px -5px 0px -4px inset;
 }
 
 * {

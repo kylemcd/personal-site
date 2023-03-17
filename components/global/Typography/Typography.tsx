@@ -44,6 +44,27 @@ export const SecondaryHeading = ({
     );
 };
 
+export const TertiaryHeading = ({
+    color,
+    className,
+    children,
+    ...otherProps
+}: {
+    color?: string;
+    className?: string;
+    children: React.ReactNode;
+} & React.HTMLAttributes<HTMLHeadingElement>) => {
+    return (
+        <h3
+            className={styles.tertiaryHeading + ' ' + className}
+            style={{ color: shapeColorVariable({ color }) }}
+            {...otherProps}
+        >
+            {children}
+        </h3>
+    );
+};
+
 export const Paragraph = ({
     color,
     className,

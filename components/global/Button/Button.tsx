@@ -17,6 +17,7 @@ interface ButtonPropsGeneric<T extends Type> {
     size: Size;
     lightnessModifier?: number;
     children: React.ReactElement | string;
+    shadowless?: boolean;
     [key: string]: any; // ...otherProps
 }
 
@@ -49,7 +50,6 @@ const getColorStyle = ({
             borderColor: `var(--primary-font-color))`,
         };
     }
-    console.log(hslString);
 
     if (isHexString(hslString)) {
         const hslFromHex = hexToHSL(hslString as HexString);
@@ -63,8 +63,6 @@ const getColorStyle = ({
 
         hslString = hslFromHex;
     }
-
-    console.log(hslString);
 
     let lightness = 50;
     let fontColor = `var(--primary-font-color)`;
@@ -118,6 +116,12 @@ const getSizeClassName = ({ size }: { size: Size }) => {
     }
 };
 
+const getShadowClassName = ({ shadowless }: { shadowless: boolean }) => {
+    if (shadowless) {
+        return styles.shadowless;
+    }
+};
+
 const Button = ({
     type = 'button',
     color: colorProp,
@@ -126,17 +130,17 @@ const Button = ({
     href,
     onClick,
     children,
+    shadowless = false,
     ...otherProps
 }: ButtonProps) => {
     const color = useCSSVariableObserver(colorProp);
-    console.log(color, href);
 
     if (type === 'Link') {
         return (
             <Link
                 href={href}
                 style={getColorStyle({ hslString: color, lightnessModifier })}
-                className={styles.button + ' ' + getSizeClassName({ size })}
+                className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
                 {...otherProps}
             >
                 {children}
@@ -149,7 +153,7 @@ const Button = ({
             <a
                 href={href}
                 style={getColorStyle({ hslString: color, lightnessModifier })}
-                className={styles.button + ' ' + getSizeClassName({ size })}
+                className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
                 {...otherProps}
             >
                 {children}
@@ -161,7 +165,7 @@ const Button = ({
         <button
             onClick={onClick}
             style={getColorStyle({ hslString: color, lightnessModifier })}
-            className={styles.button + ' ' + getSizeClassName({ size })}
+            className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
             {...otherProps}
         >
             {children}

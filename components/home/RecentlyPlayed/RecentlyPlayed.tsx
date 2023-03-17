@@ -4,7 +4,7 @@ import { FormattedSpotifyData } from '@/types/spotify';
 
 import styles from './RecentlyPlayed.module.css';
 import { StatsContainer } from '@/components/home/StatsContainer';
-import { SecondaryHeading, Paragraph } from '@/components/global/Typography';
+import { TertiaryHeading, Paragraph } from '@/components/global/Typography';
 import { Button } from '@/components/global/Button';
 
 const RecentlyPlayed = ({ data }: { data: FormattedSpotifyData }) => {
@@ -14,20 +14,34 @@ const RecentlyPlayed = ({ data }: { data: FormattedSpotifyData }) => {
 
     return (
         <StatsContainer>
-            <div className={styles.container}>
-                <Image
-                    src={data?.albumArt?.url!}
-                    width={data?.albumArt?.width}
-                    height={data?.albumArt?.height}
-                    alt={`${data?.songName} by ${data?.artistName}`}
-                    className={styles.albumArt}
-                />
-                <SecondaryHeading color={`--primary-font-color`}>{data?.songName}</SecondaryHeading>
-                <Paragraph color={`--secondary-font-color`}>{data?.artistName}</Paragraph>
-                <Button type="a" href={data?.href!} target="_blank" color={'--primary-color'} size="sm">
-                    Open on Spotify
-                </Button>
-            </div>
+            <>
+                <div className={styles.infoContainer}>
+                    <Image
+                        src={data?.albumArt?.url!}
+                        width={data?.albumArt?.width}
+                        height={data?.albumArt?.height}
+                        alt={`${data?.songName} by ${data?.artistName}`}
+                        className={styles.albumArt}
+                    />
+                    <div className={styles.copyContainer}>
+                        <TertiaryHeading color={`--primary-font-color`}>{data?.songName}</TertiaryHeading>
+                        <Paragraph color={`--secondary-font-color`}>{data?.artistName}</Paragraph>
+                    </div>
+                </div>
+                <div className={styles.bottomContainer}>
+                    <div className={styles.nowPlayingContainer}>
+                        <Paragraph color={`--secondary-font-color`}>Now Playing</Paragraph>
+                        <span className={styles.musicBars}>
+                            <span className={styles.musicBar + ' ' + styles.musicBar1} />
+                            <span className={styles.musicBar + ' ' + styles.musicBar2} />
+                            <span className={styles.musicBar + ' ' + styles.musicBar3} />
+                        </span>
+                    </div>
+                    <Button type="a" href={data?.href!} target="_blank" color={'--primary-color'} size="sm">
+                        Open on Spotify
+                    </Button>
+                </div>
+            </>
         </StatsContainer>
     );
 };

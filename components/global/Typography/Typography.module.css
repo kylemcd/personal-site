@@ -25,3 +25,9 @@
     font-size: 2rem;
     line-height: 2.25rem;
 }
+
+.tertiaryHeading {
+    font-size: 1.5rem;
+    line-height: 1.75rem;
+    font-weight: 500;
+}
