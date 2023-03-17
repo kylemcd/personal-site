@@ -62,10 +62,28 @@ const Home = async () => {
     return (
         <>
             <Hero />
-            <div className={style.statsContainer}>
-                {/* <Stats stats={stats!} /> */}
+            <div className={style.contentContainer}>
+                <div className={style.statsContainer}>
+                    {/* <Stats stats={stats!} /> */}
 
-                <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                    <RecentlyPlayed data={track!} />
+                </div>
             </div>
         </>
     );

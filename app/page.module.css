@@ -1,3 +1,11 @@
+.contentContainer {
+    background-color: white;
+    border-top-color: var(--primary-border-color);
+    border-top-style: solid;
+    border-top-width: 2px;
+    position: relative;
+    z-index: 8;
+}
 .statsContainer {
     display: flex;
     flex-wrap: wrap;
