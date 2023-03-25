@@ -14,7 +14,7 @@ const RootLayout = ({ children }: { children: React.ReactNode }) => {
         head.tsx. Find out more at https://beta.nextjs.org/docs/api-reference/file-conventions/head
       */}
             <head />
-            <body className={inter.className} style={{ height: '100vh', overflowX: 'hidden' }}>
+            <body className={inter.className}>
                 <TopNavigation />
                 {children}
             </body>

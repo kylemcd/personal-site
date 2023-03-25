@@ -1,6 +1,6 @@
-import fetchAirTableStats from '@/api/fetchAirTableStats';
-import fetchSpotifyData from '@/api/fetchSpotifyData';
-import fetchGitHubData from '@/api/fetchGitHubData';
+import fetchAirTableStats from '@/external-api/fetchAirTableStats';
+import fetchSpotifyData from '@/external-api/fetchSpotifyData';
+import fetchGitHubData from '@/external-api/fetchGitHubData';
 
 import { Hero } from '@/components/home/Hero';
 import { Stats } from '@/components/home/Stats';
