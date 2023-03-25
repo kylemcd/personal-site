@@ -1,9 +1,10 @@
 'use client';
-import styles from './Hero.module.css';
+import { Playfair_Display } from 'next/font/google';
 
 import { HeroHeading } from '@/components/global/Typography';
 
-import { Playfair_Display } from '@next/font/google';
+import styles from './Hero.module.css';
+
 const playfairDisplay = Playfair_Display({ subsets: ['latin'] });
 
 const Hero = () => {

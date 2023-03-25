@@ -1,9 +1,9 @@
+export interface RawGitHubDay {
+    contributionCount: number;
+    date: string;
+}
 export interface RawGitHubWeek {
-    contributionDays: [
-        {
-            contributionCount: number;
-        }
-    ];
+    contributionDays: RawGitHubDay[];
     firstDay: string;
 }
 
@@ -23,4 +23,5 @@ export interface RawGitHubData {
 export interface FormattedGitHubData {
     yearlyContributions: number;
     weeklyContributions: number;
+    streak: number;
 }

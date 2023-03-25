@@ -1,6 +1,6 @@
 import { RawDataFromAirtable, FormattedStat, FormattedStats, FormattedStatType } from '@/types/stats';
 import { FormattedSpotifyData, RawSpotifyTrack } from '@/types/spotify';
-import { RawGitHubData, FormattedGitHubData } from '@/types/github';
+import { RawGitHubData, RawGitHubDay, FormattedGitHubData } from '@/types/github';
 
 export const statsTranformer = ({ stats }: { stats: RawDataFromAirtable }): FormattedStats => {
     if (stats?.records?.length > 0) {
@@ -35,17 +35,38 @@ export const gitHubTransformer = ({ gitHubData }: { gitHubData: RawGitHubData })
     const yearlyContributions =
         gitHubData?.data?.user?.contributionsCollection?.contributionCalendar?.totalContributions;
 
-    const getFirstDayOfWeekDate = () => {
-        const date = new Date();
-        return date.getDate() - date.getDay() + (date.getDay() === 0 ? -6 : 1);
+    const today = new Date();
+
+    const transformToTwoDigit = (value: number) => {
+        if (String(value).length === 1) {
+            return String(value).padStart(2, '0');
+        }
+        return value;
     };
 
-    const firstDayOfWeekDate = `${new Date().getFullYear()}-${new Date().getMonth()}-${getFirstDayOfWeekDate()}`;
+    const getFirstDayOfWeekDate = () => {
+        return today.getDate() - (today.getDay() || 7);
+    };
+    const currentDay = `${today.getFullYear()}-${transformToTwoDigit(today.getMonth() + 1)}-${transformToTwoDigit(
+        today.getDate()
+    )}`;
+
+    const firstDayOfWeekDate = `${today.getFullYear()}-${transformToTwoDigit(
+        today.getMonth() + 1
+    )}-${transformToTwoDigit(getFirstDayOfWeekDate())}`;
 
     const contributionsArray = gitHubData?.data?.user?.contributionsCollection?.contributionCalendar?.weeks;
 
+    let mostRecentWeekIndex: number = 0;
+
     // Find Array Value that has a "firstDay" value equal to the first day of the current week
-    const mostRecentWeek = contributionsArray?.find((week) => (week.firstDay = firstDayOfWeekDate))?.contributionDays;
+    const mostRecentWeek = contributionsArray?.find((week, index) => {
+        if (week.firstDay === firstDayOfWeekDate) {
+            mostRecentWeekIndex = index;
+            return true;
+        }
+        return false;
+    })?.contributionDays;
 
     // Add up all the contributionCounts for the week
     const weeklyContributions = mostRecentWeek?.reduce(
@@ -53,8 +74,47 @@ export const gitHubTransformer = ({ gitHubData }: { gitHubData: RawGitHubData })
         0
     );
 
+    /*  Start of questionable code*/
+
+    // Calculate current Streak
+    const completedWeeksContributionsArray = contributionsArray.splice(0, mostRecentWeekIndex + 1).reverse();
+
+    let streak = 0;
+    let streakBroken = false;
+
+    const findStreakAdditionForWeek = (days: RawGitHubDay[], startingIndex = 0) => {
+        let streakBroken = false;
+        days.map((day, index) => {
+            if (index >= startingIndex) {
+                if (day.contributionCount > 0) {
+                    streak = streak + 1;
+                    return;
+                }
+
+                streakBroken = true;
+            }
+        });
+        return streakBroken;
+    };
+
+    completedWeeksContributionsArray.find((week, index) => {
+        const days: RawGitHubDay[] = week.contributionDays.reverse();
+        if (index === 0) {
+            // Start at today
+            const startingIndex = days.findIndex((day) => day.date === currentDay);
+            streakBroken = findStreakAdditionForWeek(days, startingIndex);
+        } else {
+            streakBroken = findStreakAdditionForWeek(days);
+        }
+
+        return streakBroken;
+    });
+
+    /* end of questionable code */
+
     return {
         yearlyContributions,
         weeklyContributions,
+        streak,
     };
 };
