@@ -5,6 +5,7 @@
     border: none;
     cursor: pointer;
     display: inline-block;
+    white-space: nowrap;
 
     /* Styles */
     border-radius: 0.5rem;

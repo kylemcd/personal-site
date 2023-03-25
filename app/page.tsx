@@ -5,6 +5,7 @@ import fetchGitHubData from '@/external-api/fetchGitHubData';
 import { Hero } from '@/components/home/Hero';
 import { Stats } from '@/components/home/Stats';
 import { RecentlyPlayed } from '@/components/home/RecentlyPlayed';
+import { GitHub } from '@/components/home/GitHub';
 
 import { statsTranformer, spotifyTransformer, gitHubTransformer } from '@/helpers/dataHelper';
 
@@ -64,8 +65,7 @@ const Home = async () => {
             <Hero />
             <div className={style.contentContainer}>
                 <div className={style.statsContainer}>
-                    {/* <Stats stats={stats!} /> */}
-
+                    <GitHub data={github} />
                     <RecentlyPlayed data={track!} />
                     <RecentlyPlayed data={track!} />
                     <RecentlyPlayed data={track!} />
