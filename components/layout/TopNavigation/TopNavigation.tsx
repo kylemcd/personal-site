@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 import styles from './TopNavigation.module.css';
 import { Heading } from '@/components/global/Typography';
@@ -11,9 +12,11 @@ const TopNavigation = () => {
         <>
             <div className={formatClassNames([[styles.container]])}>
                 <div className={styles.filler} />
-                <Heading color={'--primary-color'} size="lg" element="h1">
-                    KPM
-                </Heading>
+                <Link href="/">
+                    <Heading color={'--primary-color'} size="lg" element="h1">
+                        KPM
+                    </Heading>
+                </Link>
                 <div className={styles.menuContainer}>
                     <Menu />
                 </div>

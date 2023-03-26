@@ -21,7 +21,9 @@ const Menu = () => {
     const [activeTheme, setActiveTheme] = usePersistedState('theme', THEMES[0]);
 
     React.useEffect(() => {
-        document.documentElement.style.setProperty('--primary-color', activeTheme);
+        if (activeTheme) {
+            document.documentElement.style.setProperty('--primary-color', activeTheme);
+        }
     }, [activeTheme]);
 
     useOnClickOutside({ ref: menuContainer, handler: () => setIsMenuOpen(false) });

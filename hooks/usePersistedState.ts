@@ -1,48 +1,20 @@
-'use client';
 import React from 'react';
+import { parseCookies, setCookie } from 'nookies';
 
 const usePersistedState = (name: string, defaultValue: any) => {
-    const [value, setValue] = React.useState(defaultValue);
-    const [isReady, setIsReady] = React.useState(false);
-    const nameRef = React.useRef(name);
+    const cookies = parseCookies();
+    const cookieValue = cookies[`persisted-${name}`];
+
+    const [value, setValue] = React.useState(cookieValue || defaultValue);
 
     React.useEffect(() => {
-        const observer = new MutationObserver((mutations: MutationRecord[]) => {
-            if (typeof window !== 'undefined' && window?.localStorage) {
-                setIsReady(true);
-            }
-        });
-
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ['style'],
-        });
-
-        return () => {
-            observer.disconnect();
-        };
-    }, []);
-
-    React.useEffect(() => {
-        if (isReady) {
-            try {
-                const storedValue = localStorage.getItem(name);
-                if (storedValue !== null) {
-                    setValue(storedValue);
-                } else {
-                    localStorage.setItem(name, defaultValue);
-                }
-            } catch {
-                setValue(defaultValue);
-            }
+        if (value) {
+            setCookie(null, `persisted-${name}`, value, {
+                maxAge: 10000 * 24 * 60 * 60 * 1000,
+                path: '/',
+            });
         }
-    }, [isReady]);
-
-    React.useEffect(() => {
-        if (isReady && value) {
-            localStorage.setItem(name, value);
-        }
-    }, [isReady, value]);
+    }, [value]);
 
     return [value, setValue];
 };
