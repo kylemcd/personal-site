@@ -1,42 +1,36 @@
-import { useEffect, useState } from 'react';
+'use client';
+import { notFound } from 'next/navigation';
 import Head from 'next/head';
 import { allPosts, Post } from 'contentlayer/generated';
-import styles from './PostStyles.module.css';
+
 import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
 import { HSLString, HexString, isHSLString } from '@/types/colors';
 import { hslToHex, pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
 
-export async function getStaticPaths() {
-    const paths: string[] = allPosts.map((post: any) => `/posts/${post._raw.flattenedPath}`);
-    return {
-        paths,
-        fallback: false,
-    };
-}
+import styles from './PostStyles.module.css';
 
-export async function getStaticProps({ params }: any) {
+const getPost = ({ params }: any) => {
     const post: Post = allPosts.find((post: any) => post._raw.flattenedPath === params.slug)!;
     return {
-        props: {
-            post,
-        },
+        post: post,
     };
-}
+};
 
-const PostLayout = ({ post }: { post: Post }) => {
+const PostLayout = ({ params }: any) => {
+    const { post } = getPost({ params });
     const color = useCSSVariableObserver('--primary-color');
-    const [fontColor, setFontColor] = useState('#000000');
 
-    useEffect(() => {
-        if (color) {
-            let backgroundColor = color as HSLString | HexString;
-            if (isHSLString(backgroundColor)) {
-                backgroundColor = hslToHex(backgroundColor);
-            }
-            const fontColor = pickFontColorBasedonBackgroundColor(backgroundColor, '#ffffff', '#000000');
-            setFontColor(fontColor);
+    const calculateFontColor = (color: HSLString | HexString) => {
+        let backgroundColor = color;
+        if (isHSLString(backgroundColor)) {
+            backgroundColor = hslToHex(backgroundColor);
         }
-    }, [color]);
+        return pickFontColorBasedonBackgroundColor(backgroundColor, '#ffffff', '#000000');
+    };
+
+    if (!post) {
+        return notFound();
+    }
 
     return (
         <>
@@ -46,10 +40,10 @@ const PostLayout = ({ post }: { post: Post }) => {
             <article>
                 <div className={styles.headerContainer}>
                     <div className={styles.headerContentContainer}>
-                        <h1 className={styles.postTitle} style={{ color: fontColor }}>
+                        <h1 className={styles.postTitle} style={{ color: calculateFontColor(color) }}>
                             {post.title}
                         </h1>
-                        <span className={styles.postDate} style={{ color: fontColor }}>
+                        <span className={styles.postDate} style={{ color: calculateFontColor(color) }}>
                             {String(
                                 new Date(post.date).toLocaleDateString('en-us', {
                                     weekday: 'long',
