@@ -89,7 +89,7 @@ const Home = async () => {
             <div className={style.contentContainer}>
                 <div className={style.statsContainer}>
                     <RecentlyPlayed data={track!} />
-                    <RecentlyGamed data={steam} />
+                    <RecentlyGamed data={steam!} />
                     <GitHub data={github} />
                 </div>
             </div>
