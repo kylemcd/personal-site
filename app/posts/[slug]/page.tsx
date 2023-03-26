@@ -1,14 +1,14 @@
-import fs from 'fs';
+const { promises: fs } = require('fs');
 import path from 'path';
 import { serialize } from 'next-mdx-remote/serialize';
 import { Frontmatter, Post } from '@/types/posts';
 import { MdxContent } from './mdx-content';
 
 async function getPost(filepath: string): Promise<Post<Frontmatter>> {
-    const post = path.resolve('.', `posts${filepath}`);
+    const post = path.join(process.cwd(), 'posts' + filepath);
 
     // Read the file from the filesystem
-    const raw = fs.readFileSync(post, 'utf-8');
+    const raw = await fs.readFileSync(post, 'utf-8');
     // Serialize the MDX content and parse the frontmatter
     const serialized = await serialize(raw, {
         parseFrontmatter: true,
