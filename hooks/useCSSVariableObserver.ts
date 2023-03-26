@@ -1,5 +1,5 @@
 import React from 'react';
-import { CSSVariable, HSLString, Color, isCSSVariable, isHSLString } from '@/types/colors';
+import { CSSVariable, HSLString, Color, isCSSVariable, isHSLString, HexString } from '@/types/colors';
 
 const getHSLValueFromCSSVariable = ({ cssVar }: { cssVar: CSSVariable }): HSLString => {
     return getComputedStyle(document.documentElement)?.getPropertyValue(cssVar) as HSLString;
@@ -15,7 +15,7 @@ const useCSSVariableObserver = (colorProp: Color): HSLString => {
     //         : (colorProp as HSLString)
     // );
 
-    const [color, setColor] = React.useState('hsl(0,0%,0%)' as HSLString);
+    const [color, setColor] = React.useState(isCSSVariable(colorProp) ? 'hsl(0,0%,0%)' : (colorProp as HSLString));
 
     React.useEffect(() => {
         if (isCSSVariable(colorProp)) {
@@ -27,9 +27,15 @@ const useCSSVariableObserver = (colorProp: Color): HSLString => {
                 }
             });
 
-            observer.observe(document.documentElement, {
+            const htmlElement = document.documentElement;
+
+            // Get initial value
+            setColor(htmlElement.style.getPropertyValue(colorProp) as HSLString);
+
+            // Observer for changes
+            observer.observe(htmlElement, {
                 attributes: true,
-                attributeFilter: ['style'],
+                // attributeFilter: ['style'],
             });
 
             return () => {

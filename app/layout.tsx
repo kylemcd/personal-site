@@ -1,7 +1,12 @@
 // import './globals.css';
 import React from 'react';
-import { DefaultLayout } from '@/components/global/DefaultLayout';
-import { cookies } from 'next/headers'; // Import cookies
+import { cookies } from 'next/headers';
+
+import '@/app/globals.css';
+import { TopNavigation } from '@/components/layout/TopNavigation';
+
+import { Inter } from 'next/font/google';
+const inter = Inter({ subsets: ['latin'] });
 
 const getThemeColor = async () => {
     const nextCookies = cookies();
@@ -18,8 +23,9 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
     const cssVariables = themeColor ? ({ '--primary-color': themeColor } as React.CSSProperties) : {};
     return (
         <html lang="en" style={cssVariables}>
-            <body>
-                <DefaultLayout>{children}</DefaultLayout>
+            <body className={inter.className}>
+                <TopNavigation />
+                {children}
             </body>
         </html>
     );

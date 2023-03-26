@@ -5,7 +5,6 @@
     border-bottom-color: var(--primary-border-color);
     border-bottom-style: solid;
     border-bottom-width: 2px;
-    box-shadow: 0 0 0 transparent;
     display: flex;
     justify-content: space-between;
     opacity: 0.98;
@@ -13,7 +12,6 @@
     position: sticky;
     top: 0;
     left: 0;
-    transform: translateZ(0);
     width: 100%;
     z-index: 100;
 }

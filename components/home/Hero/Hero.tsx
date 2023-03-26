@@ -6,6 +6,7 @@ import { Heading } from '@/components/global/Typography';
 import styles from './Hero.module.css';
 
 const playfairDisplay = Playfair_Display({ subsets: ['latin'] });
+
 const Hero = () => {
     return (
         <div className={styles.container}>
