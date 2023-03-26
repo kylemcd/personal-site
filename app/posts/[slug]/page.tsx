@@ -5,8 +5,10 @@ import { Frontmatter, Post } from '@/types/posts';
 import { MdxContent } from './mdx-content';
 
 async function getPost(filepath: string): Promise<Post<Frontmatter>> {
+    const post = path.join(process.cwd(), 'posts' + filepath);
+
     // Read the file from the filesystem
-    const raw = await fs.readFile(path.join(__dirname, filepath), 'utf-8');
+    const raw = await fs.readFile(post, 'utf-8');
     // Serialize the MDX content and parse the frontmatter
     const serialized = await serialize(raw, {
         parseFrontmatter: true,
@@ -25,7 +27,7 @@ async function getPost(filepath: string): Promise<Post<Frontmatter>> {
 // import Test from '../../../posts/avoiding-burnout'
 
 const Post = async ({ params }: { params: any }) => {
-    const { serialized, frontmatter } = await getPost(`../../../../../posts/${params.slug}/index.md`);
+    const { serialized, frontmatter } = await getPost(`/${params.slug}/index.md`);
 
     return (
         <div>
