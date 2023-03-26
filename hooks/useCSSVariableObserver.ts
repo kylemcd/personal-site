@@ -9,11 +9,13 @@ const getHSLValueFromCSSVariable = ({ cssVar }: { cssVar: CSSVariable }): HSLStr
 // listen to changes so we can update the button color
 // if not, then just return the HSL value
 const useCSSVariableObserver = (colorProp: Color): HSLString => {
-    const [color, setColor] = React.useState(
-        isCSSVariable(colorProp)
-            ? getHSLValueFromCSSVariable({ cssVar: colorProp as CSSVariable })
-            : (colorProp as HSLString)
-    );
+    // const [color, setColor] = React.useState(
+    //     isCSSVariable(colorProp)
+    //         ? getHSLValueFromCSSVariable({ cssVar: colorProp as CSSVariable })
+    //         : (colorProp as HSLString)
+    // );
+
+    const [color, setColor] = React.useState('hsl(0,0%,0%)' as HSLString);
 
     React.useEffect(() => {
         if (isCSSVariable(colorProp)) {
@@ -33,6 +35,8 @@ const useCSSVariableObserver = (colorProp: Color): HSLString => {
             return () => {
                 observer.disconnect();
             };
+        } else {
+            setColor(colorProp);
         }
     }, []);
 

@@ -1,17 +1,12 @@
-import { Inter } from 'next/font/google';
-
 import './globals.css';
 
-import { TopNavigation } from '@/components/layout/TopNavigation';
-
-const inter = Inter({ subsets: ['latin'] });
+import { DefaultLayout } from '@/components/global/DefaultLayout';
 
 const RootLayout = async ({ children }: { children: React.ReactNode }) => {
     return (
         <html lang="en">
-            <body className={inter.className}>
-                <TopNavigation />
-                {children}
+            <body>
+                <DefaultLayout>{children}</DefaultLayout>
             </body>
         </html>
     );
