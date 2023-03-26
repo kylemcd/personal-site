@@ -17,6 +17,7 @@ export interface RawSteamGameData {
         data: {
             name: string;
             header_image: string;
+            steam_appid: string;
         };
     };
 }
