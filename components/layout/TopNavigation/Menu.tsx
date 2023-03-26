@@ -36,7 +36,7 @@ const Menu = () => {
                 type="button"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 size="sm"
-                color={`--tertiary-background-color`}
+                color={`hsl(0, 0%, 84%)`}
                 lightnessModifier={2}
                 shadowless={true}
             >

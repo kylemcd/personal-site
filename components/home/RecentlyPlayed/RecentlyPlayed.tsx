@@ -9,25 +9,35 @@ import { Button } from '@/components/global/Button';
 import styles from './RecentlyPlayed.module.css';
 
 const RecentlyPlayed = ({ data }: { data: FormattedSpotifyData }) => {
-    if (data?.error) {
-        return <div>error</div>;
-    }
-
     return (
         <StatsContainer>
-            <>
+            <div className={styles.container}>
                 <div className={styles.infoContainer}>
                     <Image
-                        src={data?.albumArt?.url!}
-                        width={data?.albumArt?.width}
-                        height={data?.albumArt?.height}
-                        alt={`${data?.songName} by ${data?.artistName}`}
+                        src={data?.image?.url!}
+                        width={data?.image?.width}
+                        height={data?.image?.height}
+                        alt={`${data?.name}`}
                         className={styles.albumArt}
                     />
                     <div className={styles.copyContainer}>
-                        <TertiaryHeading color={`--primary-font-color`}>{data?.songName}</TertiaryHeading>
-                        <Paragraph color={`--secondary-font-color`}>{data?.artistName}</Paragraph>
+                        <TertiaryHeading color={`--primary-font-color`}>{data?.name}</TertiaryHeading>
                     </div>
+                </div>
+                <div className={styles.trackContainer}>
+                    {data?.tracks.map((track) => (
+                        <div className={styles.track}>
+                            <div>
+                                <Paragraph color={`--primary-font-color`} style={{ fontWeight: 500 }}>
+                                    {track.songName}
+                                </Paragraph>
+                            </div>
+                            <div className={styles.trackInfo}>
+                                <Paragraph color={`--primary-font-color`}>{track.artistName}</Paragraph>
+                                <Paragraph color={`--secondary-font-color`}>{track.duration}</Paragraph>
+                            </div>
+                        </div>
+                    ))}
                 </div>
                 <div className={styles.bottomContainer}>
                     <div className={styles.nowPlayingContainer}>
@@ -42,7 +52,7 @@ const RecentlyPlayed = ({ data }: { data: FormattedSpotifyData }) => {
                         Open on Spotify
                     </Button>
                 </div>
-            </>
+            </div>
         </StatsContainer>
     );
 };

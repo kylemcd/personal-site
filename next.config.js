@@ -13,6 +13,12 @@ const nextConfig = {
             },
             {
                 protocol: 'https',
+                hostname: 'mosaic.scdn.co',
+                port: '',
+                pathname: '**',
+            },
+            {
+                protocol: 'https',
                 hostname: 'cdn.akamai.steamstatic.com',
                 port: '',
                 pathname: '**',

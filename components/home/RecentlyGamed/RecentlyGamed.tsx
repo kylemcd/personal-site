@@ -10,7 +10,7 @@ import styles from './RecentlyGamed.module.css';
 const RecentlyGamed = ({ data }: { data: FormattedSteamData }) => {
     return (
         <StatsContainer>
-            <>
+            <div className={styles.container}>
                 <div className={styles.infoContainer}>
                     <div className={styles.copyContainer}>
                         <div className={styles.copyContainerTop}>
@@ -23,12 +23,13 @@ const RecentlyGamed = ({ data }: { data: FormattedSteamData }) => {
                             />
                             <div className={styles.copy}>
                                 <TertiaryHeading color={`--primary-font-color`}>{data?.name}</TertiaryHeading>
-                                <Paragraph color={`--secondary-font-color`}>
-                                    Last played on {data?.lastPlayed}
-                                </Paragraph>
                             </div>
                         </div>
                         <div className={styles.gameTimeContainer}>
+                            <div className={styles.gameTime}>
+                                <Paragraph color={`--primary-font-color`}>Last played</Paragraph>
+                                <Paragraph color={`--secondary-font-color`}>{data?.lastPlayed}</Paragraph>
+                            </div>
                             <div className={styles.gameTime}>
                                 <Paragraph color={`--primary-font-color`}>Last 2 weeks</Paragraph>
                                 <Paragraph color={`--secondary-font-color`}>
@@ -52,7 +53,7 @@ const RecentlyGamed = ({ data }: { data: FormattedSteamData }) => {
                         Open on Steam
                     </Button>
                 </div>
-            </>
+            </div>
         </StatsContainer>
     );
 };

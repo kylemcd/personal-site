@@ -14,7 +14,7 @@ export interface RawDataFromAirtable {
     records: AirtableRecord[];
 }
 
-export type FormattedStatType = 'stat' | 'track';
+export type FormattedStatType = 'stat' | 'playlist';
 
 export interface FormattedStat {
     name?: string;

@@ -20,13 +20,13 @@ import {
 
 import { FormattedGitHubData } from '@/types/github';
 import { RawDataFromAirtable, FormattedStats } from '@/types/stats';
-import { RawSpotifyTrack, FormattedSpotifyData } from '@/types/spotify';
+import { RawSpotifyTrack, FormattedSpotifyData, RawSpotifyPlaylistData } from '@/types/spotify';
 import { FormattedSteamData, RawSteamGameData, RawSteamLastPlayedData } from '@/types/steam';
 
 import style from './page.module.css';
 
 interface FetchAndFormatResult {
-    track: FormattedSpotifyData | null;
+    playlist: FormattedSpotifyData | null;
     stats: FormattedStats | null;
     github: FormattedGitHubData | null;
     steam: FormattedSteamData | null;
@@ -35,7 +35,7 @@ interface FetchAndFormatResult {
 
 const fetchAndFormatData = async (): Promise<FetchAndFormatResult> => {
     const result: FetchAndFormatResult = {
-        track: null,
+        playlist: null,
         stats: null,
         github: null,
         steam: null,
@@ -53,12 +53,11 @@ const fetchAndFormatData = async (): Promise<FetchAndFormatResult> => {
     result.stats = formattedStats;
 
     // Spotify
-    const trackId = formattedStats.stats!.find((stat) => stat.type === 'track' && stat.value !== '');
+    const playlistId = formattedStats.stats!.find((stat) => stat.type === 'playlist' && stat.value !== '');
 
-    if (trackId) {
-        const track: RawSpotifyTrack = await fetchSpotifyData(trackId?.value!);
-
-        result.track = spotifyTransformer({ track });
+    if (playlistId) {
+        const playlist: RawSpotifyPlaylistData = await fetchSpotifyData(playlistId?.value!);
+        result.playlist = spotifyTransformer({ playlist });
     }
 
     // GitHub
@@ -77,7 +76,7 @@ const fetchAndFormatData = async (): Promise<FetchAndFormatResult> => {
 };
 
 const Home = async () => {
-    const { track, stats, github, steam, error } = await fetchAndFormatData();
+    const { playlist, stats, github, steam, error } = await fetchAndFormatData();
 
     if (error) {
         return null;
@@ -87,10 +86,11 @@ const Home = async () => {
         <>
             <Hero />
             <div className={style.contentContainer}>
+                <div className={style.content}></div>
                 <div className={style.statsContainer}>
-                    <RecentlyPlayed data={track!} />
-                    <RecentlyGamed data={steam!} />
                     <GitHub data={github} />
+                    <RecentlyPlayed data={playlist!} />
+                    <RecentlyGamed data={steam!} />
                 </div>
             </div>
         </>

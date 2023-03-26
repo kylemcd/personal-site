@@ -1,5 +1,5 @@
 import { RawDataFromAirtable, FormattedStat, FormattedStats, FormattedStatType } from '@/types/stats';
-import { FormattedSpotifyData, RawSpotifyTrack } from '@/types/spotify';
+import { FormattedSpotifyData, RawSpotifyPlaylistData, RawSpotifyTrack } from '@/types/spotify';
 import { RawGitHubData, RawGitHubDay, FormattedGitHubData } from '@/types/github';
 import {
     FormattedSteamLastPlayedData,
@@ -25,16 +25,30 @@ export const statsTranformer = ({ stats }: { stats: RawDataFromAirtable }): Form
     return { error: { errorReason: 'No status to be formatted' } };
 };
 
-export const spotifyTransformer = ({ track }: { track: RawSpotifyTrack }): FormattedSpotifyData => {
-    if (!track) {
-        return { error: { errorReason: 'No track' } };
-    }
+export const spotifyTransformer = ({ playlist }: { playlist: RawSpotifyPlaylistData }): FormattedSpotifyData => {
+    const msToMinutesSeconds = (ms: number) => {
+        // Convert milliseconds to seconds
+        let totalSeconds = Math.floor(ms / 1000);
+
+        // Extract minutes and seconds
+        let minutes = Math.floor(totalSeconds / 60);
+        let seconds = totalSeconds % 60;
+
+        // Format the output as "mm:ss"
+        return minutes.toString().padStart(2, '0') + ':' + seconds.toString().padStart(2, '0');
+    };
 
     return {
-        artistName: track?.artists?.[0]?.name ?? null,
-        songName: track?.name ?? null,
-        albumArt: track?.album?.images?.[0] ?? null,
-        href: track?.external_urls?.spotify ?? null,
+        name: playlist?.name,
+        image: playlist?.images[0],
+        href: playlist?.external_urls?.spotify,
+        tracks: playlist?.tracks?.items?.slice(0, 3).map(({ track }) => ({
+            artistName: track?.artists?.[0]?.name,
+            songName: track?.name,
+            duration: msToMinutesSeconds(track?.duration_ms),
+            albumArt: track?.album?.images?.[0],
+            href: track?.external_urls?.spotify,
+        })),
     };
 };
 
@@ -80,8 +94,7 @@ export const gitHubTransformer = ({ gitHubData }: { gitHubData: RawGitHubData })
         (accumulator: any, currentValue: { contributionCount: any }) => accumulator + currentValue?.contributionCount,
         0
     );
-
-    /*  Start of questionable code*/
+    /*  Start of questionable code */
 
     // Calculate current Streak
     const completedWeeksContributionsArray = contributionsArray.splice(0, mostRecentWeekIndex + 1).reverse();
@@ -122,6 +135,7 @@ export const gitHubTransformer = ({ gitHubData }: { gitHubData: RawGitHubData })
     return {
         yearlyContributions,
         weeklyContributions,
+        mostRecentWeek: mostRecentWeek?.reverse(),
         streak,
     };
 };
@@ -143,16 +157,30 @@ export const steamLastPlayedTransformer = (data: RawSteamLastPlayedData): Format
         return { days: daysDisplay, hours: hoursDisplay, minutes: minutesDisplay };
     };
 
-    const convertEpocToReadableTime = (epoch: number): string => {
-        const date = new Date(epoch * 1000);
-        return date.toLocaleDateString('en-us', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+    const convertEpocToReadableTime = (epoch: number): Date => {
+        return new Date(epoch * 1000);
+    };
+
+    const daysAgo = (date: Date) => {
+        const today = new Date();
+        const inputDate = new Date(date);
+        const timeDiff = today.getTime() - inputDate.getTime();
+        const diffInDays = Math.round(timeDiff / (1000 * 3600 * 24)); // 1000ms * 3600s * 24hrs
+
+        if (diffInDays === 0) {
+            return 'today';
+        } else if (diffInDays === 1) {
+            return `${diffInDays} day ago`;
+        } else {
+            return `${diffInDays} days ago`;
+        }
     };
 
     const mostRecentGame = data.response.games.sort((a, b) => (a.rtime_last_played > b.rtime_last_played ? -1 : 1))[0];
 
     const totalPlayTime = convertMinutesToReadableTime(mostRecentGame.playtime_forever);
     const lastTwoWeeksPlayTime = convertMinutesToReadableTime(mostRecentGame.playtime_2weeks);
-    const lastPlayed = convertEpocToReadableTime(mostRecentGame.rtime_last_played);
+    const lastPlayed = daysAgo(convertEpocToReadableTime(mostRecentGame.rtime_last_played));
 
     return { totalPlayTime, lastTwoWeeksPlayTime, lastPlayed, appid: mostRecentGame.appid };
 };

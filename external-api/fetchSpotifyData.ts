@@ -1,6 +1,6 @@
-import { RawSpotifyTrack } from '@/types/spotify';
+import { RawSpotifyPlaylistData } from '@/types/spotify';
 
-const fetchSpotifyData = async (trackId: string): Promise<RawSpotifyTrack> => {
+const fetchSpotifyData = async (playlistId: string): Promise<RawSpotifyPlaylistData> => {
     const authorizationResponse = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
         headers: {
@@ -16,7 +16,7 @@ const fetchSpotifyData = async (trackId: string): Promise<RawSpotifyTrack> => {
     const authorizationResponseJSON = await authorizationResponse.json();
 
     if (authorizationResponseJSON?.access_token) {
-        const trackLookUpResponse = await fetch('https://api.spotify.com/v1/tracks/' + trackId, {
+        const trackLookUpResponse = await fetch('https://api.spotify.com/v1/playlists/' + playlistId, {
             headers: { Authorization: `Bearer ${authorizationResponseJSON?.access_token}` },
             next: { revalidate: 3600 /* 1 hour */ },
         });

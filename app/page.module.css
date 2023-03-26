@@ -6,13 +6,30 @@
     position: relative;
     z-index: 8;
 }
-.statsContainer {
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 1rem;
+.content {
     margin: 0 auto;
     max-width: 1300px;
-    padding: 2rem;
+    padding: 1rem;
     width: 100%;
+}
+
+.statsContainer {
+    display: flex;
+    flex-direction: row;
+    gap: 1.5rem;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    padding-left: calc((100vw - 1300px) / 2);
+    padding-right: 4rem;
+    margin-left: 1rem;
+}
+
+.statsContainer > div {
+    /* min-width: 85vw; */
+}
+
+@media (min-width: 768px) {
+    .statsContainer > div {
+        min-width: 600px;
+    }
 }

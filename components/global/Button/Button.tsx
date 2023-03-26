@@ -6,7 +6,7 @@ import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
 import styles from './Button.module.css';
 
 import { HSLString, Color, isHSLString, HexString, isHexString } from '@/types/colors';
-import { hexToHSL } from '@/helpers/colorHelper';
+import { hexToHSL, hslToHex, pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
 
 type Size = 'xs' | 'sm' | 'md' | 'lg';
 type Type = 'a' | 'button' | 'Link';
@@ -35,15 +35,14 @@ const DEFAULT_LIGHTNESS_MODIFIER = 6;
 const LIGHTNESS_FONT_MINIMUM = 65;
 
 const getColorStyle = ({
-    hslString: initialHslString,
+    colorString,
     lightnessModifier,
 }: {
-    hslString: HSLString;
+    colorString: HSLString | HexString;
     lightnessModifier: number;
 }): { backgroundImage: string; color: string; borderColor: string } => {
-    let hslString = initialHslString;
     // Default back up just in case
-    if (typeof window === 'undefined' || !hslString) {
+    if (typeof window === 'undefined' || !colorString) {
         return {
             backgroundImage: `linear-gradient(to top, var(--primary-font-color), var(--secondary-font-color))`,
             color: `var(--tertiary-font-color)`,
@@ -51,24 +50,11 @@ const getColorStyle = ({
         };
     }
 
-    if (isHexString(hslString)) {
-        const hslFromHex = hexToHSL(hslString as HexString);
-        if (!hslFromHex) {
-            return {
-                backgroundImage: `linear-gradient(to top, var(--primary-font-color), var(--secondary-font-color))`,
-                color: `var(--tertiary-font-color)`,
-                borderColor: `var(--primary-font-color))`,
-            };
-        }
-
-        hslString = hslFromHex;
-    }
-
-    let lightness = 50;
-    let fontColor = `var(--primary-font-color)`;
+    const hexString = isHexString(colorString) ? (colorString as HexString) : hslToHex(colorString);
+    const hslString = isHSLString(colorString) ? (colorString as HSLString) : hexToHSL(colorString);
 
     // Get each indiviusal HSL Value
-    const hslSplit = hslString!
+    const hslSplit = hslString
         .match(/\((.*)\)/)!
         .pop()!
         ?.split(',')
@@ -79,20 +65,16 @@ const getColorStyle = ({
     const lighterHsl = `hsl(${hslSplit!
         .map((each, index) => {
             if (index === 2) {
-                lightness = parseInt(each.split('%')[0]);
+                const lightness = parseInt(each.split('%')[0]);
                 return `${lightness + lightnessModifier}%`;
             }
             return each;
         })
         .join(',')})`;
 
-    // Use lightnes to calculate font color (black or white)
-    if (lightness < LIGHTNESS_FONT_MINIMUM) {
-        fontColor = `var(--tertiary-font-color)`;
-    }
-
     const backgroundImage = `linear-gradient(to top, ${hslString}, ${lighterHsl})`;
     const borderColor = hslString;
+    const fontColor = pickFontColorBasedonBackgroundColor(hexString, '#ffffff', '#000000');
 
     return {
         backgroundImage,
@@ -139,7 +121,7 @@ const Button = ({
         return (
             <Link
                 href={href}
-                style={getColorStyle({ hslString: color, lightnessModifier })}
+                style={getColorStyle({ colorString: color, lightnessModifier })}
                 className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
                 {...otherProps}
             >
@@ -152,7 +134,7 @@ const Button = ({
         return (
             <a
                 href={href}
-                style={getColorStyle({ hslString: color, lightnessModifier })}
+                style={getColorStyle({ colorString: color, lightnessModifier })}
                 className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
                 {...otherProps}
             >
@@ -164,7 +146,7 @@ const Button = ({
     return (
         <button
             onClick={onClick}
-            style={getColorStyle({ hslString: color, lightnessModifier })}
+            style={getColorStyle({ colorString: color, lightnessModifier })}
             className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
             {...otherProps}
         >

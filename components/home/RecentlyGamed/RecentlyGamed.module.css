@@ -1,3 +1,11 @@
+.container {
+    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 500px;
+}
+
 .infoContainer {
     align-items: center;
     display: flex;
@@ -5,13 +13,6 @@
     padding: 1rem;
 }
 
-.infoContainer * h3 {
-}
-
-.infoContainer > p {
-    display: block;
-    margin: 1rem 0 0.5rem 0;
-}
 .copyContainer {
     align-items: center;
     display: flex;
@@ -29,6 +30,10 @@
     gap: 1rem;
 }
 
+.copy {
+    text-align: center;
+}
+
 .gameArt {
     border-color: var(--primary-border-color);
     border-style: solid;
@@ -36,7 +41,6 @@
     border-width: 1px;
     display: block;
     height: auto;
-    margin-right: 1rem;
 }
 
 .bottomContainer {
@@ -44,6 +48,7 @@
     border-top: 1px solid var(--primary-border-color);
     display: flex;
     justify-content: space-between;
+    margin-top: auto;
     padding: 1rem;
 }
 
@@ -55,6 +60,14 @@
 .gameTimeContainer {
     display: flex;
     gap: 1rem;
+    justify-content: space-between;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .gameTimeContainer {
+        justify-content: flex-start;
+    }
 }
 
 .gameTime {
