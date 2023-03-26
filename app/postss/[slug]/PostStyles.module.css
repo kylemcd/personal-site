@@ -1,0 +1,81 @@
+.postContainer {
+    margin: 0 auto;
+    max-width: 900px;
+    padding: 0 1rem;
+    width: 100%;
+}
+
+.headerContainer {
+    background-color: var(--primary-color);
+    padding: 4rem 0;
+}
+
+.headerContentContainer {
+    margin: 0 auto;
+    max-width: 900px;
+    padding: 0 1rem;
+    width: 100%;
+}
+
+.postTitle {
+    font-size: 3.25rem;
+    line-height: 3.5rem;
+    letter-spacing: -2px;
+    margin-bottom: 0.5rem;
+}
+
+.postDate {
+    opacity: 0.8;
+}
+
+.postStyles {
+    color: var(--primary-font-color);
+    padding: 2rem 0;
+}
+
+.postStyles h1 {
+    font-size: 2rem;
+    line-height: 3.5rem;
+    margin: 1rem 0;
+}
+
+.postStyles h2 {
+    font-size: 1.5rem;
+    line-height: 2.25rem;
+    margin: 1rem 0;
+}
+
+.postStyles h3 {
+    font-size: 1rem;
+    line-height: 1.75rem;
+    font-weight: 500;
+    margin: 1rem 0;
+}
+
+.postStyles p {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    margin: 1rem 0;
+}
+
+.postStyles a {
+    color: var(--primary-font-color);
+    position: relative;
+}
+
+.postStyles a:after {
+    content: '';
+    background-color: var(--primary-color);
+    height: 1px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    transform-origin: top center;
+    transition: transform 0.1s linear;
+}
+
+.postContainer a:hover:after {
+    content: '';
+    transform: scaleY(2);
+}
