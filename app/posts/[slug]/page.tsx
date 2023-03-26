@@ -5,7 +5,7 @@ import { Frontmatter, Post } from '@/types/posts';
 import { MdxContent } from './mdx-content';
 
 async function getPost(filepath: string): Promise<Post<Frontmatter>> {
-    const post = path.join(process.cwd(), 'posts' + filepath);
+    const post = path.resolve('.', `posts${filepath}`);
 
     // Read the file from the filesystem
     const raw = fs.readFileSync(post, 'utf-8');
