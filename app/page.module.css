@@ -20,16 +20,7 @@
     overflow-x: scroll;
     overflow-y: hidden;
     padding-left: calc((100vw - 1300px) / 2);
-    padding-right: 4rem;
     margin-left: 1rem;
-}
-
-.statsContainer > div {
-    /* min-width: 85vw; */
-}
-
-@media (min-width: 768px) {
-    .statsContainer > div {
-        min-width: 600px;
-    }
+    padding-top: 2rem;
+    padding-bottom: 2rem;
 }

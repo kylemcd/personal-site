@@ -6,6 +6,12 @@
     min-width: 500px;
 }
 
+@media (min-width: 768px) {
+    .container {
+        min-width: 600px;
+    }
+}
+
 .infoContainer {
     align-items: center;
     display: flex;
@@ -77,6 +83,7 @@
     border: 1px solid var(--primary-border-color);
     flex-direction: column;
     padding: 1rem;
+    width: 100%;
 }
 
 .gameTime > p:first-child {
