@@ -1,7 +1,7 @@
-import fs from 'fs';
 import path from 'path';
+import fs from 'fs';
 
-const readMarkdownFiles = (req, res) => {
+const fetchFiles = async (req, res) => {
     const dir = path.resolve('./posts');
 
     const filenames = fs.readdirSync(dir);
@@ -9,8 +9,8 @@ const readMarkdownFiles = (req, res) => {
     const markdownFiles = filenames.map((name) => path.join('/', dir, name));
 
     console.log('Posts Brought In: ', markdownFiles);
-    res.statusCode = 200;
-    res.json(markdownFiles);
+    res.status = 200;
+    res.json();
 };
 
-export default readMarkdownFiles;
+export default fetchFiles;

@@ -1,4 +1,4 @@
-import fs, { promises as fsPromises } from 'fs';
+import { promises as fsPromises } from 'fs';
 import path from 'path';
 import { serialize } from 'next-mdx-remote/serialize';
 import { Frontmatter, Post } from '@/types/posts';
@@ -24,22 +24,7 @@ async function getPost(filepath: string): Promise<Post<Frontmatter>> {
     };
 }
 
-const fetchFiles = async () => {
-    const dir = path.resolve('./posts');
-
-    const filenames = fs.readdirSync(dir);
-
-    const markdownFiles = filenames.map((name) => path.join('/', dir, name));
-
-    console.log('Posts Brought In: ', markdownFiles);
-    // res.statusCode = 200;
-    // res.json(markdownFiles);
-};
-
-// import Test from '../../../posts/avoiding-burnout'
-
 const Post = async ({ params }: { params: any }) => {
-    await fetchFiles();
     const { serialized, frontmatter } = await getPost(`/${params.slug}/index.md`);
 
     return (
