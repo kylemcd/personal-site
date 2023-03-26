@@ -6,6 +6,7 @@ import {
     FormattedSteamGameData,
     RawSteamGameData,
     RawSteamLastPlayedData,
+    FormattedSteamTime,
 } from '@/types/steam';
 
 export const statsTranformer = ({ stats }: { stats: RawDataFromAirtable }): FormattedStats => {
@@ -126,7 +127,7 @@ export const gitHubTransformer = ({ gitHubData }: { gitHubData: RawGitHubData })
 };
 
 export const steamLastPlayedTransformer = (data: RawSteamLastPlayedData): FormattedSteamLastPlayedData => {
-    const convertMinutesToReadableTime = (minutes: number): string => {
+    const convertMinutesToReadableTime = (minutes: number): FormattedSteamTime => {
         const oneDayInMinutes = 1440; // 24 hours * 60 minutes
         const oneHourInMinutes = 60;
 
@@ -134,12 +135,12 @@ export const steamLastPlayedTransformer = (data: RawSteamLastPlayedData): Format
         const hours = Math.floor((minutes % oneDayInMinutes) / oneHourInMinutes);
         const remainingMinutes = minutes % oneHourInMinutes;
 
-        const daysDisplay = days > 0 ? days + (days == 1 ? ' day, ' : ' days, ') : '';
-        const hoursDisplay = hours > 0 ? hours + (hours == 1 ? ' hour, ' : ' hours, ') : '';
+        const daysDisplay = days > 0 ? days + (days == 1 ? ' day, ' : ' days') : '';
+        const hoursDisplay = hours > 0 ? hours + (hours == 1 ? ' hour, ' : ' hours') : '';
         const minutesDisplay =
             remainingMinutes > 0 ? remainingMinutes + (remainingMinutes == 1 ? ' minute' : ' minutes') : '';
 
-        return daysDisplay + hoursDisplay + minutesDisplay;
+        return { days: daysDisplay, hours: hoursDisplay, minutes: minutesDisplay };
     };
 
     const convertEpocToReadableTime = (epoch: number): string => {

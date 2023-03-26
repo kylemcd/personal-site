@@ -21,9 +21,15 @@ export interface RawSteamGameData {
     };
 }
 
+export interface FormattedSteamTime {
+    days: string;
+    hours: string;
+    minutes: string;
+}
+
 export interface FormattedSteamLastPlayedData {
-    totalPlayTime: string;
-    lastTwoWeeksPlayTime: string;
+    totalPlayTime: FormattedSteamTime;
+    lastTwoWeeksPlayTime: FormattedSteamTime;
     lastPlayed: string;
     appid: number;
 }

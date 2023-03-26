@@ -2,10 +2,11 @@ import Image from 'next/image';
 
 import { FormattedSpotifyData } from '@/types/spotify';
 
-import styles from './RecentlyPlayed.module.css';
 import { StatsContainer } from '@/components/home/StatsContainer';
 import { TertiaryHeading, Paragraph } from '@/components/global/Typography';
 import { Button } from '@/components/global/Button';
+
+import styles from './RecentlyPlayed.module.css';
 
 const RecentlyPlayed = ({ data }: { data: FormattedSpotifyData }) => {
     if (data?.error) {
@@ -30,7 +31,7 @@ const RecentlyPlayed = ({ data }: { data: FormattedSpotifyData }) => {
                 </div>
                 <div className={styles.bottomContainer}>
                     <div className={styles.nowPlayingContainer}>
-                        <Paragraph color={`--secondary-font-color`}>Now Playing</Paragraph>
+                        <Paragraph color={`--secondary-font-color`}>Recently Played</Paragraph>
                         <span className={styles.musicBars}>
                             <span className={styles.musicBar + ' ' + styles.musicBar1} />
                             <span className={styles.musicBar + ' ' + styles.musicBar2} />

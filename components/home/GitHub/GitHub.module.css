@@ -1,12 +1,12 @@
 .container {
-    padding: 2rem;
+    padding: 1rem;
 }
 
 .headingContainer {
     align-items: center;
     display: flex;
     justify-content: space-between;
-    padding-bottom: 2rem;
+    padding-bottom: 1.5rem;
     width: 100%;
 }
 

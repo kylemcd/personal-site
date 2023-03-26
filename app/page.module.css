@@ -9,6 +9,7 @@
 .statsContainer {
     display: flex;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 1rem;
     margin: 0 auto;
     max-width: 1300px;

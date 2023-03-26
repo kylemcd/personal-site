@@ -1,0 +1,72 @@
+.infoContainer {
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+    padding: 1rem;
+}
+
+.infoContainer * h3 {
+}
+
+.infoContainer > p {
+    display: block;
+    margin: 1rem 0 0.5rem 0;
+}
+.copyContainer {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    width: 100%;
+}
+
+.copyContainerTop {
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.gameArt {
+    border-color: var(--primary-border-color);
+    border-style: solid;
+    border-radius: 0.5rem;
+    border-width: 1px;
+    display: block;
+    height: auto;
+    margin-right: 1rem;
+}
+
+.bottomContainer {
+    align-items: center;
+    border-top: 1px solid var(--primary-border-color);
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem;
+}
+
+.recentlyGamedContainer {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.gameTimeContainer {
+    display: flex;
+    gap: 1rem;
+}
+
+.gameTime {
+    display: flex;
+    background-color: var(--secondary-background-color);
+    border-radius: 0.5rem;
+    border: 1px solid var(--primary-border-color);
+    flex-direction: column;
+    padding: 1rem;
+}
+
+.gameTime > p:first-child {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}

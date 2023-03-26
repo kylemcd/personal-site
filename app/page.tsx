@@ -7,6 +7,7 @@ import fetchSteamGame from '@/external-api/fetchSteamGame';
 import { Hero } from '@/components/home/Hero';
 import { Stats } from '@/components/home/Stats';
 import { RecentlyPlayed } from '@/components/home/RecentlyPlayed';
+import { RecentlyGamed } from '@/components/home/RecentlyGamed';
 import { GitHub } from '@/components/home/GitHub';
 
 import {
@@ -76,7 +77,7 @@ const fetchAndFormatData = async (): Promise<FetchAndFormatResult> => {
 };
 
 const Home = async () => {
-    const { track, stats, github, error } = await fetchAndFormatData();
+    const { track, stats, github, steam, error } = await fetchAndFormatData();
 
     if (error) {
         return null;
@@ -87,8 +88,9 @@ const Home = async () => {
             <Hero />
             <div className={style.contentContainer}>
                 <div className={style.statsContainer}>
-                    <GitHub data={github} />
                     <RecentlyPlayed data={track!} />
+                    <RecentlyGamed data={steam} />
+                    <GitHub data={github} />
                 </div>
             </div>
         </>
