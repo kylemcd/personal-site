@@ -1,6 +1,12 @@
 import { RawDataFromAirtable, FormattedStat, FormattedStats, FormattedStatType } from '@/types/stats';
 import { FormattedSpotifyData, RawSpotifyTrack } from '@/types/spotify';
 import { RawGitHubData, RawGitHubDay, FormattedGitHubData } from '@/types/github';
+import {
+    FormattedSteamLastPlayedData,
+    FormattedSteamGameData,
+    RawSteamGameData,
+    RawSteamLastPlayedData,
+} from '@/types/steam';
 
 export const statsTranformer = ({ stats }: { stats: RawDataFromAirtable }): FormattedStats => {
     if (stats?.records?.length > 0) {
@@ -116,5 +122,45 @@ export const gitHubTransformer = ({ gitHubData }: { gitHubData: RawGitHubData })
         yearlyContributions,
         weeklyContributions,
         streak,
+    };
+};
+
+export const steamLastPlayedTransformer = (data: RawSteamLastPlayedData): FormattedSteamLastPlayedData => {
+    const convertMinutesToReadableTime = (minutes: number): string => {
+        const oneDayInMinutes = 1440; // 24 hours * 60 minutes
+        const oneHourInMinutes = 60;
+
+        const days = Math.floor(minutes / oneDayInMinutes);
+        const hours = Math.floor((minutes % oneDayInMinutes) / oneHourInMinutes);
+        const remainingMinutes = minutes % oneHourInMinutes;
+
+        const daysDisplay = days > 0 ? days + (days == 1 ? ' day, ' : ' days, ') : '';
+        const hoursDisplay = hours > 0 ? hours + (hours == 1 ? ' hour, ' : ' hours, ') : '';
+        const minutesDisplay =
+            remainingMinutes > 0 ? remainingMinutes + (remainingMinutes == 1 ? ' minute' : ' minutes') : '';
+
+        return daysDisplay + hoursDisplay + minutesDisplay;
+    };
+
+    const convertEpocToReadableTime = (epoch: number): string => {
+        const date = new Date(epoch * 1000);
+        return date.toLocaleDateString('en-us', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+    };
+
+    const mostRecentGame = data.response.games.sort((a, b) => (a.rtime_last_played > b.rtime_last_played ? -1 : 1))[0];
+
+    const totalPlayTime = convertMinutesToReadableTime(mostRecentGame.playtime_forever);
+    const lastTwoWeeksPlayTime = convertMinutesToReadableTime(mostRecentGame.playtime_2weeks);
+    const lastPlayed = convertEpocToReadableTime(mostRecentGame.rtime_last_played);
+
+    return { totalPlayTime, lastTwoWeeksPlayTime, lastPlayed, appid: mostRecentGame.appid };
+};
+
+export const steamGameTransformer = (data: RawSteamGameData): FormattedSteamGameData => {
+    const game = Object.values(data)[0]?.data;
+    return {
+        name: game?.name,
+        image: game?.header_image,
+        link: `https://store.steampowered.com/app/${game?.steam_appid}`,
     };
 };
