@@ -24,7 +24,18 @@ async function getPost(filepath: string): Promise<Post<Frontmatter>> {
     };
 }
 
+async function fetchPosts() {
+    const apiUrl = () => {
+        if (process.env.NODE_ENV === 'production') {
+            return `https://${process.env.VERCEL_URL}`;
+        }
+        return `http://localhost:3000`;
+    };
+    return await fetch(`${apiUrl()}/api/readfiles`);
+}
+
 const Post = async ({ params }: { params: any }) => {
+    await fetchPosts();
     const { serialized, frontmatter } = await getPost(`/${params.slug}/index.md`);
 
     return (
