@@ -1,4 +1,4 @@
-import { promises as fsPromises } from 'fs';
+import fs, { promises as fsPromises } from 'fs';
 import path from 'path';
 import { serialize } from 'next-mdx-remote/serialize';
 import { Frontmatter, Post } from '@/types/posts';
@@ -24,15 +24,18 @@ async function getPost(filepath: string): Promise<Post<Frontmatter>> {
     };
 }
 
-async function fetchPosts() {
-    const apiUrl = () => {
-        if (process.env.NODE_ENV === 'production') {
-            return `https://${process.env.VERCEL_URL}`;
-        }
-        return `http://localhost:3000`;
+const fetchPosts = async () => {
+    const dir = path.resolve('./posts');
+
+    const filenames = fs.readdirSync(dir);
+
+    const markdownFiles = filenames.map((name) => path.join('/', dir, name));
+
+    console.log('Posts Brought In: ', markdownFiles);
+    return {
+        revalidate: Infinity,
     };
-    return await fetch(`${apiUrl()}/api/readfiles`);
-}
+};
 
 const Post = async ({ params }: { params: any }) => {
     await fetchPosts();
