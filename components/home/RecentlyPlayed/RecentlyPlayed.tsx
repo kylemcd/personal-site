@@ -25,8 +25,8 @@ const RecentlyPlayed = ({ data }: { data: FormattedSpotifyData }) => {
                     </div>
                 </div>
                 <div className={styles.trackContainer}>
-                    {data?.tracks.map((track) => (
-                        <div className={styles.track}>
+                    {data?.tracks.map((track, index) => (
+                        <div className={styles.track} key={index}>
                             <div>
                                 <Paragraph color={`--primary-font-color`} style={{ fontWeight: 500 }}>
                                     {track.songName}

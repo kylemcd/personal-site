@@ -16,8 +16,8 @@ const GitHub = ({ data }: { data: FormattedGitHubData | null }) => {
             <div className={styles.container}>
                 <div className={styles.topContainer}>
                     <div className={styles.contributionContainer}>
-                        {data?.mostRecentWeek?.map((day) => (
-                            <div>
+                        {data?.mostRecentWeek?.map((day, index) => (
+                            <div key={index}>
                                 <Paragraph color={'--secondary-font-color'}>
                                     {dayOfWeekAsString(new Date(day.date).getDay())}
                                 </Paragraph>
