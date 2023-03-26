@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-export default (req, res) => {
+const readMarkdownFiles = (req, res) => {
     const dir = path.resolve('./posts');
 
     const filenames = fs.readdirSync(dir);
@@ -11,3 +11,5 @@ export default (req, res) => {
     res.statusCode = 200;
     res.json(markdownFiles);
 };
+
+export default readMarkdownFiles;
