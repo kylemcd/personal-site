@@ -6,6 +6,7 @@ export type Frontmatter = {
 };
 
 export type Post<TFrontmatter> = {
-    serialized: MDXRemoteSerializeResult;
-    frontmatter: TFrontmatter;
+    serialized?: MDXRemoteSerializeResult;
+    frontmatter?: TFrontmatter;
+    error: boolean;
 };
