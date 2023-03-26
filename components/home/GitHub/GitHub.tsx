@@ -18,7 +18,7 @@ const GitHub = ({ data }: { data: FormattedGitHubData | null }) => {
                     <div className={styles.contributionContainer}>
                         {data?.mostRecentWeek?.map((day, index) => (
                             <div key={index}>
-                                <Paragraph color={'--secondary-font-color'}>
+                                <Paragraph color={'--secondary-font-color'} size="md">
                                     {dayOfWeekAsString(new Date(day.date).getDay())}
                                 </Paragraph>
                                 <div
@@ -37,20 +37,34 @@ const GitHub = ({ data }: { data: FormattedGitHubData | null }) => {
                 </div>
                 <div className={styles.statsContainer}>
                     <div className={styles.statContainer}>
-                        <Paragraph color={'--primary-font-color'}>This Year</Paragraph>
-                        <Paragraph color={'--primary-font-color'}>{data?.yearlyContributions}</Paragraph>
+                        <Paragraph color={'--primary-font-color'} size="md">
+                            This Year
+                        </Paragraph>
+                        <Paragraph color={'--primary-font-color'} size="md">
+                            {data?.yearlyContributions}
+                        </Paragraph>
                     </div>
                     <div className={styles.statContainer}>
-                        <Paragraph color={'--primary-font-color'}>This Week</Paragraph>
-                        <Paragraph color={'--primary-font-color'}>{data?.weeklyContributions}</Paragraph>
+                        <Paragraph color={'--primary-font-color'} size="md">
+                            This Week
+                        </Paragraph>
+                        <Paragraph color={'--primary-font-color'} size="md">
+                            {data?.weeklyContributions}
+                        </Paragraph>
                     </div>
                     <div className={styles.statContainer}>
-                        <Paragraph color={'--primary-font-color'}>Current Streak</Paragraph>
-                        <Paragraph color={'--primary-font-color'}>{data?.streak}</Paragraph>
+                        <Paragraph color={'--primary-font-color'} size="md">
+                            Current Streak
+                        </Paragraph>
+                        <Paragraph color={'--primary-font-color'} size="md">
+                            {data?.streak}
+                        </Paragraph>
                     </div>
                 </div>
                 <div className={styles.bottomContainer}>
-                    <Paragraph color={'--primary-font-color'}>GitHub Contributions</Paragraph>
+                    <Paragraph color={'--primary-font-color'} size="md">
+                        GitHub Contributions
+                    </Paragraph>
                     <Button
                         type="a"
                         href={'https://github.com/kylemcd'}

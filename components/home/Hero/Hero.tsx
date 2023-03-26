@@ -1,7 +1,7 @@
 'use client';
 import { Playfair_Display } from 'next/font/google';
 
-import { HeroHeading } from '@/components/global/Typography';
+import { Heading } from '@/components/global/Typography';
 
 import styles from './Hero.module.css';
 
@@ -10,9 +10,9 @@ const Hero = () => {
     return (
         <div className={styles.container}>
             <div className={styles.contentContainer}>
-                <HeroHeading className={playfairDisplay.className} style={{ fontWeight: '500' }}>
+                <Heading className={playfairDisplay.className} element="h2" size="xl" style={{ fontWeight: '500' }}>
                     Director of Engineering at Foxtrot. Just <span>tinkering</span> around.
-                </HeroHeading>
+                </Heading>
             </div>
         </div>
     );

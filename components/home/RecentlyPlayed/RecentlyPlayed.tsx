@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { FormattedSpotifyData } from '@/types/spotify';
 
 import { StatsContainer } from '@/components/home/StatsContainer';
-import { TertiaryHeading, Paragraph } from '@/components/global/Typography';
+import { Heading, Paragraph } from '@/components/global/Typography';
 import { Button } from '@/components/global/Button';
 
 import styles from './RecentlyPlayed.module.css';
@@ -21,27 +21,35 @@ const RecentlyPlayed = ({ data }: { data: FormattedSpotifyData }) => {
                         className={styles.albumArt}
                     />
                     <div className={styles.copyContainer}>
-                        <TertiaryHeading color={`--primary-font-color`}>{data?.name}</TertiaryHeading>
+                        <Heading color={`--primary-font-color`} size="md" element="h3">
+                            {data?.name}
+                        </Heading>
                     </div>
                 </div>
                 <div className={styles.trackContainer}>
                     {data?.tracks.map((track, index) => (
                         <div className={styles.track} key={index}>
                             <div>
-                                <Paragraph color={`--primary-font-color`} style={{ fontWeight: 500 }}>
+                                <Paragraph color={`--primary-font-color`} size="md" style={{ fontWeight: 500 }}>
                                     {track.songName}
                                 </Paragraph>
                             </div>
                             <div className={styles.trackInfo}>
-                                <Paragraph color={`--primary-font-color`}>{track.artistName}</Paragraph>
-                                <Paragraph color={`--secondary-font-color`}>{track.duration}</Paragraph>
+                                <Paragraph color={`--primary-font-color`} size="md">
+                                    {track.artistName}
+                                </Paragraph>
+                                <Paragraph color={`--secondary-font-color`} size="md">
+                                    {track.duration}
+                                </Paragraph>
                             </div>
                         </div>
                     ))}
                 </div>
                 <div className={styles.bottomContainer}>
                     <div className={styles.nowPlayingContainer}>
-                        <Paragraph color={`--secondary-font-color`}>Recently Played</Paragraph>
+                        <Paragraph color={`--secondary-font-color`} size="md">
+                            Recently Played
+                        </Paragraph>
                         <span className={styles.musicBars}>
                             <span className={styles.musicBar + ' ' + styles.musicBar1} />
                             <span className={styles.musicBar + ' ' + styles.musicBar2} />

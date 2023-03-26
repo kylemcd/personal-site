@@ -1,100 +1,61 @@
 import { shapeColorVariable } from '@/helpers/colorHelper';
-
+import { formatClassNames } from '@/helpers/jsxHelpers';
 import styles from './Typography.module.css';
+import { CSSProperties } from 'react';
 
-export const PrimaryHeading = ({
+type HeadingSize = 'xl' | 'lg' | 'md' | 'sm';
+type ParagraphSize = 'md';
+
+export const Heading = ({
     color,
+    size,
+    element: Element,
     className,
+    style,
     children,
     ...otherProps
 }: {
     color?: string;
+    size: HeadingSize;
+    element: keyof JSX.IntrinsicElements;
     className?: string;
+    style?: CSSProperties;
     children: React.ReactNode;
-} & React.HTMLAttributes<HTMLHeadingElement>) => {
+}) => {
     return (
-        <h1
-            className={styles.primaryHeading + ' ' + className}
-            style={{ color: shapeColorVariable({ color }) }}
+        <Element
+            className={formatClassNames([[styles[size + 'Heading']], [className!, !!className]])}
+            style={{ color: shapeColorVariable({ color }), ...style }}
             {...otherProps}
         >
             {children}
-        </h1>
-    );
-};
-
-export const SecondaryHeading = ({
-    color,
-    className,
-    children,
-    ...otherProps
-}: {
-    color?: string;
-    className?: string;
-    children: React.ReactNode;
-} & React.HTMLAttributes<HTMLHeadingElement>) => {
-    return (
-        <h2
-            className={styles.secondaryHeading + ' ' + className}
-            style={{ color: shapeColorVariable({ color }) }}
-            {...otherProps}
-        >
-            {children}
-        </h2>
-    );
-};
-
-export const TertiaryHeading = ({
-    color,
-    className,
-    children,
-    ...otherProps
-}: {
-    color?: string;
-    className?: string;
-    children: React.ReactNode;
-} & React.HTMLAttributes<HTMLHeadingElement>) => {
-    return (
-        <h3
-            className={styles.tertiaryHeading + ' ' + className}
-            style={{ color: shapeColorVariable({ color }) }}
-            {...otherProps}
-        >
-            {children}
-        </h3>
+        </Element>
     );
 };
 
 export const Paragraph = ({
     color,
+    size,
+    element: Element = 'p',
     className,
+    style,
     children,
     ...otherProps
-}: { color?: string; className?: string; children: React.ReactNode } & React.HTMLAttributes<HTMLParagraphElement>) => {
+}: {
+    color?: string;
+    size: ParagraphSize;
+    element?: keyof JSX.IntrinsicElements;
+    className?: string;
+    style?: CSSProperties;
+    children: React.ReactNode;
+}) => {
     return (
-        <p
-            className={styles.paragraph + '' + className}
-            style={{ color: shapeColorVariable({ color }) }}
+        <Element
+            className={formatClassNames([[styles[size + 'Paragraph']], [className!, !!className]])}
+            style={{ color: shapeColorVariable({ color }), ...style }}
             {...otherProps}
         >
             {children}
-        </p>
-    );
-};
-
-export const HeroHeading = ({
-    color,
-    className,
-    children,
-    ...otherProps
-}: { color?: string; className?: string; children: React.ReactNode } & React.HTMLAttributes<HTMLParagraphElement>) => {
-    return (
-        <h2
-            className={styles.heroHeading + ' ' + className}
-            style={{ color: shapeColorVariable({ color }) }}
-            {...otherProps}
-        >
-            {children}
-        </h2>
+        </Element>
     );
 };

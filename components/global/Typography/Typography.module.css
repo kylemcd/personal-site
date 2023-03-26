@@ -3,31 +3,36 @@
     line-height: 3.5rem;
 }
 
-.paragraph {
+.mdParagraph {
     font-size: 1rem;
     line-height: 1.5rem;
 }
 
-.heroHeading {
+.xlHeading {
     font-size: 3.25rem;
     line-height: 3.5rem;
     letter-spacing: -2px;
 }
 
 @media (min-width: 768px) {
-    .heroHeading {
+    .xlHeading {
         font-size: 5.75rem;
         line-height: 6rem;
     }
 }
 
-.secondaryHeading {
+.lgHeading {
     font-size: 2rem;
+    line-height: 3.5rem;
+}
+
+.mdHeading {
+    font-size: 1.5rem;
     line-height: 2.25rem;
 }
 
-.tertiaryHeading {
-    font-size: 1.5rem;
+.smHeading {
+    font-size: 1rem;
     line-height: 1.75rem;
     font-weight: 500;
 }

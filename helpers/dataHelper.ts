@@ -66,15 +66,18 @@ export const gitHubTransformer = ({ gitHubData }: { gitHubData: RawGitHubData })
     };
 
     const getFirstDayOfWeekDate = () => {
-        return today.getDate() - (today.getDay() || 7);
+        const dayOfWeek = today.getDay();
+        const diff = dayOfWeek >= 6 ? dayOfWeek - 6 : -dayOfWeek - 1; // calculate the number of days to subtract
+        const firstDayOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() + diff + 1);
+        return `${firstDayOfWeek.getFullYear()}-${transformToTwoDigit(
+            firstDayOfWeek.getMonth() + 1
+        )}-${transformToTwoDigit(firstDayOfWeek.getDate())}`;
     };
     const currentDay = `${today.getFullYear()}-${transformToTwoDigit(today.getMonth() + 1)}-${transformToTwoDigit(
         today.getDate()
     )}`;
 
-    const firstDayOfWeekDate = `${today.getFullYear()}-${transformToTwoDigit(
-        today.getMonth() + 1
-    )}-${transformToTwoDigit(getFirstDayOfWeekDate())}`;
+    const firstDayOfWeekDate = getFirstDayOfWeekDate();
 
     const contributionsArray = gitHubData?.data?.user?.contributionsCollection?.contributionCalendar?.weeks;
 

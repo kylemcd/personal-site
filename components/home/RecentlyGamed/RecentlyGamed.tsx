@@ -2,7 +2,7 @@ import Image from 'next/image';
 
 import { FormattedSteamData } from '@/types/steam';
 import { StatsContainer } from '@/components/home/StatsContainer';
-import { TertiaryHeading, Paragraph } from '@/components/global/Typography';
+import { Heading, Paragraph } from '@/components/global/Typography';
 import { Button } from '@/components/global/Button';
 
 import styles from './RecentlyGamed.module.css';
@@ -22,23 +22,33 @@ const RecentlyGamed = ({ data }: { data: FormattedSteamData }) => {
                                 className={styles.gameArt}
                             />
                             <div className={styles.copy}>
-                                <TertiaryHeading color={`--primary-font-color`}>{data?.name}</TertiaryHeading>
+                                <Heading color={`--primary-font-color`} size="md" element="h3">
+                                    {data?.name}
+                                </Heading>
                             </div>
                         </div>
                         <div className={styles.gameTimeContainer}>
                             <div className={styles.gameTime}>
-                                <Paragraph color={`--primary-font-color`}>Last played</Paragraph>
-                                <Paragraph color={`--secondary-font-color`}>{data?.lastPlayed}</Paragraph>
+                                <Paragraph color={`--primary-font-color`} size="md">
+                                    Last played
+                                </Paragraph>
+                                <Paragraph color={`--secondary-font-color`} size="md">
+                                    {data?.lastPlayed}
+                                </Paragraph>
                             </div>
                             <div className={styles.gameTime}>
-                                <Paragraph color={`--primary-font-color`}>Last 2 weeks</Paragraph>
-                                <Paragraph color={`--secondary-font-color`}>
+                                <Paragraph color={`--primary-font-color`} size="md">
+                                    Last 2 weeks
+                                </Paragraph>
+                                <Paragraph color={`--secondary-font-color`} size="md">
                                     {data?.lastTwoWeeksPlayTime.days} {data?.lastTwoWeeksPlayTime.hours}
                                 </Paragraph>
                             </div>
                             <div className={styles.gameTime}>
-                                <Paragraph color={`--primary-font-color`}>All time</Paragraph>
-                                <Paragraph color={`--secondary-font-color`}>
+                                <Paragraph color={`--primary-font-color`} size="md">
+                                    All time
+                                </Paragraph>
+                                <Paragraph color={`--secondary-font-color`} size="md">
                                     {data?.totalPlayTime.days} {data?.totalPlayTime.hours}
                                 </Paragraph>
                             </div>
@@ -47,7 +57,9 @@ const RecentlyGamed = ({ data }: { data: FormattedSteamData }) => {
                 </div>
                 <div className={styles.bottomContainer}>
                     <div className={styles.recentlyGamedContainer}>
-                        <Paragraph color={`--secondary-font-color`}>Recently Gamed</Paragraph>
+                        <Paragraph color={`--secondary-font-color`} size="md">
+                            Recently Gamed
+                        </Paragraph>
                     </div>
                     <Button type="a" href={data?.link} target="_blank" color={'--primary-color'} size="sm">
                         Open on Steam

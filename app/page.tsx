@@ -24,6 +24,7 @@ import { RawSpotifyTrack, FormattedSpotifyData, RawSpotifyPlaylistData } from '@
 import { FormattedSteamData, RawSteamGameData, RawSteamLastPlayedData } from '@/types/steam';
 
 import style from './page.module.css';
+import { Heading } from '@/components/global/Typography';
 
 interface FetchAndFormatResult {
     playlist: FormattedSpotifyData | null;
@@ -88,9 +89,16 @@ const Home = async () => {
             <div className={style.contentContainer}>
                 <div className={style.content}></div>
                 <div className={style.statsContainer}>
-                    <GitHub data={github} />
-                    <RecentlyPlayed data={playlist!} />
-                    <RecentlyGamed data={steam!} />
+                    <div className={style.statsTopContainer}>
+                        <Heading color={`--primary-font-color`} element="h2" size="lg">
+                            My Activity
+                        </Heading>
+                    </div>
+                    <div className={style.statsScrollContainer}>
+                        <GitHub data={github} />
+                        <RecentlyPlayed data={playlist!} />
+                        <RecentlyGamed data={steam!} />
+                    </div>
                 </div>
             </div>
         </>
