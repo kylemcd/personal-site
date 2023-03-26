@@ -6,8 +6,9 @@ const readMarkdownFiles = (req, res) => {
 
     const filenames = fs.readdirSync(dir);
 
-    const markdownFiles = filenames.map((name) => path.join('/', dirRelativeToPublicFolder, name));
+    const markdownFiles = filenames.map((name) => path.join('/', dir, name));
 
+    console.log('Posts Brought In: ', markdownFiles);
     res.statusCode = 200;
     res.json(markdownFiles);
 };
