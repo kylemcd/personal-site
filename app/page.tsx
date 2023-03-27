@@ -5,10 +5,6 @@ import fetchSteamLastPlayed from '@/external-api/fetchSteamLastPlayed';
 import fetchSteamGame from '@/external-api/fetchSteamGame';
 
 import { Hero } from '@/components/home/Hero';
-import { Stats } from '@/components/home/Stats';
-import { RecentlyPlayed } from '@/components/home/RecentlyPlayed';
-import { RecentlyGamed } from '@/components/home/RecentlyGamed';
-import { GitHub } from '@/components/home/GitHub';
 
 import {
     statsTranformer,
@@ -25,6 +21,8 @@ import { FormattedSteamData, RawSteamGameData, RawSteamLastPlayedData } from '@/
 
 import style from './page.module.css';
 import { Heading } from '@/components/global/Typography';
+
+import { ActivityFeed } from '@/components/home/ActivityFeed';
 
 interface FetchAndFormatResult {
     playlist: FormattedSpotifyData | null;
@@ -77,7 +75,7 @@ const fetchAndFormatData = async (): Promise<FetchAndFormatResult> => {
 };
 
 const Home = async () => {
-    const { playlist, stats, github, steam, error } = await fetchAndFormatData();
+    const { error, ...data } = await fetchAndFormatData();
 
     if (error) {
         return null;
@@ -94,11 +92,7 @@ const Home = async () => {
                             My Activity
                         </Heading>
                     </div>
-                    <div className={style.statsScrollContainer}>
-                        <GitHub data={github} />
-                        <RecentlyPlayed data={playlist!} />
-                        <RecentlyGamed data={steam!} />
-                    </div>
+                    <ActivityFeed data={data} />
                 </div>
             </div>
         </>

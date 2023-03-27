@@ -1,0 +1,61 @@
+.statsScrollContainer {
+    display: flex;
+    flex-direction: row;
+    gap: 1.5rem;
+    padding-left: calc((100vw - 1300px) / 2) !important;
+    overflow-y: clip;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    scrollbar-width: none;
+}
+
+.statsScrollContainer::-webkit-scrollbar {
+    display: none;
+}
+
+.scrollbar {
+    background-color: var(--scrollbar-color);
+    border: 5px solid white;
+    border-radius: 1rem;
+    cursor: grab;
+    height: 18px;
+    width: 0px;
+    transition: background-color linear 0.3s;
+    /* margin-left: calc((100vw - 1300px) / 2) !important; */
+}
+
+.scrollbar:hover {
+    background-color: var(--primary-color);
+}
+
+.scrollbar:focus {
+    background-color: var(--primary-color);
+}
+
+.dragging .scrollbar {
+    background-color: var(--primary-color);
+}
+
+.track {
+    background-color: transparent;
+}
+
+@media (min-width: 1300px) {
+    .track {
+        margin-left: calc((100vw - 1300px) / 2);
+        width: calc(100vw - (100vw - 1300px) / 2);
+    }
+}
+
+/* Last ditch attempt to get padding at end of scrolling area */
+.statsScrollContainer > div:last-child {
+    position: relative;
+}
+
+.statsScrollContainer > div:last-child:after {
+    content: '';
+    position: absolute;
+    right: -1rem;
+    height: 20px;
+    width: 1rem;
+}
