@@ -1,23 +1,15 @@
 'use client';
 import { notFound } from 'next/navigation';
 import Head from 'next/head';
-import { allPosts, Post } from 'contentlayer/generated';
 
 import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
 import { HSLString, HexString, isHSLString } from '@/types/colors';
 import { hslToHex, pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
-
+import fetchOnePost from '@/internal/fetchOnePost';
 import styles from './PostStyles.module.css';
 
-const getPost = ({ params }: any) => {
-    const post: Post = allPosts.find((post: any) => post._raw.flattenedPath === params.slug)!;
-    return {
-        post: post,
-    };
-};
-
 const PostLayout = ({ params }: any) => {
-    const { post } = getPost({ params });
+    const post = fetchOnePost({ slug: params.slug });
     const color = useCSSVariableObserver('--primary-color');
 
     const calculateFontColor = (color: HSLString | HexString) => {

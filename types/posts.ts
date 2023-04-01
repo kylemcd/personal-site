@@ -1,12 +1,3 @@
-import { type MDXRemoteSerializeResult } from 'next-mdx-remote';
+import { Post } from 'contentlayer/generated';
 
-export type Frontmatter = {
-    title: string;
-    date: string;
-};
-
-export type Post<TFrontmatter> = {
-    serialized?: MDXRemoteSerializeResult;
-    frontmatter?: TFrontmatter;
-    error: boolean;
-};
+export interface ContentLayerPost extends Post {}

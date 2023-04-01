@@ -1,0 +1,14 @@
+.container {
+    border: 1px solid var(--primary-border-color);
+    border-radius: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    transition: background-color 0.3s linear, border-color 0.3s linear;
+}
+
+.container:hover {
+    background-color: var(--secondary-background-color);
+    border-color: var(--tertiary-background-color);
+}

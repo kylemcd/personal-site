@@ -1,8 +1,9 @@
-import fetchAirTableStats from '@/external-api/fetchAirTableStats';
-import fetchSpotifyData from '@/external-api/fetchSpotifyData';
-import fetchGitHubData from '@/external-api/fetchGitHubData';
-import fetchSteamLastPlayed from '@/external-api/fetchSteamLastPlayed';
-import fetchSteamGame from '@/external-api/fetchSteamGame';
+import fetchAirTableStats from '@/external/fetchAirTableStats';
+import fetchSpotifyData from '@/external/fetchSpotifyData';
+import fetchGitHubData from '@/external/fetchGitHubData';
+import fetchSteamLastPlayed from '@/external/fetchSteamLastPlayed';
+import fetchSteamGame from '@/external/fetchSteamGame';
+import fetchAllPosts from '@/internal/fetchAllPosts';
 
 import { Hero } from '@/components/home/Hero';
 
@@ -16,19 +17,23 @@ import {
 
 import { FormattedGitHubData } from '@/types/github';
 import { RawDataFromAirtable, FormattedStats } from '@/types/stats';
-import { RawSpotifyTrack, FormattedSpotifyData, RawSpotifyPlaylistData } from '@/types/spotify';
+import { FormattedSpotifyData, RawSpotifyPlaylistData } from '@/types/spotify';
 import { FormattedSteamData, RawSteamGameData, RawSteamLastPlayedData } from '@/types/steam';
 
-import style from './page.module.css';
+import { ActivityFeed } from '@/components/home/ActivityFeed';
+import { PostList } from '@/components/global/PostList';
+
 import { Heading } from '@/components/global/Typography';
 
-import { ActivityFeed } from '@/components/home/ActivityFeed';
+import style from './page.module.css';
+import { ContentLayerPost } from '@/types/posts';
 
 interface FetchAndFormatResult {
     playlist: FormattedSpotifyData | null;
     stats: FormattedStats | null;
     github: FormattedGitHubData | null;
     steam: FormattedSteamData | null;
+    posts: ContentLayerPost[] | null;
     error: boolean;
 }
 
@@ -38,6 +43,7 @@ const fetchAndFormatData = async (): Promise<FetchAndFormatResult> => {
         stats: null,
         github: null,
         steam: null,
+        posts: null,
         error: false,
     };
 
@@ -71,11 +77,15 @@ const fetchAndFormatData = async (): Promise<FetchAndFormatResult> => {
 
     result.steam = { ...formattedGameData, ...formattedLastPlayedData };
 
+    // Blog
+    const posts = fetchAllPosts();
+    result.posts = posts;
+
     return result;
 };
 
 const Home = async () => {
-    const { error, ...data } = await fetchAndFormatData();
+    const { error, posts, ...data } = await fetchAndFormatData();
 
     if (error) {
         return null;
@@ -93,6 +103,7 @@ const Home = async () => {
                         </Heading>
                     </div>
                     <ActivityFeed data={data} />
+                    <PostList data={posts} layout="scrollable" />
                 </div>
             </div>
         </>

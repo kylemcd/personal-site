@@ -15,21 +15,9 @@
     text-align: center;
 }
 
-@keyframes popIn {
-    0% {
-        opacity: 0;
-    }
-
-    100% {
-        opacity: 1;
-    }
-}
-
 .contentContainer {
-    animation: popIn 2.3s;
     padding: 4rem 2rem;
     max-width: 1000px;
-
     width: 100%;
 }
 

@@ -24,6 +24,13 @@
     width: 100%;
 }
 
+@media (min-width: 1300px) {
+    .statsTopContainer {
+        margin: 0;
+        padding-left: calc((100vw - 1300px) / 2);
+    }
+}
+
 .statsScrollContainer {
     display: flex;
     flex-direction: row;

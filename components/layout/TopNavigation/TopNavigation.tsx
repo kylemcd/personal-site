@@ -4,7 +4,7 @@ import Link from 'next/link';
 import styles from './TopNavigation.module.css';
 import { Heading } from '@/components/global/Typography';
 
-import Menu from '../TopNavigation/Menu';
+import { Menu } from '@/components/layout/Menu';
 import { formatClassNames } from '@/helpers/jsxHelpers';
 
 const TopNavigation = () => {
