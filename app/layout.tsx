@@ -31,7 +31,7 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
         </html>
     );
 };
-export async function generateMetadata(props) {
+export async function generateMetadata() {
     const themeColor = await getThemeColor();
     const fontColor = pickFontColorBasedonBackgroundColor(hslToHex(themeColor || `hsl(0,0%,0%)`), '#ffffff', '#000000');
     return {
@@ -52,11 +52,5 @@ export async function generateMetadata(props) {
         },
     };
 }
-// export const metadata = {
-//     title: 'Kyle McDonald',
-//     icons: {
-//         // icon: `data:image/svg+xml,%3Csvg width='128' height='128' viewBox='0 0 128 128' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='128' height='128' rx='16' class='rect'/%3E%3Cpath d='M36.0682 100V30.1818H50.8295V60.9659H51.75L76.875 30.1818H94.5682L68.6591 61.4432L94.875 100H77.2159L58.0909 71.2955L50.8295 80.1591V100H36.0682Z' fill='black'/%3E%3C/svg%3E%0A1`,
-//     },
-// };
 
 export default RootLayout;
