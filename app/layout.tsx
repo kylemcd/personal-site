@@ -6,6 +6,7 @@ import { TopNavigation } from '@/components/layout/TopNavigation';
 
 import { Inter } from 'next/font/google';
 import { hslToHex, pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
+import { HSLString } from '@/types/colors';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -33,7 +34,11 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
 };
 export async function generateMetadata() {
     const themeColor = await getThemeColor();
-    const fontColor = pickFontColorBasedonBackgroundColor(hslToHex(themeColor || `hsl(0,0%,0%)`), '#ffffff', '#000000');
+    const fontColor = pickFontColorBasedonBackgroundColor(
+        hslToHex((themeColor as HSLString) || (`hsl(0,0%,0%)` as HSLString)),
+        '#ffffff',
+        '#000000'
+    );
     return {
         title: 'Kyle McDonald',
         icons: {
