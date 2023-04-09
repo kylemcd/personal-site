@@ -5,6 +5,7 @@
     border-top-width: 2px;
     position: relative;
     z-index: 8;
+    transform: translateZ(0);
 }
 .content {
     margin: 0 auto;
