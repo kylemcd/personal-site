@@ -6,6 +6,9 @@ import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
 import { HSLString, HexString, isHSLString } from '@/types/colors';
 import { hslToHex, pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
 import fetchOnePost from '@/internal/fetchOnePost';
+import { PostBody } from '@/components/posts/PostBody';
+
+import './PrismTheme.css';
 import styles from './PostStyles.module.css';
 
 const PostLayout = ({ params }: any) => {
@@ -44,11 +47,13 @@ const PostLayout = ({ params }: any) => {
                                     day: 'numeric',
                                 })
                             )}
+                            &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+                            {post.readingTime.text}
                         </span>
                     </div>
                 </div>
                 <div className={styles.postContainer}>
-                    <div className={styles.postStyles} dangerouslySetInnerHTML={{ __html: post.body.html }} />
+                    <PostBody htmlBody={post.postBody} />
                 </div>
             </article>
         </>

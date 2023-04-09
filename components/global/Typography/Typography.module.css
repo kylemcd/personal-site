@@ -8,6 +8,11 @@
     line-height: 1.5rem;
 }
 
+.smParagraph {
+    font-size: 0.85rem;
+    line-height: 1.25rem;
+}
+
 .xlHeading {
     font-size: 3.25rem;
     line-height: 3.5rem;

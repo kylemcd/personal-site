@@ -20,6 +20,9 @@ const PostPreview = ({ data }: { data?: ContentLayerPost }) => {
                     day: 'numeric',
                 })}
             </Paragraph>
+            <Paragraph size="sm" color="--secondary-font-color" className={styles.readingTime}>
+                {data.readingTime.text}
+            </Paragraph>
         </Link>
     );
 };

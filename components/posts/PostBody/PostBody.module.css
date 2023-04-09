@@ -1,0 +1,94 @@
+.container {
+    /* display: flex; */
+    position: relative;
+}
+
+.sideNavContainer {
+    display: none;
+}
+
+.sideNav {
+    display: none;
+}
+
+@media (min-width: 1350px) {
+    .sideNavContainer {
+        display: block;
+        height: 100%;
+        position: absolute;
+        left: -250px;
+        width: 250px;
+    }
+    .sideNav {
+        display: flex;
+        flex-direction: column;
+        padding: 1rem 2rem 1rem 1rem;
+        position: sticky;
+        top: 120px;
+        left: -40px;
+        margin-top: 2rem;
+        bottom: 0;
+    }
+}
+
+.sideNavList {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0 0 0;
+}
+
+.sideNavListItem {
+    margin-bottom: 0.5rem;
+}
+
+.sideNavListItem a:hover {
+    text-decoration: underline;
+    color: var(--primary-color);
+}
+
+.postStyles {
+    color: var(--primary-font-color);
+    padding: 2rem 0;
+}
+
+.postStyles h1 {
+    font-size: 2rem;
+    line-height: 3.5rem;
+    margin: 1rem 0;
+}
+
+.postStyles h2 {
+    font-size: 1.5rem;
+    line-height: 2.25rem;
+    margin: 1rem 0;
+}
+
+.postStyles h3 {
+    font-size: 1rem;
+    line-height: 1.75rem;
+    font-weight: 500;
+    margin: 1rem 0;
+}
+
+.postStyles p {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    margin: 1rem 0;
+}
+
+.postStyles a {
+    color: var(--primary-font-color);
+    position: relative;
+}
+
+.postStyles a:after {
+    content: '';
+    background-color: var(--primary-color);
+    height: 1px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    transform-origin: top center;
+    transition: transform 0.1s linear;
+}

@@ -102,8 +102,10 @@ const Home = async () => {
                             My Activity
                         </Heading>
                     </div>
-                    <ActivityFeed data={data} />
-                    <PostList data={posts} layout="scrollable" />
+                    <div className={style.pageContentContainer}>
+                        <ActivityFeed data={data} />
+                        <PostList data={posts} layout="scrollable" />
+                    </div>
                 </div>
             </div>
         </>

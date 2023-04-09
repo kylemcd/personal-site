@@ -12,3 +12,8 @@
     background-color: var(--secondary-background-color);
     border-color: var(--tertiary-background-color);
 }
+
+.readingTime {
+    display: block;
+    margin-top: auto;
+}
