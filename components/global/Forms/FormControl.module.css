@@ -1,3 +1,8 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    margin: 1rem 0;
+}
 .field {
     appearance: none;
     border-radius: 0.5rem;
@@ -18,5 +23,24 @@
 .label {
     color: var(--primary-font-color);
     font-size: 1rem;
-    margin: 1rem;
+    margin: 0.5rem 0;
+}
+
+.textarea {
+    appearance: none;
+    border-radius: 0.5rem;
+    border: 1px solid var(--primary-border-color);
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    height: 200px;
+    padding: 1rem;
+    transition: border-color ease-in-out 0.3s;
+}
+
+.textarea:hover {
+    border-color: var(--primary-font-color);
+}
+.textarea:focus {
+    border-color: var(--primary-font-color);
+    outline: none;
 }

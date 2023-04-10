@@ -26,7 +26,8 @@ interface ButtonPropsLink extends ButtonPropsGeneric<'Link' | 'a'> {
 }
 
 interface ButtonPropsButton extends ButtonPropsGeneric<'button'> {
-    onClick: Function;
+    onClick?: Function;
+    buttonType?: 'submit' | 'button';
 }
 
 type ButtonProps = ButtonPropsButton | ButtonPropsLink;
@@ -111,6 +112,7 @@ const Button = ({
     lightnessModifier = DEFAULT_LIGHTNESS_MODIFIER,
     href,
     onClick,
+    buttonType,
     children,
     shadowless = false,
     ...otherProps
@@ -148,6 +150,7 @@ const Button = ({
             onClick={onClick}
             style={getColorStyle({ colorString: color, lightnessModifier })}
             className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
+            type={buttonType || 'button'}
             {...otherProps}
         >
             {children}
