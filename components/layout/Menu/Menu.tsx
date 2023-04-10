@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import Link from 'next/link';
 
 import { HuePicker } from 'react-color';
 
@@ -32,6 +33,30 @@ const Menu = () => {
         setActiveTheme(theme);
     };
 
+    const handleActiveBubblePositioning = () => {
+        if (activeTheme === THEMES[0]) {
+            return {
+                transform: 'translateX(0)',
+            };
+        }
+
+        if (activeTheme === THEMES[1]) {
+            return {
+                transform: 'translateX(32px)',
+            };
+        }
+
+        if (activeTheme === THEMES[2]) {
+            return {
+                transform: 'translateX(64px)',
+            };
+        }
+
+        return {
+            transform: 'translateX(0)',
+        };
+    };
+
     return (
         <div className={styles.menuContainer} ref={menuContainer}>
             <Button
@@ -50,19 +75,31 @@ const Menu = () => {
             </Button>
             <div className={formatClassNames([[styles.menu], [styles.menuOpen, isMenuOpen]])}>
                 <ul className={styles.menuList}>
+                    <li>
+                        <Link href="/posts" onClick={() => setIsMenuOpen(false)}>
+                            Posts
+                        </Link>
+                    </li>
                     <li>About</li>
                     <li>Uses</li>
                     <li>Uses</li>
                 </ul>
                 <div className={styles.themesContainer}>
-                    {THEMES.map((theme, index) => (
-                        <button
-                            className={`${styles.themeBubble} ${theme === activeTheme ? styles.themeBubbleActive : ''}`}
-                            style={{ backgroundColor: theme }}
-                            onClick={() => handleThemeSet(theme)}
-                            key={index}
-                        />
-                    ))}
+                    <div className={styles.themeBubbleContainer}>
+                        {THEMES.map((theme, index) => (
+                            <button
+                                style={{ backgroundColor: theme }}
+                                className={styles.themeBubble}
+                                onClick={() => handleThemeSet(theme)}
+                                key={theme + index}
+                            />
+                        ))}
+                        {THEMES.includes(activeTheme) ? (
+                            <span className={styles.themeBubbleActive} style={handleActiveBubblePositioning()} />
+                        ) : (
+                            <span />
+                        )}
+                    </div>
                     <div className={styles.colorPickerContainer}>
                         <HuePicker
                             color={activeTheme}

@@ -99,6 +99,16 @@
     margin-bottom: 0;
 }
 
+.menuList a,
+.menuList a:focus,
+.menuList a:visited {
+    color: var(--primary-font-color);
+}
+
+.menuList a:hover {
+    text-decoration: underline;
+}
+
 .themesContainer {
     border-top-width: 1px;
     border-top-style: solid;
@@ -108,37 +118,45 @@
     padding: 1.5rem;
 }
 
+.themeBubbleContainer {
+    display: flex;
+    gap: 0.5rem;
+    position: relative;
+}
+
 .themeBubble {
     appearance: none;
     border: none;
     border-radius: 100%;
     cursor: pointer;
-    outline-width: 4px;
-    outline-style: solid;
-    outline-color: transparent;
     height: 24px;
     padding: 2px;
     position: relative;
+    transition: transform ease-in-out 0.3s;
     width: 24px;
 }
 
 .themeBubbleActive {
-    /* border-color: var(--primary-border-color); */
-    outline-color: var(--tertiary-background-color);
-}
-
-.themeBubbleActive:before {
-    content: '';
-    border-radius: 100%;
-    border-width: 2px;
-    border-style: solid;
-    border-color: var(--primary-background-color);
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-50%);
     height: 24px;
     width: 24px;
+    position: absolute;
+    transition: transform ease-in-out 0.3s;
+}
+
+.themeBubble:hover {
+    transform: scale(1.05);
+}
+
+.themeBubbleActive:after {
+    content: '';
+    box-sizing: border-box;
+    border-radius: 100%;
+    border: 2px solid var(--tertiary-background-color);
+    height: calc(24px + 8px);
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    width: calc(24px + 8px);
 }
 
 .colorPickerContainer * div {

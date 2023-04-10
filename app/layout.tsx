@@ -3,6 +3,7 @@ import React from 'react';
 import { cookies } from 'next/headers';
 import '@/app/globals.css';
 import { TopNavigation } from '@/components/layout/TopNavigation';
+import { Footer } from '@/components/layout/Footer';
 
 import { Inter } from 'next/font/google';
 import { hslToHex, pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
@@ -28,6 +29,7 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
             <body className={inter.className}>
                 <TopNavigation />
                 {children}
+                <Footer />
             </body>
         </html>
     );

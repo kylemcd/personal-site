@@ -17,9 +17,11 @@ const PostList = ({ data, layout }: { data: ContentLayerPost[] | null; layout: L
     if (layout === 'stackable') {
         return (
             <div>
-                {data.map((post, index) => {
-                    return <PostPreview data={post} key={index} />;
-                })}
+                <div className={styles.stackableContainer}>
+                    {data.map((post, index) => {
+                        return <PostPreview data={post} key={index} />;
+                    })}
+                </div>
             </div>
         );
     }
