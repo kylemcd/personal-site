@@ -1,0 +1,22 @@
+.field {
+    appearance: none;
+    border-radius: 0.5rem;
+    border: 1px solid var(--primary-border-color);
+    font-size: 18px;
+    padding: 1rem;
+    transition: border-color ease-in-out 0.3s;
+}
+
+.field:hover {
+    border-color: var(--primary-font-color);
+}
+.field:focus {
+    border-color: var(--primary-font-color);
+    outline: none;
+}
+
+.label {
+    color: var(--primary-font-color);
+    font-size: 1rem;
+    margin: 1rem;
+}

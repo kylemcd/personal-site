@@ -4,7 +4,7 @@ import styles from './Typography.module.css';
 import { CSSProperties } from 'react';
 
 type HeadingSize = 'xl' | 'lg' | 'md' | 'sm';
-type ParagraphSize = 'md' | 'sm';
+type ParagraphSize = 'lg' | 'md' | 'sm';
 
 export const Heading = ({
     color,

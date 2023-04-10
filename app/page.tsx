@@ -6,6 +6,7 @@ import fetchSteamGame from '@/external/fetchSteamGame';
 import fetchAllPosts from '@/internal/fetchAllPosts';
 
 import { Hero } from '@/components/home/Hero';
+import { About } from '@/components/home/About';
 
 import {
     statsTranformer,
@@ -97,6 +98,7 @@ const Home = async () => {
             <div className={style.contentContainer}>
                 <div className={style.content}></div>
                 <div className={style.statsContainer}>
+                    <About />
                     <div className={style.statsTopContainer}>
                         <Heading color={`--primary-font-color`} element="h2" size="lg">
                             My Activity

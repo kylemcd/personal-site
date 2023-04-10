@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { HuePicker } from 'react-color';
 
 import { Button } from '@/components/global/Button';
+import { Paragraph } from '@/components/global/Typography';
 import usePersistedState from '@/hooks/usePersistedState';
 import styles from './Menu.module.css';
 import useOnClickOutside from '@/hooks/useOnClickOutside';
@@ -75,14 +76,41 @@ const Menu = () => {
             </Button>
             <div className={formatClassNames([[styles.menu], [styles.menuOpen, isMenuOpen]])}>
                 <ul className={styles.menuList}>
+                    <li className={styles.menuListTitle}>
+                        <Paragraph color="--secondary-font-color" size="md">
+                            Pages
+                        </Paragraph>
+                    </li>
                     <li>
                         <Link href="/posts" onClick={() => setIsMenuOpen(false)}>
                             Posts
                         </Link>
                     </li>
-                    <li>About</li>
-                    <li>Uses</li>
-                    <li>Uses</li>
+                    <li>
+                        <Link href="/contact" onClick={() => setIsMenuOpen(false)}>
+                            Contact
+                        </Link>
+                    </li>
+                    <li className={styles.menuListTitle + ' ' + styles.menuListTitleExternal}>
+                        <Paragraph color="--secondary-font-color" size="md">
+                            Links
+                        </Paragraph>
+                    </li>
+                    <li className={styles.linksListItem}>
+                        <a href="https://twitter.com/kpmdev" target="_blank">
+                            Twitter
+                        </a>
+                    </li>
+                    <li className={styles.linksListItem}>
+                        <a href="https://github.com/kylemcd" target="_blank">
+                            GitHub
+                        </a>
+                    </li>
+                    <li className={styles.linksListItem}>
+                        <a href="https://linkedin.com/in/kylemcd1" target="_blank">
+                            Linkedin
+                        </a>
+                    </li>
                 </ul>
                 <div className={styles.themesContainer}>
                     <div className={styles.themeBubbleContainer}>
