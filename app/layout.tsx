@@ -7,6 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 
 import { Inter } from 'next/font/google';
 import { hslToHex, pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
+import { THEMES } from '@/constants/theme';
 import { HSLString } from '@/types/colors';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -18,7 +19,7 @@ const getThemeColor = async () => {
         return themeColor?.value;
     }
 
-    return '';
+    return THEMES[0];
 };
 
 const RootLayout = async ({ children }: { children: React.ReactNode }) => {

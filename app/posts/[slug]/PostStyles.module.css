@@ -32,3 +32,11 @@
     content: '';
     transform: scaleY(2);
 }
+
+.postListContainer {
+    border-top: 1px solid var(--primary-border-color);
+    margin: 0 auto;
+    max-width: 900px;
+    padding: 2rem 1rem;
+    width: 100%;
+}

@@ -11,10 +11,7 @@ import styles from './Menu.module.css';
 import useOnClickOutside from '@/hooks/useOnClickOutside';
 import { formatClassNames } from '@/helpers/jsxHelpers';
 import { HSLString } from '@/types/colors';
-
-type Themes = HSLString[];
-
-const THEMES: Themes = ['hsl(24, 100%, 60%)', 'hsl(143, 87%, 23%)', 'hsl(356, 87%, 23%)'];
+import { THEMES } from '@/constants/theme';
 
 const Menu = () => {
     const menuContainer = React.useRef<HTMLDivElement>(null);
