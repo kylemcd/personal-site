@@ -1,3 +1,4 @@
+'use client';
 import { Paragraph } from '@/components/global/Typography';
 import styles from './Footer.module.css';
 
