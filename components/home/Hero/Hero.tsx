@@ -1,4 +1,3 @@
-'use client';
 import { Playfair_Display } from 'next/font/google';
 
 import { Heading } from '@/components/global/Typography';

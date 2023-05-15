@@ -17,6 +17,7 @@ const ActivityFeed = ({ data }: { data: any }) => {
                 track: style.track,
                 contentEl: style.statsScrollContainer,
                 dragging: style.dragging,
+                contentWrapper: style.contentWrapper,
             }}
         >
             <GitHub data={github} />

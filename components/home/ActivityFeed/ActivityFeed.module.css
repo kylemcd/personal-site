@@ -2,12 +2,17 @@
     display: flex;
     flex-direction: row;
     gap: 1.5rem;
-    /* padding-left: calc((100vw - 1300px) / 2) !important; */
     margin-left: 1rem;
-    overflow-y: clip;
-    -webkit-overflow-scrolling: touch;
     position: relative;
     scrollbar-width: none;
+}
+
+.contentWrapper {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+}
+.contentWrapper::-webkit-scrollbar {
+    display: none;
 }
 
 @media (min-width: 1300px) {
