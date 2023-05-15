@@ -2,7 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 
-import { HuePicker } from 'react-color';
+import { HslColorPicker } from 'react-colorful';
 
 import { Button } from '@/components/global/Button';
 import { Paragraph } from '@/components/global/Typography';
@@ -126,11 +126,10 @@ const Menu = () => {
                         )}
                     </div>
                     <div className={styles.colorPickerContainer}>
-                        <HuePicker
+                        <HslColorPicker
                             color={activeTheme}
-                            width={'100px'}
                             onChange={(color: any) => {
-                                const hslString: HSLString = `hsl(${color.hsl.h},80%,50%)` as HSLString;
+                                const hslString: HSLString = `hsl(${color.h},80%,50%)` as HSLString;
                                 setActiveTheme(hslString);
                             }}
                         />

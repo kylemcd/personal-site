@@ -130,6 +130,7 @@
     border-top-style: solid;
     border-top-color: var(--primary-border-color);
     display: flex;
+    justify-content: space-between;
     gap: 0.5rem;
     padding: 1.5rem;
 }
@@ -175,11 +176,21 @@
     width: calc(24px + 8px);
 }
 
-.colorPickerContainer * div {
-    border-radius: 1rem !important;
-    height: 24px !important;
+.colorPickerContainer :global(.react-colorful) {
+    height: auto;
+    width: 100px;
+    margin-left: 0.5rem;
 }
 
-.colorPickerContainer div:last-child:not(:has(> div)) {
-    width: 24px !important;
+.colorPickerContainer :global(.react-colorful__hue) {
+    border-radius: 1rem;
+}
+
+.colorPickerContainer :global(.react-colorful__pointer) {
+    height: 24px;
+    width: 24px;
+}
+
+.colorPickerContainer :global(.react-colorful__saturation) {
+    display: none !important;
 }
