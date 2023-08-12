@@ -1,4 +1,4 @@
-import { NextRequest, ImageResponse } from 'next/server';
+import { type NextRequest, ImageResponse } from 'next/server';
 import fetchOnePost from '@/internal/fetchOnePost';
 
 // Route segment config
@@ -10,7 +10,7 @@ const size = {
     height: 630,
 };
 
-export const revalidate = 'force-cache';
+// export const revalidate = 'force-cache';
 
 const interMedium = fetch(new URL('../../public/og/Inter-Medium.ttf', import.meta.url)).then((res) =>
     res.arrayBuffer()
@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
                     />
                     <div style={{ display: 'flex', alignItems: 'center', padding: '36px 72px' }}>
                         <img
-                            src={`https://github.com/kylemcd.png`}
+                            src="https://github.com/kylemcd/personal-site/assets/29106675/1c569d73-1bb7-4b66-95f3-1547d6823e0a"
                             alt="avatar"
                             width="90"
                             height="90"
