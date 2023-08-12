@@ -1,4 +1,4 @@
-import { type NextRequest, ImageResponse } from 'next/server';
+import { ImageResponse } from 'next/server';
 // Route segment config
 export const runtime = 'edge';
 
@@ -8,13 +8,14 @@ const size = {
     height: 630,
 };
 
-const interMedium = fetch(new URL('../og/Inter-Medium.ttf', import.meta.url)).then((res) => res.arrayBuffer());
-const interLight = fetch(new URL('../og/Inter-Light.ttf', import.meta.url)).then((res) => res.arrayBuffer());
-const playFairBold = fetch(new URL('../og/PlayfairDisplay-Bold.ttf', import.meta.url)).then((res) =>
-    res.arrayBuffer()
-);
-
 export default async function Image() {
+    const interMedium = fetch(new URL('../og/Inter-Medium.ttf', import.meta.url)).then((res) =>
+        res.arrayBuffer()
+    );
+    const interLight = fetch(new URL('../og/Inter-Light.ttf', import.meta.url)).then((res) => res.arrayBuffer());
+    const playFairBold = fetch(new URL('../og/PlayfairDisplay-Bold.ttf', import.meta.url)).then((res) =>
+        res.arrayBuffer()
+    );
     const title = "Kyle McDonald's Personal Site";
 
     return new ImageResponse(
