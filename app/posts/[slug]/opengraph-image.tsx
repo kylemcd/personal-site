@@ -1,5 +1,5 @@
 import { type NextRequest, ImageResponse } from 'next/server';
-
+import fetchOnePost from '@/internal/fetchOnePost';
 // Route segment config
 export const runtime = 'edge';
 
@@ -11,23 +11,23 @@ const size = {
 
 // export const revalidate = 'force-cache';
 
-export async function GET(req: NextRequest) {
-    const { searchParams } = req.nextUrl;
-    const titleParam = searchParams.get('title');
+const interMedium = fetch(new URL('../../../public/og/Inter-Medium.ttf', import.meta.url)).then((res) =>
+    res.arrayBuffer()
+);
+const interLight = fetch(new URL('../../../public/og/Inter-Light.ttf', import.meta.url)).then((res) =>
+    res.arrayBuffer()
+);
+const playFairBold = fetch(new URL('../../../public/og/PlayfairDisplay-Bold.ttf', import.meta.url)).then((res) =>
+    res.arrayBuffer()
+);
 
+export default async function Image({ params }: { params: { slug: string } }) {
     let title = "Kyle McDonald's Personal Site";
-    if (titleParam) {
-        title = titleParam;
+
+    if (params?.slug) {
+
+        title = fetchOnePost({slug:params.slug})?.title;
     }
-    const interMedium = fetch(new URL('../../public/og/Inter-Medium.ttf', import.meta.url)).then((res) =>
-        res.arrayBuffer()
-    );
-    const interLight = fetch(new URL('../../public/og/Inter-Light.ttf', import.meta.url)).then((res) =>
-        res.arrayBuffer()
-    );
-    const playFairBold = fetch(new URL('../../public/og/PlayfairDisplay-Bold.ttf', import.meta.url)).then((res) =>
-        res.arrayBuffer()
-    );
 
     return new ImageResponse(
         (
