@@ -16,18 +16,10 @@ const size = {
 export const revalidate = 'force-cache';
 // export const dynamic = 'force-static';
 
-const interMedium = fs.promises.readFile(
-    path.join(url.fileURLToPath(import.meta.url), path.relative(process.cwd(), '../Inter-Medium.ttf'))
-);
-const interBold = fs.promises.readFile(
-    path.join(url.fileURLToPath(import.meta.url), path.relative(process.cwd(), '../Inter-Bold.ttf'))
-);
-const interLight = fs.promises.readFile(
-    path.join(url.fileURLToPath(import.meta.url), path.relative(process.cwd(), '../Inter-Light.ttf'))
-);
-const playFairBold = fs.promises.readFile(
-    path.join(url.fileURLToPath(import.meta.url), path.relative(process.cwd(), '../PlayfairDisplay-Bold.ttf'))
-);
+const interMedium = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../Inter-Medium.ttf'));
+const interBold = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../Inter-Bold.ttf'));
+const interLight = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../Inter-Light.ttf'));
+const playFairBold = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../PlayfairDisplay-Bold.ttf'));
 
 export async function GET(req: NextRequest) {
     const { searchParams } = req.nextUrl;
