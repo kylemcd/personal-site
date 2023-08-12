@@ -15,7 +15,6 @@ const size = {
 
 export const revalidate = 'force-cache';
 export const dynamic = 'force-static';
-export const contentType = 'image/png';
 
 const interMedium = fs.promises.readFile(
     path.join(url.fileURLToPath(import.meta.url), path.relative(process.cwd(), '../Inter-Medium.ttf'))
