@@ -5,7 +5,7 @@ import url from 'url';
 import fetchOnePost from '@/internal/fetchOnePost';
 
 // Route segment config
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 // // Image metadata
 const size = {
@@ -16,10 +16,19 @@ const size = {
 export const revalidate = 'force-cache';
 // export const dynamic = 'force-static';
 
-const interMedium = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../Inter-Medium.ttf'));
-const interBold = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../Inter-Bold.ttf'));
-const interLight = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../Inter-Light.ttf'));
-const playFairBold = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../PlayfairDisplay-Bold.ttf'));
+// const interMedium = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../Inter-Medium.ttf'));
+// const interBold = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../Inter-Bold.ttf'));
+// const interLight = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../Inter-Light.ttf'));
+// const playFairBold = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../PlayfairDisplay-Bold.ttf'));
+
+const interMedium = fetch(new URL('../../public/og/Inter-Medium.ttf', import.meta.url)).then((res) =>
+    res.arrayBuffer()
+);
+const interBold = fetch(new URL('../../public/og/Inter-Bold.ttf', import.meta.url)).then((res) => res.arrayBuffer());
+const interLight = fetch(new URL('../../public/og/Inter-Light.ttf', import.meta.url)).then((res) => res.arrayBuffer());
+const playFairBold = fetch(new URL('../../public/og/PlayfairDisplay-Bold.ttf', import.meta.url)).then((res) =>
+    res.arrayBuffer()
+);
 
 export async function GET(req: NextRequest) {
     const { searchParams } = req.nextUrl;
@@ -103,6 +112,7 @@ export async function GET(req: NextRequest) {
                             src={`https://github.com/kylemcd.png`}
                             alt="avatar"
                             width="90"
+                            height="90"
                             style={{
                                 borderRadius: 90,
                                 border: '1px solid rgba(255,255,255,0.2)',
@@ -141,7 +151,8 @@ export async function GET(req: NextRequest) {
         {
             // For convenience, we can re-use the exported opengraph-image
             // size config to also set the ImageResponse's width and height.
-            ...size,
+    width: 1200,
+    height: 630,
             fonts: [
                 {
                     name: 'Inter',
