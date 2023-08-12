@@ -1,5 +1,5 @@
-// import './globals.css';
 import React from 'react';
+
 import { cookies } from 'next/headers';
 import '@/app/globals.css';
 import { TopNavigation } from '@/components/layout/TopNavigation';
@@ -35,6 +35,12 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
         </html>
     );
 };
+
+type Props = {
+    params: { id: string };
+    searchParams: { [key: string]: string | string[] | undefined };
+};
+
 export async function generateMetadata() {
     const themeColor = await getThemeColor();
     const fontColor = pickFontColorBasedonBackgroundColor(
@@ -42,6 +48,7 @@ export async function generateMetadata() {
         '#ffffff',
         '#000000'
     );
+
     return {
         title: 'Kyle McDonald',
         icons: {

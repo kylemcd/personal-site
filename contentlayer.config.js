@@ -22,6 +22,11 @@ const computedFields = {
             return result.toString();
         },
     },
+    structuredData: {
+        resolve: (doc) => ({
+            image: `https://localhost:3000/og?slug=${doc.slug}`,
+        }),
+    },
 };
 
 export const Post = defineDocumentType(() => ({

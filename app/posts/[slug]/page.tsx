@@ -1,4 +1,4 @@
-'use client';
+'use client'
 import { notFound } from 'next/navigation';
 import Head from 'next/head';
 
