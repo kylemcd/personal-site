@@ -14,17 +14,10 @@ const size = {
 };
 
 export const revalidate = 'force-cache';
-// export const dynamic = 'force-static';
-
-// const interMedium = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../Inter-Medium.ttf'));
-// const interBold = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../Inter-Bold.ttf'));
-// const interLight = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../Inter-Light.ttf'));
-// const playFairBold = fs.promises.readFile(path.join(url.fileURLToPath(import.meta.url), '../PlayfairDisplay-Bold.ttf'));
 
 const interMedium = fetch(new URL('../../public/og/Inter-Medium.ttf', import.meta.url)).then((res) =>
     res.arrayBuffer()
 );
-const interBold = fetch(new URL('../../public/og/Inter-Bold.ttf', import.meta.url)).then((res) => res.arrayBuffer());
 const interLight = fetch(new URL('../../public/og/Inter-Light.ttf', import.meta.url)).then((res) => res.arrayBuffer());
 const playFairBold = fetch(new URL('../../public/og/PlayfairDisplay-Bold.ttf', import.meta.url)).then((res) =>
     res.arrayBuffer()
@@ -151,8 +144,8 @@ export async function GET(req: NextRequest) {
         {
             // For convenience, we can re-use the exported opengraph-image
             // size config to also set the ImageResponse's width and height.
-    width: 1200,
-    height: 630,
+            width: 1200,
+            height: 630,
             fonts: [
                 {
                     name: 'Inter',
@@ -165,12 +158,6 @@ export async function GET(req: NextRequest) {
                     data: await interMedium,
                     style: 'normal',
                     weight: 400,
-                },
-                {
-                    name: 'Inter',
-                    data: await interBold,
-                    style: 'normal',
-                    weight: 600,
                 },
                 {
                     name: 'Playfair',
