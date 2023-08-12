@@ -24,17 +24,7 @@ const getThemeColor = async () => {
 };
 
 const RootLayout = async ({ children }: { children: React.ReactNode }) => {
-    const themeColor = await getThemeColor();
-    const cssVariables = themeColor ? ({ '--primary-color': themeColor } as React.CSSProperties) : {};
-    return (
-        <html lang="en" style={cssVariables}>
-            <body className={inter.className}>
-                <TopNavigation />
-                {children}
-                <Footer />
-            </body>
-        </html>
-    );
+    return <>{children }</>
 };
 
 type Props = {
