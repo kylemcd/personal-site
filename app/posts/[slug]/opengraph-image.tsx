@@ -1,27 +1,24 @@
-import {  ImageResponse } from 'next/server';
+import { ImageResponse } from 'next/server';
 import fetchOnePost from '@/internal/fetchOnePost';
 // Route segment config
 export const runtime = 'edge';
 
 // Image metadata
 const size = {
-    width: 1200,
-    height: 630,
+    width: 800,
+    height: 420,
 };
 
 // export const revalidate = 'force-cache';
 
-
 export default async function Image({ params }: { params: { slug: string } }) {
     const interMedium = fetch(new URL('../../../og/Inter-Medium.ttf', import.meta.url)).then((res) =>
-            res.arrayBuffer()
-            );
-    const interLight = fetch(new URL('../../../og/Inter-Light.ttf', import.meta.url)).then((res) =>
-            res.arrayBuffer()
-            );
+        res.arrayBuffer()
+    );
+    const interLight = fetch(new URL('../../../og/Inter-Light.ttf', import.meta.url)).then((res) => res.arrayBuffer());
     const playFairBold = fetch(new URL('../../../og/PlayfairDisplay-Bold.ttf', import.meta.url)).then((res) =>
-            res.arrayBuffer()
-            );
+        res.arrayBuffer()
+    );
     let title = "Kyle McDonald's Personal Site";
 
     if (params?.slug) {
