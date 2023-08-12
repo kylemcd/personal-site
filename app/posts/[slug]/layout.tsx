@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { cookies } from 'next/headers';
+import fetchOnePost from '@/internal/fetchOnePost';
 import '@/app/globals.css';
 import { TopNavigation } from '@/components/layout/TopNavigation';
 import { Footer } from '@/components/layout/Footer';
@@ -37,11 +38,11 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
 };
 
 type Props = {
-    params: { id: string };
-    searchParams: { [key: string]: string | string[] | undefined };
+    params: { slug: string };
 };
 
-export async function generateMetadata() {
+export async function generateMetadata({ params }: Props) {
+    const post = fetchOnePost({ slug: params?.slug as string });
     const themeColor = await getThemeColor();
     const fontColor = pickFontColorBasedonBackgroundColor(
         hslToHex((themeColor as HSLString) || (`hsl(0,0%,0%)` as HSLString)),
@@ -50,7 +51,10 @@ export async function generateMetadata() {
     );
 
     return {
-        title: 'Kyle McDonald',
+        title: post?.title ?? 'Kyle McDonald',
+            description:
+                post?.postPreview ??
+                "Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
         icons: {
             icon: `data:image/svg+xml,<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
             <style>
@@ -69,16 +73,17 @@ export async function generateMetadata() {
         openGraph: {
             title: 'Kyle McDonald',
             description:
+                post?.postPreview ??
                 "Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
-            url: 'https://kylemcd.com',
+            url: `https://kylemcd.com/posts/${post?.slug}`,
             siteName: 'Kyle McDonald',
             locale: 'en-US',
             type: 'website',
         },
-         twitter: {
-    title: 'Kyle McDonald',
-    card: 'summary_large_image',
-  },
+        twitter: {
+            title: 'Kyle McDonald',
+            card: 'summary_large_image',
+        },
     };
 }
 

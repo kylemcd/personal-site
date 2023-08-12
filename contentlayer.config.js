@@ -1,4 +1,5 @@
 import { defineDocumentType, makeSource } from 'contentlayer/source-files';
+import strip from 'strip-markdown';
 
 import readingTime from 'reading-time';
 
@@ -20,6 +21,13 @@ const computedFields = {
         resolve: async (doc) => {
             const result = await remark().use(html, { sanitize: false }).use(prism).process(doc.body.raw);
             return result.toString();
+        },
+    },
+    postPreview: {
+        type: 'string',
+        resolve: async (doc) => {
+            const result = await remark().use(strip).process(doc.body.raw);
+            return result.toString().substring(0, 200) + "...";
         },
     },
     structuredData: {
