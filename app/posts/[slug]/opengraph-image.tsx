@@ -5,11 +5,11 @@ export const runtime = 'edge';
 
 // Image metadata
 const size = {
-    width: 800,
-    height: 420,
+    width: 1200,
+    height: 630,
 };
 
-// export const revalidate = 'force-cache';
+export const revalidate = 'force-cache';
 
 export default async function Image({ params }: { params: { slug: string } }) {
     const interMedium = fetch(new URL('../../../og/Inter-Medium.ttf', import.meta.url)).then((res) =>
@@ -19,6 +19,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
     const playFairBold = fetch(new URL('../../../og/PlayfairDisplay-Bold.ttf', import.meta.url)).then((res) =>
         res.arrayBuffer()
     );
+
     let title = "Kyle McDonald's Personal Site";
 
     if (params?.slug) {
