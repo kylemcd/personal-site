@@ -1,13 +1,10 @@
 import { NextRequest, ImageResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import url from 'url';
 import fetchOnePost from '@/internal/fetchOnePost';
 
 // Route segment config
 export const runtime = 'edge';
 
-// // Image metadata
+// Image metadata
 const size = {
     width: 1200,
     height: 630,
