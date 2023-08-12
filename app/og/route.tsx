@@ -11,22 +11,23 @@ const size = {
 
 // export const revalidate = 'force-cache';
 
-
 export async function GET(req: NextRequest) {
     const { searchParams } = req.nextUrl;
     const titleParam = searchParams.get('title');
 
     let title = "Kyle McDonald's Personal Site";
     if (titleParam) {
-            title = titleParam
+        title = titleParam;
     }
     const interMedium = fetch(new URL('../../public/og/Inter-Medium.ttf', import.meta.url)).then((res) =>
-            res.arrayBuffer()
-            );
-    const interLight = fetch(new URL('../../public/og/Inter-Light.ttf', import.meta.url)).then((res) => res.arrayBuffer());
+        res.arrayBuffer()
+    );
+    const interLight = fetch(new URL('../../public/og/Inter-Light.ttf', import.meta.url)).then((res) =>
+        res.arrayBuffer()
+    );
     const playFairBold = fetch(new URL('../../public/og/PlayfairDisplay-Bold.ttf', import.meta.url)).then((res) =>
-            res.arrayBuffer()
-            );
+        res.arrayBuffer()
+    );
 
     return new ImageResponse(
         (
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
                 }}
             >
                 <img
-                    src="https://github.com/kylemcd/personal-site/assets/29106675/31d94f0f-68b3-497d-8f84-4a897ef77fc4"
+                    src="https://github.com/kylemcd/personal-site/assets/29106675/87f24255-9c14-42df-a7f7-2a2dbd1b95e5"
                     alt="background"
                     width="1200"
                     height="600"
