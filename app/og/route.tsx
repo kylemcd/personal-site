@@ -1,27 +1,42 @@
-import { ImageResponse } from 'next/server';
+import { NextRequest, ImageResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
+import url from 'url';
 import fetchOnePost from '@/internal/fetchOnePost';
 
 // Route segment config
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
-// Image metadata
-export const size = {
+// // Image metadata
+const size = {
     width: 1200,
     height: 630,
 };
 
+export const revalidate = 'force-cache';
 export const dynamic = 'force-static';
 export const contentType = 'image/png';
 
-const interMedium = fetch(new URL('../og/Inter-Medium.ttf', import.meta.url)).then((res) => res.arrayBuffer());
-const interBold = fetch(new URL('../og/Inter-Bold.ttf', import.meta.url)).then((res) => res.arrayBuffer());
-const interLight = fetch(new URL('../og/Inter-Light.ttf', import.meta.url)).then((res) => res.arrayBuffer());
-const playFairBold = fetch(new URL('../og/PlayfairDisplay-Bold.ttf', import.meta.url)).then((res) => res.arrayBuffer());
+const interMedium = fs.promises.readFile(
+    path.join(url.fileURLToPath(import.meta.url), path.relative(process.cwd(), '../Inter-Medium.ttf'))
+);
+const interBold = fs.promises.readFile(
+    path.join(url.fileURLToPath(import.meta.url), path.relative(process.cwd(), '../Inter-Bold.ttf'))
+);
+const interLight = fs.promises.readFile(
+    path.join(url.fileURLToPath(import.meta.url), path.relative(process.cwd(), '../Inter-Light.ttf'))
+);
+const playFairBold = fs.promises.readFile(
+    path.join(url.fileURLToPath(import.meta.url), path.relative(process.cwd(), '../PlayfairDisplay-Bold.ttf'))
+);
 
-export default async function Image({ params }: { params: { slug: string } }) {
+export async function GET(req: NextRequest) {
+    const { searchParams } = req.nextUrl;
+    const slug = searchParams.get('slug');
+
     let title = "Kyle McDonald's Personal Site";
-    if (params.slug) {
-        const post = fetchOnePost({ slug: params.slug });
+    if (slug) {
+        const post = fetchOnePost({ slug: slug });
         if (post?.title) {
             title = post.title;
         }

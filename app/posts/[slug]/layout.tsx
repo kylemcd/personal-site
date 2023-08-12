@@ -38,11 +38,10 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
 };
 
 type Props = {
-    params: { id: string };
-    searchParams: { [key: string]: string | string[] | undefined };
+    params: { slug: string };
 };
 
-export async function generateMetadata(params: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const themeColor = await getThemeColor();
     const fontColor = pickFontColorBasedonBackgroundColor(
         hslToHex((themeColor as HSLString) || (`hsl(0,0%,0%)` as HSLString)),
@@ -66,7 +65,7 @@ export async function generateMetadata(params: Props): Promise<Metadata> {
             <path class="font" d="M36.0682 100V30.1818H50.8295V60.9659H51.75L76.875 30.1818H94.5682L68.6591 61.4432L94.875 100H77.2159L58.0909 71.2955L50.8295 80.1591V100H36.0682Z"/>
             </svg>`,
         },
-        openGraph: { images: ['/og'] },
+        openGraph: { images: [`/og${params.slug ? `?slug=${params.slug}` : ''}`] },
     };
 }
 

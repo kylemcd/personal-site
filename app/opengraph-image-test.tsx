@@ -1,8 +1,11 @@
 import { ImageResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
+import url from 'url';
 import fetchOnePost from '@/internal/fetchOnePost';
 
 // Route segment config
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // Image metadata
 export const size = {
@@ -13,14 +16,21 @@ export const size = {
 export const dynamic = 'force-static';
 export const contentType = 'image/png';
 
-const interMedium = fetch(new URL('../../../og/Inter-Medium.ttf', import.meta.url)).then((res) => res.arrayBuffer());
-const interBold = fetch(new URL('../../../og/Inter-Bold.ttf', import.meta.url)).then((res) => res.arrayBuffer());
-const interLight = fetch(new URL('../../../og/Inter-Light.ttf', import.meta.url)).then((res) => res.arrayBuffer());
-const playFairBold = fetch(new URL('../../../og/PlayfairDisplay-Bold.ttf', import.meta.url)).then((res) =>
-    res.arrayBuffer()
+const interMedium = fs.promises.readFile(
+    path.join(url.fileURLToPath(import.meta.url), path.relative(process.cwd(), '../../og/Inter-Medium.ttf'))
+);
+const interBold = fs.promises.readFile(
+    path.join(url.fileURLToPath(import.meta.url), path.relative(process.cwd(), '../../og/Inter-Bold.ttf'))
+);
+const interLight = fs.promises.readFile(
+    path.join(url.fileURLToPath(import.meta.url), path.relative(process.cwd(), '../../og/Inter-Light.ttf'))
+);
+const playFairBold = fs.promises.readFile(
+    path.join(url.fileURLToPath(import.meta.url), path.relative(process.cwd(), '../../og/PlayfairDisplay-Bold.ttf'))
 );
 
 export default async function Image({ params }: { params: { slug: string } }) {
+    console.log('params', params);
     let title = "Kyle McDonald's Personal Site";
     if (params.slug) {
         const post = fetchOnePost({ slug: params.slug });
