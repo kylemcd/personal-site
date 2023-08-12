@@ -1,4 +1,3 @@
-// import './globals.css';
 import React from 'react';
 import { cookies } from 'next/headers';
 import '@/app/globals.css';
