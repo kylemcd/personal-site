@@ -25,8 +25,8 @@ export default async function Image({ params }: { params: { slug: string } }) {
     let title = "Kyle McDonald's Personal Site";
 
     if (params?.slug) {
-
-        title = fetchOnePost({slug:params.slug})?.title;
+        const postTitle =  fetchOnePost({ slug: params.slug })?.title;
+        if(postTitle) title = postTitle;
     }
 
     return new ImageResponse(
