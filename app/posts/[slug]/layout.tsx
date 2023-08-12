@@ -52,9 +52,9 @@ export async function generateMetadata({ params }: Props) {
 
     return {
         title: post?.title ?? 'Kyle McDonald',
-            description:
-                post?.postPreview ??
-                "Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
+        description:
+            post?.postPreview ??
+            "Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
         icons: {
             icon: `data:image/svg+xml,<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
             <style>
@@ -71,7 +71,7 @@ export async function generateMetadata({ params }: Props) {
         },
         metadataBase: new URL('https://kylemcd.com'),
         openGraph: {
-            title: 'Kyle McDonald',
+            title: post?.title ?? 'Kyle McDonald',
             description:
                 post?.postPreview ??
                 "Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
