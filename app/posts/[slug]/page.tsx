@@ -1,4 +1,4 @@
-'use client'
+'use client';
 import { notFound } from 'next/navigation';
 import Head from 'next/head';
 
@@ -34,7 +34,7 @@ const randomizeAndSplicePosts = (posts: ContentLayerPost[]): ContentLayerPost[] 
 
 const PostLayout = ({ params }: any) => {
     const post = fetchOnePost({ slug: params.slug });
-    const morePosts = randomizeAndSplicePosts(fetchAllPosts());
+    const morePosts = randomizeAndSplicePosts(fetchAllPosts().filter(post => post.slug !== params.slug));
     const color = useCSSVariableObserver('--primary-color');
 
     const calculateFontColor = (color: HSLString | HexString) => {

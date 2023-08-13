@@ -54,38 +54,44 @@
 .postStyles h1 {
     font-size: 2.25rem;
     line-height: 3.5rem;
-    margin: 1rem 0;
+    margin: 2rem 0 1rem 0;
+    font-family: 'Playfair Display';
 }
 
 .postStyles h2 {
     font-size: 2rem;
     line-height: 2.25rem;
-    margin: 1rem 0;
+    margin: 2rem 0 1rem 0;
+    font-family: 'Playfair Display';
 }
 
 .postStyles h3 {
     font-size: 1.75rem;
     line-height: 2rem;
-    margin: 1rem 0;
+    margin: 2rem 0 1rem 0;
+    font-family: 'Playfair Display';
 }
 .postStyles h4 {
     font-size: 1.5rem;
     line-height: 1.75rem;
-    margin: 1rem 0;
+    margin: 2rem 0 1rem 0;
+    font-family: 'Playfair Display';
 }
 .postStyles h5 {
     font-size: 1.25rem;
     line-height: 1.50rem;
-    margin: 1rem 0;
+    margin: 2rem 0 1rem 0;
+    font-family: 'Playfair Display';
 }
 .postStyles h6 {
     font-size: 1.25rem;
     line-height: 1.50rem;
-    margin: 1rem 0;
+    margin: 2rem 0 1rem 0;
+    font-family: 'Playfair Display';
 }
 
 .postStyles p {
-    font-size: 1.125rem;
+    font-size: 1rem;
     line-height: 2rem;
     margin: 1rem 0;
 }
@@ -112,19 +118,19 @@
 }
 
 .postStyles ul, .postStyles ol {
-    margin-left: 1rem;
+    margin-left: 2rem;
     font-size: 1.125rem;
     padding: 0.5rem 0;
 }
 
 .postStyles li {
-    margin-bottom: 1rem;
-    font-size: 1.125rem;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    line-height: 2rem;
 }
 
 .postStyles li:last-child() {
     margin-bottom: 0;
-    font-size: 1.125rem;
 }
 
 /* Only code that isn't a block */
