@@ -79,8 +79,8 @@
     margin: 1rem 0;
 }
 .postStyles h6 {
-    font-size: 1rem;
-    line-height: 1.25rem;
+    font-size: 1.25rem;
+    line-height: 1.50rem;
     margin: 1rem 0;
 }
 
@@ -113,13 +113,27 @@
 
 .postStyles ul, .postStyles ol {
     margin-left: 1rem;
+    font-size: 1.125rem;
     padding: 0.5rem 0;
 }
 
 .postStyles li {
     margin-bottom: 1rem;
+    font-size: 1.125rem;
 }
 
 .postStyles li:last-child() {
     margin-bottom: 0;
+    font-size: 1.125rem;
+}
+
+/* Only code that isn't a block */
+.postStyles code:not(:has(> *)) {
+    font-size: 1rem;
+    line-height: 1.25rem;
+    border: 1px solid var(--primary-border-color);
+    background-color: var(--secondary-background-color);
+    color: var(--primary-font-color);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
 }
