@@ -4,8 +4,11 @@ import strip from 'strip-markdown';
 import readingTime from 'reading-time';
 
 import { remark } from 'remark';
+import remarkGfm from 'remark-gfm';
+
 import html from 'remark-html';
 import prism from 'remark-prism';
+import mermaid from 'remark-mermaidjs';
 
 const computedFields = {
     slug: {
@@ -19,7 +22,11 @@ const computedFields = {
     postBody: {
         type: 'string',
         resolve: async (doc) => {
-            const result = await remark().use(html, { sanitize: false }).use(prism).process(doc.body.raw);
+            const result = await remark()
+                .use(html, { sanitize: false })
+                .use(mermaid)
+                .use(prism)
+                .process(doc.body.raw);
             return result.toString();
         },
     },
@@ -27,7 +34,7 @@ const computedFields = {
         type: 'string',
         resolve: async (doc) => {
             const result = await remark().use(strip).process(doc.body.raw);
-            return result.toString().substring(0, 200) + "...";
+            return result.toString().substring(0, 200) + '...';
         },
     },
     structuredData: {
@@ -52,4 +59,7 @@ export const Post = defineDocumentType(() => ({
 export default makeSource({
     contentDirPath: 'posts',
     documentTypes: [Post],
+    mdx: {
+        remarkPlugins: [remarkGfm],
+    },
 });
