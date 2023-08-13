@@ -1,6 +1,6 @@
-'use client'
+'use client';
 import React from 'react';
-import { usePathname } from "next/navigation";
+import { usePathname } from 'next/navigation';
 
 import Link from 'next/link';
 
@@ -13,7 +13,12 @@ import { formatClassNames } from '@/helpers/jsxHelpers';
 const TopNavigation = () => {
     const pathname = usePathname();
     return (
-        <div className={formatClassNames([[styles.container], [!pathname.includes('/posts/') && styles.containerSticky]])}>
+        <div
+            className={formatClassNames([
+                [styles.container],
+                [!pathname.includes('/posts/') ? styles.containerSticky : ''],
+            ])}
+        >
             <div className={styles.filler} />
             <Link href="/">
                 <Heading color={'--primary-color'} size="lg" element="h1">
