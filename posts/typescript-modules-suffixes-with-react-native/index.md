@@ -27,7 +27,7 @@ Historically there was no good way of letting typescript know about this. So you
 ## Enter 2023
 Now we have `modulesSuffixes`. Using this `tsconfig` option combined with some smart build output structuring lets typescript utilize the correct for the platform you're building for. Here's an example, again starting with file structure.
 
-```
+```typescript
 react-native-project
 ---ButtonGroup.ts
 ---tsconfig.json
@@ -95,7 +95,7 @@ This configuration is primarily to give the `tsc` build command some direction. 
 To set up the Button to work with this configuration is pretty simple, but missing a step could mean this won't work, so make sure you follow every detail I'm about to explain.
 
 First, here's a reminder of the file structure that we're working with for this section:
-```
+```typescript
 shared-ui-library
 ---dist
 ------index.js
@@ -202,7 +202,7 @@ Now that we have all the pieces in place, it's time to build the button. Here's 
 ```
 
 Your `/dist` folder should look roughly like this:
-```json
+```typescript
 dist
 index.d.ts
 index.js
