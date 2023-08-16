@@ -9,7 +9,7 @@ For the longest time, there was no easy way for typescript to mirror the react-n
 Let's first go through an example of the problem so that we can visualize what problem `moduleSuffixes` is solving.
 
 First the file structure:
-```Button
+```typescript
 ---index.ts
 ---index.native.ts
 ButtonGroup
