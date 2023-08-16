@@ -9,8 +9,7 @@ For the longest time, there was no easy way for typescript to mirror the react-n
 Let's first go through an example of the problem so that we can visualize what problem `moduleSuffixes` is solving.
 
 First the file structure:
-```
-Button
+```Button
 ---index.ts
 ---index.native.ts
 ButtonGroup
@@ -18,8 +17,8 @@ ButtonGroup
 ```
 
 Inside of `ButtonGroup/index.ts` we'd want to import the Button so we could use it, like this:
-```
-import { Button } from './Button':
+```typescript
+import { Button } from "./Button":
 ```
 
 When following this pattern react-native will prioritize whichever file is most relevant to the user, so if you're importing from a react-native project, `Button/index.native.ts` would be the Button that displays. If you're on web and do the same import `Button/index.ts` would be the Button that displays. 
@@ -28,7 +27,7 @@ Historically there was no good way of letting typescript know about this. So you
 ## Enter 2023
 Now we have `modulesSuffixes`. Using this `tsconfig` option combined with some smart build output structuring lets typescript utilize the correct for the platform you're building for. Here's an example, again starting with file structure.
 
-```json
+```
 react-native-project
 ---ButtonGroup.ts
 ---tsconfig.json
@@ -82,7 +81,6 @@ Similar to the above, because this is a web project we don't care about suffixes
 This configuration is primarily to give the `tsc` build command some direction. You can definitely tailor this file differently to address your own needs.
 ```json
 {
-
 	"compilerOptions":{
 		"outDir": "./dist",
 		"module": "commonjs",
@@ -97,7 +95,7 @@ This configuration is primarily to give the `tsc` build command some direction. 
 To set up the Button to work with this configuration is pretty simple, but missing a step could mean this won't work, so make sure you follow every detail I'm about to explain.
 
 First, here's a reminder of the file structure that we're working with for this section:
-```json
+```
 shared-ui-library
 ---dist
 ------index.js
