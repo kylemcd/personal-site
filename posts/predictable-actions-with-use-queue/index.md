@@ -13,13 +13,13 @@ When thinking through this problem and the issues that I was facing I wanted to 
 ### Solving slow server response
 The project I was looking to implement this solution for a shopping cart on an e-commerce app. When thinking through the anatomy of the shopping cart and how adds, changes, and deletes occurred, I realized that I had all the information I needed on the client to know what the end result of an action would be. Because the user had to add the product to the cart from a product page, I already knew the price, name, thumbnail, and anything else I would need to display to inform the user that the cart action happened. Then I could do the math for how the add, change, or delete action would effect the cart item's quantity. I realized I could optimistically update the UI before reaching out to the server. This meant that actions happened near-instantaneous, and the slow server response times wouldn't be felt by the user at all.
 
-## Solving the race condition problem
+### Solving the race condition problem
 In the cart project, I consistently ran into issues when users mashed the add to cart button, the responses would come back in a different order than the actions that the user took. This meant that you would see the cart quantity jump in ways that didn't make sense. The quantity would go from `1 -> 3 -> 2 -> 4` since the response from the cart was used to inform the UI. This didn't provide a good user experience and when trying to add any large quantity it was super painful for the user. I needed a solution that would guarantee that the responses came back in the same order that the user actions intended. I thought WAY back to CS classes where we had concepts like stacks and queues where functions would get executed as they were added to the queue and then removed once completed. This concept was perfect. I could make a queue that took in each user action and would execute them one at a time without the chance of race condition.
 
-## Solving error handling
+### Solving error handling
 Now that I had the queue concept in place and I could guarantee that the user actions got processed on the server in the correct order. Error handling becomes a lot more predictable. Instead of having a response stack like: `success  -> error -> success` because of the race condition, I could now guarantee that it looks like: `success -> success -> error` . I could even take this a step further and flush the queue when an error occurs so that no more actions would ran as it would have likely resulted in an error. This allowed me to have total control and write more bulletproof code to display and handle resolution of any errors that occurred since I knew I would only have to handle one error at a time.
 
-## Conceptualizing a solution
+### Conceptualizing a solution
 I now had all the pieces of the puzzle, but architecting a solution that would do every one of these things required some upfront planning. I decided to step back and look at the entire life cycle that would need to occur for this to be done properly. I was quickly able to draw conclusions of the steps that needed to happen.
 
 1. The UI would be optimistically updated as the user makes an action
@@ -39,7 +39,7 @@ E ---> G[Handle Error & Flush Queue]
 
 So now that we have conceptualized what the solution would look like, we need to now think through the implementation details and write some code.
 
-### Building the Queue
+## Building the Queue
 For the project I was working on, I was storing the cart inside of React's Context API. I like this pattern as I was able to pull through cart actions into any component without much thought or overhead. I decided that this overarching pattern was fine and I was going to stick with it. So I had to introduce this queue concept into this file. Here's some rough pseudo code to visualize what that file looked like:
 
 ```javascript
@@ -204,7 +204,7 @@ Looking at the updated `addCartItem` function, we can now see that what we set o
 3. Errors are handled. We got some more bang for our buck here depending on the server response with the ability to revert the cart back to it's previous state if there is nothing returned, or use the cart response if there is.
 4.  Cart gets updated with server response once processed.
 
-### In conclusion
+## In conclusion
 This project specifically hit a lot of points home for me. First being that when setting out to do something that's "complicated", defining the issue, the output of the solution, and taking the time to visualize, helps to create as well thought out and simple solution. It also reminded me about how important it is to understand how data structures and CS concepts can be super powerful when used correctly. Between the utilization of the queue pattern and the dependency injection like pattern for executing the user action in the task queue, implementing those patterns made the overall solution a lot more simple.
 
 Thanks for coming along with me on this journey! It was a lot of fun to write. If you'd like to see more of these types of articles please reach out to me on X (Twitter) [@kpmdev](https://twitter.com/kpmdev) with any subjects or ideas you have, I would love to hear them!

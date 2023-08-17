@@ -1,0 +1,1 @@
+export { PostHeading } from './PostHeading';

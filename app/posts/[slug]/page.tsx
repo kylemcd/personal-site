@@ -1,16 +1,11 @@
-'use client';
 import { notFound } from 'next/navigation';
 import Head from 'next/head';
-
-import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
 
 import { PostBody } from '@/components/posts/PostBody';
 import { PostList } from '@/components/global/PostList';
 
-import { hslToHex, pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
-
-import { HSLString, HexString, isHSLString } from '@/types/colors';
 import { ContentLayerPost } from '@/types/posts';
+import { PostHeading } from '@/components/posts/PostHeading';
 
 import './PrismTheme.css';
 import styles from './PostStyles.module.css';
@@ -34,16 +29,7 @@ const randomizeAndSplicePosts = (posts: ContentLayerPost[]): ContentLayerPost[] 
 
 const PostLayout = ({ params }: any) => {
     const post = fetchOnePost({ slug: params.slug });
-    const morePosts = randomizeAndSplicePosts(fetchAllPosts().filter(post => post.slug !== params.slug));
-    const color = useCSSVariableObserver('--primary-color');
-
-    const calculateFontColor = (color: HSLString | HexString) => {
-        let backgroundColor = color;
-        if (isHSLString(backgroundColor)) {
-            backgroundColor = hslToHex(backgroundColor);
-        }
-        return pickFontColorBasedonBackgroundColor(backgroundColor, '#ffffff', '#000000');
-    };
+    const morePosts = randomizeAndSplicePosts(fetchAllPosts().filter((post) => post.slug !== params.slug));
 
     if (!post) {
         return notFound();
@@ -55,25 +41,7 @@ const PostLayout = ({ params }: any) => {
                 <title>{post.title}</title>
             </Head>
             <article>
-                <div className={styles.headerContainer}>
-                    <div className={styles.headerContentContainer}>
-                        <h1 className={styles.postTitle} style={{ color: calculateFontColor(color) }}>
-                            {post.title}
-                        </h1>
-                        <span className={styles.postDate} style={{ color: calculateFontColor(color) }}>
-                            {String(
-                                new Date(post.date).toLocaleDateString('en-us', {
-                                    weekday: 'long',
-                                    year: 'numeric',
-                                    month: 'short',
-                                    day: 'numeric',
-                                })
-                            )}
-                            &nbsp;&nbsp;&middot;&nbsp;&nbsp;
-                            {post.readingTime.text}
-                        </span>
-                    </div>
-                </div>
+                <PostHeading post={post} />
                 <div className={styles.postContainer}>
                     <PostBody htmlBody={post.postBody} />
                 </div>

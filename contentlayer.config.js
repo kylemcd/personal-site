@@ -5,10 +5,13 @@ import readingTime from 'reading-time';
 
 import { remark } from 'remark';
 import remarkGfm from 'remark-gfm';
-
 import html from 'remark-html';
 import prism from 'remark-prism';
 import mermaid from 'remark-mermaidjs';
+
+import { rehype } from 'rehype';
+import rehypeSlug from 'rehype-slug';
+import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 
 const computedFields = {
     slug: {
@@ -22,12 +25,12 @@ const computedFields = {
     postBody: {
         type: 'string',
         resolve: async (doc) => {
-            const result = await remark()
-                .use(html, { sanitize: false })
-                .use(mermaid)
-                .use(prism)
-                .process(doc.body.raw);
-            return result.toString();
+            const result = await remark().use(html, { sanitize: false }).use(mermaid).use(prism).process(doc.body.raw);
+            const result2 = await rehype()
+                .use(rehypeSlug)
+                .use(rehypeAutolinkHeadings, { properties: { className: ['heading-anchor'] } })
+                .process(result.toString());
+            return result2.toString();
         },
     },
     postPreview: {

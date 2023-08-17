@@ -33,11 +33,12 @@ body {
     background-color: var(--primary-background-color);
     color: var(--primary-font-color);
     max-width: 100vw;
+    overflow-x: hidden;
     min-height: 100vh;
 }
 
 body {
-    overflow-x: clip;
+    max-width: 100vw;
 }
 
 a {

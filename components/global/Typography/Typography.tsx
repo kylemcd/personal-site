@@ -1,4 +1,5 @@
 import { shapeColorVariable } from '@/helpers/colorHelper';
+import React from 'react';
 import { formatClassNames } from '@/helpers/jsxHelpers';
 import styles from './Typography.module.css';
 import { CSSProperties } from 'react';
