@@ -4,7 +4,6 @@ import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
 import { Popover } from '@interunit/popover';
 import { P } from '@interunit/primitives';
 import { ChevronDown, ScrollText } from 'lucide-react';
-import { Paragraph } from '@/components/global/Typography';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import styles from './PostNavigator.module.css';
@@ -27,6 +26,14 @@ const HeadingsList = ({
     currentSection: string;
     isChild?: boolean;
 }) => {
+    const handleSmoothScroll = (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>, anchor: string) => {
+        event.preventDefault();
+        const anchorElement = document.querySelector(`#${anchor}`);
+        if(!anchorElement) return;
+       anchorElement.scrollIntoView({
+            behavior: 'smooth',
+        });
+    };
     return (
         <ul className={styles.headingsList}>
             {headings.map((heading) => (
@@ -36,7 +43,11 @@ const HeadingsList = ({
                     data-child={isChild}
                     data-active={currentSection === heading.title}
                 >
-                    <a href={`#${heading.anchor}`} className={styles.headingsListAnchor}>
+                    <a
+                        href={`#${heading.anchor}`}
+                        className={styles.headingsListAnchor}
+                        onClick={(e) => handleSmoothScroll(e, heading.anchor)}
+                    >
                         {heading.title}
                     </a>
                     {heading?.children && heading.children.length > 0 && (
@@ -98,13 +109,13 @@ const PostNavigator = () => {
             );
 
             const latestScrolledHeading = scrolledHeadings[scrolledHeadings.length - 1];
-                // @ts-ignore
+            // @ts-ignore
             if (latestScrolledHeading?.innerText) {
                 // @ts-ignore
                 setCurrentSection(latestScrolledHeading.innerText);
             }
-                // @ts-ignore
-            if(!latestScrolledHeading && headings[0].innerText) {
+            // @ts-ignore
+            if (!latestScrolledHeading && headings[0].innerText) {
                 // @ts-ignore
                 setCurrentSection(headings[0].innerText);
             }
