@@ -10,6 +10,7 @@ Let's first go through an example of the problem so that we can visualize what p
 
 First the file structure:
 ```typescript
+Button
 ---index.ts
 ---index.native.ts
 ButtonGroup
