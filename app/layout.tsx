@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { cookies } from 'next/headers';
+import { Analytics } from '@vercel/analytics/react';
 import '@/app/globals.css';
 import { TopNavigation } from '@/components/layout/TopNavigation';
 import { Footer } from '@/components/layout/Footer';
@@ -31,15 +32,12 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
                 <TopNavigation />
                 {children}
                 <Footer />
+                <Analytics />
             </body>
         </html>
     );
 };
 
-type Props = {
-    params: { id: string };
-    searchParams: { [key: string]: string | string[] | undefined };
-};
 
 export async function generateMetadata() {
     const themeColor = await getThemeColor();
@@ -75,10 +73,10 @@ export async function generateMetadata() {
             locale: 'en-US',
             type: 'website',
         },
-         twitter: {
-    title: 'Kyle McDonald',
-    card: 'summary_large_image',
-  },
+        twitter: {
+            title: 'Kyle McDonald',
+            card: 'summary_large_image',
+        },
     };
 }
 
