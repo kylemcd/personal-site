@@ -1,17 +1,18 @@
 import React from 'react';
 
+import '@/app/globals.css';
+
 import { cookies } from 'next/headers';
 import { Analytics } from '@vercel/analytics/react';
-import '@/app/globals.css';
 import { TopNavigation } from '@/components/layout/TopNavigation';
 import { Footer } from '@/components/layout/Footer';
 
-import { Inter } from 'next/font/google';
 import { hslToHex, pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
 import { THEMES } from '@/constants/theme';
 import { HSLString } from '@/types/colors';
 
-const inter = Inter({ subsets: ['latin'] });
+import { GeistSans as sans } from 'geist/font/sans';
+import { GeistMono as mono } from 'geist/font/mono';
 
 const getThemeColor = async () => {
     const nextCookies = cookies();
@@ -25,10 +26,10 @@ const getThemeColor = async () => {
 
 const RootLayout = async ({ children }: { children: React.ReactNode }) => {
     const themeColor = await getThemeColor();
-    const cssVariables = themeColor ? ({ '--primary-color': themeColor } as React.CSSProperties) : {};
+    const cssVariables = themeColor ? ({ '--accent-color': themeColor } as React.CSSProperties) : {};
     return (
-        <html lang="en" style={cssVariables}>
-            <body className={inter.className}>
+        <html lang="en" style={cssVariables} className={`${mono.variable} ${sans.variable}`}>
+            <body>
                 <TopNavigation />
                 {children}
                 <Footer />
@@ -37,7 +38,6 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
         </html>
     );
 };
-
 
 export async function generateMetadata() {
     const themeColor = await getThemeColor();

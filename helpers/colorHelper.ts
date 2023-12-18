@@ -66,11 +66,75 @@ export function hexToHSL(hex: string): HSLString {
     return `hsl(${h},${s}%,${l}%)` as HSLString;
 }
 
-export function pickFontColorBasedonBackgroundColor(bgColor: HexString, lightColor: HexString, darkColor: HexString) {
-    var color = bgColor.charAt(0) === '#' ? bgColor.substring(1, 7) : bgColor;
-    var r = parseInt(color.substring(0, 2), 16); // hexToR
-    var g = parseInt(color.substring(2, 4), 16); // hexToG
-    var b = parseInt(color.substring(4, 6), 16); // hexToB
+function hueToRgb(p: number, q: number, t: number) {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+}
+
+export function hslToRgb(hslString: string) {
+    const regex = /^hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)$/i;
+    const match = hslString.match(regex);
+    if (!match) {
+        return [0, 0, 0];
+    }
+    // Parse the hue, saturation, and lightness values
+    const h = parseInt(match[1], 10);
+    let s = parseInt(match[2], 10);
+    let l = parseInt(match[3], 10);
+
+    s /= 100;
+    l /= 100;
+
+    const chroma = (1 - Math.abs(2 * l - 1)) * s;
+    const x = chroma * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - chroma / 2;
+
+    let r = 0,
+        g = 0,
+        b = 0;
+
+    if (0 <= h && h < 60) {
+        r = chroma;
+        g = x;
+        b = 0;
+    } else if (60 <= h && h < 120) {
+        r = x;
+        g = chroma;
+        b = 0;
+    } else if (120 <= h && h < 180) {
+        r = 0;
+        g = chroma;
+        b = x;
+    } else if (180 <= h && h < 240) {
+        r = 0;
+        g = x;
+        b = chroma;
+    } else if (240 <= h && h < 300) {
+        r = x;
+        g = 0;
+        b = chroma;
+    } else if (300 <= h && h < 360) {
+        r = chroma;
+        g = 0;
+        b = x;
+    }
+
+    r = Math.round((r + m) * 255);
+    g = Math.round((g + m) * 255);
+    b = Math.round((b + m) * 255);
+
+    return [r, g, b];
+}
+
+export function pickFontColorBasedonBackgroundColor(hslBgColor: string, lightColor: string, darkColor: string) {
+    var bgColor = hslToRgb(hslBgColor);
+    var r = bgColor[0];
+    var g = bgColor[1];
+    var b = bgColor[2];
     var uicolors = [r / 255, g / 255, b / 255];
     var c = uicolors.map((col) => {
         if (col <= 0.03928) {
@@ -82,7 +146,7 @@ export function pickFontColorBasedonBackgroundColor(bgColor: HexString, lightCol
     return L > 0.179 ? darkColor : lightColor;
 }
 
-export function hslToHex(hslString: HSLString): HexString {
+export function hslToHex(hslString: string): HexString {
     const hslSplit = hslString!
         .match(/\((.*)\)/)!
         .pop()!

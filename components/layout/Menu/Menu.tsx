@@ -3,25 +3,29 @@ import React from 'react';
 import Link from 'next/link';
 
 import { HslColorPicker } from 'react-colorful';
-
 import { Button } from '@/components/global/Button';
-import { Paragraph } from '@/components/global/Typography';
+import { ExternalLink } from 'lucide-react';
 import usePersistedState from '@/hooks/usePersistedState';
 import styles from './Menu.module.css';
 import useOnClickOutside from '@/hooks/useOnClickOutside';
-import { formatClassNames } from '@/helpers/jsxHelpers';
 import { HSLString } from '@/types/colors';
 import { THEMES } from '@/constants/theme';
+import { motion, AnimatePresence } from 'framer-motion';
+
+import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
+import { pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
 
 const Menu = () => {
     const menuContainer = React.useRef<HTMLDivElement>(null);
+    const accentColor = useCSSVariableObserver('--accent-color');
+    const menuBarColor = pickFontColorBasedonBackgroundColor(accentColor, 'bg-gray-12', 'bg-gray-1');
 
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
     const [activeTheme, setActiveTheme] = usePersistedState('theme', THEMES[0]);
 
     React.useEffect(() => {
         if (activeTheme) {
-            document.documentElement.style.setProperty('--primary-color', activeTheme);
+            document.documentElement.style.setProperty('--accent-color', activeTheme);
         }
     }, [activeTheme]);
 
@@ -56,86 +60,111 @@ const Menu = () => {
     };
 
     return (
-        <div className={styles.menuContainer} ref={menuContainer}>
+        <div className="relative" ref={menuContainer}>
             <Button
                 type="button"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 size="sm"
+                className="z-20 relative"
                 color={`hsl(0, 0%, 84%)`}
                 lightnessModifier={2}
                 shadowless={true}
             >
-                <span className={`${styles.menuButtonContainer} ${isMenuOpen ? styles.menuButtonContainerOpen : ''}`}>
-                    <span className={styles.menuBar1 + ' menuBar1'} />
-                    <span className={styles.menuBar2 + ' menuBar2'} />
-                    <span className={styles.menuBar3 + ' menuBar3'} />
+                <span className={` w-6 h-6 relative flex flex-col items-center justify-center gap-2 `}>
+                    <span
+                        className={`transition-all w-5 h-[2px]  ${menuBarColor} ${
+                            isMenuOpen ? 'rotate-45 translate-y-[5px]' : ''
+                        }`}
+                    />
+                    <span
+                        className={`transition-all w-5 h-[2px] ${menuBarColor} ${
+                            isMenuOpen ? '-rotate-45 -translate-y-[5px] ' : ''
+                        }`}
+                    />
                 </span>
             </Button>
-            <div className={formatClassNames([[styles.menu], [styles.menuOpen, isMenuOpen]])}>
-                <ul className={styles.menuList}>
-                    <li className={styles.menuListTitle}>
-                        <Paragraph color="--secondary-font-color" size="md">
-                            Pages
-                        </Paragraph>
-                    </li>
-                    <li>
-                        <Link href="/posts" onClick={() => setIsMenuOpen(false)}>
-                            Posts
-                        </Link>
-                    </li>
-                    <li>
-                        <Link href="/contact" onClick={() => setIsMenuOpen(false)}>
-                            Contact
-                        </Link>
-                    </li>
-                    <li className={styles.menuListTitle + ' ' + styles.menuListTitleExternal}>
-                        <Paragraph color="--secondary-font-color" size="md">
-                            Links
-                        </Paragraph>
-                    </li>
-                    <li className={styles.linksListItem}>
-                        <a href="https://twitter.com/kpmdev" target="_blank">
-                            Twitter
-                        </a>
-                    </li>
-                    <li className={styles.linksListItem}>
-                        <a href="https://github.com/kylemcd" target="_blank">
-                            GitHub
-                        </a>
-                    </li>
-                    <li className={styles.linksListItem}>
-                        <a href="https://linkedin.com/in/kylemcd1" target="_blank">
-                            Linkedin
-                        </a>
-                    </li>
-                </ul>
-                <div className={styles.themesContainer}>
-                    <div className={styles.themeBubbleContainer}>
-                        {THEMES.map((theme, index) => (
-                            <button
-                                style={{ backgroundColor: theme }}
-                                className={styles.themeBubble}
-                                onClick={() => handleThemeSet(theme)}
-                                key={theme + index}
-                            />
-                        ))}
-                        {THEMES.includes(activeTheme) ? (
-                            <span className={styles.themeBubbleActive} style={handleActiveBubblePositioning()} />
-                        ) : (
-                            <span />
+            <AnimatePresence>
+                {isMenuOpen && (
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        transition={{ duration: 0.2, stiffness: 100 }}
+                        className={['border border-gray-3 bg-gray-1 absolute top-0 right-0 z-10 origin-top-right'].join(
+                            ' '
                         )}
-                    </div>
-                    <div className={styles.colorPickerContainer}>
-                        <HslColorPicker
-                            color={activeTheme}
-                            onChange={(color: any) => {
-                                const hslString: HSLString = `hsl(${color.h},80%,50%)` as HSLString;
-                                setActiveTheme(hslString);
-                            }}
-                        />
-                    </div>
-                </div>
-            </div>
+                    >
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                            <div className="list-none flex flex-col gap-2">
+                                <ul className="list-none flex flex-col gap-2 p-4 border-b border-b-gray-3">
+                                    <li>
+                                        <Link href="/posts" onClick={() => setIsMenuOpen(false)}>
+                                            Posts
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <Link href="/contact" onClick={() => setIsMenuOpen(false)}>
+                                            Contact
+                                        </Link>
+                                    </li>
+                                </ul>
+                                <ul className="list-none flex flex-col gap-2 p-4">
+                                    <li>
+                                        <a href="https://twitter.com/kpmdev" target="_blank"
+                                        className="flex items-center gap-2">
+                                            Twitter
+                                            <ExternalLink className="stroke-gray-8" size={16} />
+                                        </a>
+                                    </li>
+                                    <li >
+                                        <a href="https://github.com/kylemcd" target="_blank"
+                                        className="flex items-center gap-2">
+                                            GitHub
+                                            <ExternalLink className="stroke-gray-8" size={16} />
+                                        </a>
+                                    </li>
+                                    <li >
+                                        <a href="https://linkedin.com/in/kylemcd1" target="_blank"
+                                        className="flex items-center gap-2">
+                                            Linkedin
+                                            <ExternalLink className="stroke-gray-8" size={16} />
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 p-4 border-t border-t-gray-3">
+                                <div className="flex gap-2 relative">
+                                    {THEMES.map((theme, index) => (
+                                        <button
+                                            style={{ backgroundColor: theme }}
+                                            className="appearance-none cursor-pointer w-6 h-6 transition-all p-1 hover:scale-105"
+                                            onClick={() => handleThemeSet(theme)}
+                                            key={theme + index}
+                                        />
+                                    ))}
+                                    {THEMES.includes(activeTheme) ? (
+                                        <span
+                                            className={styles.themeBubbleActive}
+                                            style={handleActiveBubblePositioning()}
+                                        />
+                                    ) : (
+                                        <span />
+                                    )}
+                                </div>
+                                <div className={styles.colorPickerContainer}>
+                                    <HslColorPicker
+                                        color={activeTheme}
+                                        onChange={(color: any) => {
+                                            const hslString: HSLString = `hsl(${color.h},80%,50%)` as HSLString;
+                                            setActiveTheme(hslString);
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

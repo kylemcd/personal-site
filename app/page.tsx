@@ -92,24 +92,24 @@ const Home = async () => {
         return null;
     }
 
+            // <div className={style.contentContainer}>
+            //     <div className={style.content}></div>
+            //     <div className={style.statsContainer}>
+            //         <About />
+            //         <div className={style.statsTopContainer}>
+            //             <Heading color={`--primary-font-color`} element="h2" size="lg">
+            //                 My Activity
+            //             </Heading>
+            //         </div>
+            //         <div className={style.pageContentContainer}>
+            //             <ActivityFeed data={data} />
+            //             <PostList data={posts} layout="scrollable" />
+            //         </div>
+            //     </div>
+            // </div>
     return (
         <>
             <Hero />
-            <div className={style.contentContainer}>
-                <div className={style.content}></div>
-                <div className={style.statsContainer}>
-                    <About />
-                    <div className={style.statsTopContainer}>
-                        <Heading color={`--primary-font-color`} element="h2" size="lg">
-                            My Activity
-                        </Heading>
-                    </div>
-                    <div className={style.pageContentContainer}>
-                        <ActivityFeed data={data} />
-                        <PostList data={posts} layout="scrollable" />
-                    </div>
-                </div>
-            </div>
         </>
     );
 };
