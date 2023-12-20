@@ -9,6 +9,8 @@ module.exports = {
         colors: {
             transparent: 'transparent',
             accent: 'var(--accent-color)',
+            black: 'var(--black)',
+            white: 'var(--white)',
             gray: {
                 1: 'rgba(var(--gray-1) / <alpha-value>)',
                 2: 'rgba(var(--gray-2) / <alpha-value>)',

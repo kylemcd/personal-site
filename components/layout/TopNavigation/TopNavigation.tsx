@@ -9,7 +9,7 @@ const TopNavigation = () => {
     return (
         <div className="w-full border-b border-b-gray-4">
             <div className="flex justify-between items-center w-full max-w-7xl mx-auto gap-4">
-                <div className="border-l border-r border-gray-3 px-3 py-1">
+                <div className="p-4">
                     <Link href="/">
                         <Heading
                             color={'--accent-color'}
@@ -22,7 +22,7 @@ const TopNavigation = () => {
                         </Heading>
                     </Link>
                 </div>
-                <div className="border-l border-r border-gray-3 px-3 py-1">
+                <div className=" p-4 mt-60">
                     <Menu />
                 </div>
             </div>

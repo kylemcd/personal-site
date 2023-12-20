@@ -2,73 +2,34 @@
 import React from 'react';
 import Link from 'next/link';
 
-import { HslColorPicker } from 'react-colorful';
 import { Button } from '@/components/global/Button';
-import { ExternalLink } from 'lucide-react';
-import usePersistedState from '@/hooks/usePersistedState';
-import styles from './Menu.module.css';
+import { ArrowUpRight } from 'lucide-react';
 import useOnClickOutside from '@/hooks/useOnClickOutside';
-import { HSLString } from '@/types/colors';
 import { THEMES } from '@/constants/theme';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
+import { useTheme } from '@/hooks/useTheme';
 import { pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
 
 const Menu = () => {
     const menuContainer = React.useRef<HTMLDivElement>(null);
-    const accentColor = useCSSVariableObserver('--accent-color');
-    const menuBarColor = pickFontColorBasedonBackgroundColor(accentColor, 'bg-gray-12', 'bg-gray-1');
+
+    const accentColorCssVariable = useCSSVariableObserver('--accent-color');
+    const menuBarColor = pickFontColorBasedonBackgroundColor(accentColorCssVariable, 'bg-white', 'bg-black');
 
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-    const [activeTheme, setActiveTheme] = usePersistedState('theme', THEMES[0]);
-
-    React.useEffect(() => {
-        if (activeTheme) {
-            document.documentElement.style.setProperty('--accent-color', activeTheme);
-        }
-    }, [activeTheme]);
+    const { accentColor, setAccentColor, appearance, setAppearance } = useTheme();
 
     useOnClickOutside({ ref: menuContainer, handler: () => setIsMenuOpen(false) });
-
-    const handleThemeSet = (theme: HSLString) => {
-        setActiveTheme(theme);
-    };
-
-    const handleActiveBubblePositioning = () => {
-        if (activeTheme === THEMES[0]) {
-            return {
-                transform: 'translateX(0)',
-            };
-        }
-
-        if (activeTheme === THEMES[1]) {
-            return {
-                transform: 'translateX(32px)',
-            };
-        }
-
-        if (activeTheme === THEMES[2]) {
-            return {
-                transform: 'translateX(64px)',
-            };
-        }
-
-        return {
-            transform: 'translateX(0)',
-        };
-    };
 
     return (
         <div className="relative" ref={menuContainer}>
             <Button
                 type="button"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                size="sm"
                 className="z-20 relative"
                 color={`hsl(0, 0%, 84%)`}
-                lightnessModifier={2}
-                shadowless={true}
             >
                 <span className={` w-6 h-6 relative flex flex-col items-center justify-center gap-2 `}>
                     <span
@@ -90,9 +51,9 @@ const Menu = () => {
                         animate={{ scale: 1 }}
                         exit={{ scale: 0 }}
                         transition={{ duration: 0.2, stiffness: 100 }}
-                        className={['border border-gray-3 bg-gray-1 absolute top-0 right-0 z-10 origin-top-right'].join(
-                            ' '
-                        )}
+                        className={[
+                            'border border-gray-3 bg-gray-1 absolute -top-2 -right-2 z-10 origin-top-right rounded-xl shadow-sm',
+                        ].join(' ')}
                     >
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                             <div className="list-none flex flex-col gap-2">
@@ -110,55 +71,74 @@ const Menu = () => {
                                 </ul>
                                 <ul className="list-none flex flex-col gap-2 p-4">
                                     <li>
-                                        <a href="https://twitter.com/kpmdev" target="_blank"
-                                        className="flex items-center gap-2">
+                                        <a
+                                            href="https://twitter.com/kpmdev"
+                                            target="_blank"
+                                            className="flex items-center gap-1"
+                                        >
                                             Twitter
-                                            <ExternalLink className="stroke-gray-8" size={16} />
+                                            <ArrowUpRight className="stroke-gray-8" size={16} />
                                         </a>
                                     </li>
-                                    <li >
-                                        <a href="https://github.com/kylemcd" target="_blank"
-                                        className="flex items-center gap-2">
+                                    <li>
+                                        <a
+                                            href="https://github.com/kylemcd"
+                                            target="_blank"
+                                            className="flex items-center gap-1"
+                                        >
                                             GitHub
-                                            <ExternalLink className="stroke-gray-8" size={16} />
+                                            <ArrowUpRight className="stroke-gray-8" size={16} />
                                         </a>
                                     </li>
-                                    <li >
-                                        <a href="https://linkedin.com/in/kylemcd1" target="_blank"
-                                        className="flex items-center gap-2">
+                                    <li>
+                                        <a
+                                            href="https://linkedin.com/in/kylemcd1"
+                                            target="_blank"
+                                            className="flex items-center gap-1"
+                                        >
                                             Linkedin
-                                            <ExternalLink className="stroke-gray-8" size={16} />
+                                            <ArrowUpRight className="stroke-gray-8" size={16} />
                                         </a>
                                     </li>
                                 </ul>
                             </div>
-                            <div className="flex items-center justify-between gap-2 p-4 border-t border-t-gray-3">
-                                <div className="flex gap-2 relative">
-                                    {THEMES.map((theme, index) => (
-                                        <button
-                                            style={{ backgroundColor: theme }}
-                                            className="appearance-none cursor-pointer w-6 h-6 transition-all p-1 hover:scale-105"
-                                            onClick={() => handleThemeSet(theme)}
-                                            key={theme + index}
+                            <div className="flex items-center justify-between gap-2 border-t border-t-gray-3">
+                                <div className="flex gap-2 relative p-4">
+                                    {THEMES.map((color) => (
+                                        <Button
+                                            style={{ backgroundColor: color }}
+                                            className={[
+                                                accentColor === color
+                                                    ? 'outline outline-gray-12 outline-offset-2 outline-2'
+                                                    : '',
+                                            ].join(' ')}
+                                            onClick={() => setAccentColor(color)}
+                                            key={color}
                                         />
                                     ))}
-                                    {THEMES.includes(activeTheme) ? (
-                                        <span
-                                            className={styles.themeBubbleActive}
-                                            style={handleActiveBubblePositioning()}
-                                        />
-                                    ) : (
-                                        <span />
-                                    )}
                                 </div>
-                                <div className={styles.colorPickerContainer}>
-                                    <HslColorPicker
-                                        color={activeTheme}
-                                        onChange={(color: any) => {
-                                            const hslString: HSLString = `hsl(${color.h},80%,50%)` as HSLString;
-                                            setActiveTheme(hslString);
-                                        }}
-                                    />
+                                <div className="border-l border-l-gray-3 flex items-center gap-2 p-4">
+                                    <Button
+                                        style={{ backgroundColor: 'var(--white)' }}
+                                        className={[
+                                            'aspect-square w-4 h-6 flex items-center justify-center',
+                                            appearance === 'light'
+                                                ? 'outline outline-gray-12 outline-offset-2 outline-2'
+                                                : '',
+                                        ].join(' ')}
+                                        onClick={() => setAppearance('light')}
+                                    ></Button>
+                                    <span>/</span>
+                                    <Button
+                                        style={{ backgroundColor: 'var(--black)' }}
+                                        className={[
+                                            'aspect-square w-4 h-6 flex items-center justify-center',
+                                            appearance === 'dark'
+                                                ? 'outline outline-gray-12 outline-offset-2 outline-2'
+                                                : '',
+                                        ].join(' ')}
+                                        onClick={() => setAppearance('dark')}
+                                    ></Button>
                                 </div>
                             </div>
                         </motion.div>
