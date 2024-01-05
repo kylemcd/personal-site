@@ -46,9 +46,11 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
             className={`${mono.variable} ${sans.variable}`}
             data-appearance={appearance}
         >
-            <body>
-                <TopNavigation />
-                {children}
+            <body className="bg-accent">
+                <div className="bg-gray-1 rounded-br-xl rounded-bl-2xl">
+                    <TopNavigation />
+                    {children}
+                </div>
                 <Footer />
                 <Analytics />
             </body>

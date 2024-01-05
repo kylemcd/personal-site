@@ -24,6 +24,12 @@ const nextConfig = {
                 port: '',
                 pathname: '**',
             },
+            {
+                protocol: 'https',
+                hostname: 'assets.literal.club',
+                port: '',
+                pathname: '**',
+            },
         ],
     },
 };

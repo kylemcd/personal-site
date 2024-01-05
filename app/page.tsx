@@ -20,6 +20,7 @@ import { FormattedGitHubData } from '@/types/github';
 import { RawDataFromAirtable, FormattedStats } from '@/types/stats';
 import { FormattedSpotifyData, RawSpotifyPlaylistData } from '@/types/spotify';
 import { FormattedSteamData, RawSteamGameData, RawSteamLastPlayedData } from '@/types/steam';
+import { ActivityCloud } from '@/components/home/ActivityCloud';
 
 import { ActivityFeed } from '@/components/home/ActivityFeed';
 import { PostList } from '@/components/global/PostList';
@@ -92,25 +93,26 @@ const Home = async () => {
         return null;
     }
 
-            // <div className={style.contentContainer}>
-            //     <div className={style.content}></div>
-            //     <div className={style.statsContainer}>
-            //         <About />
-            //         <div className={style.statsTopContainer}>
-            //             <Heading color={`--primary-font-color`} element="h2" size="lg">
-            //                 My Activity
-            //             </Heading>
-            //         </div>
-            //         <div className={style.pageContentContainer}>
-            //             <ActivityFeed data={data} />
-            //             <PostList data={posts} layout="scrollable" />
-            //         </div>
-            //     </div>
-            // </div>
+    // <div className={style.contentContainer}>
+    //     <div className={style.content}></div>
+    //     <div className={style.statsContainer}>
+    //         <About />
+    //         <div className={style.statsTopContainer}>
+    //             <Heading color={`--primary-font-color`} element="h2" size="lg">
+    //                 My Activity
+    //             </Heading>
+    //         </div>
+    //         <div className={style.pageContentContainer}>
+    //             <ActivityFeed data={data} />
+    //             <PostList data={posts} layout="scrollable" />
+    //         </div>
+    //     </div>
+    // </div>
     return (
-        <>
+        <div className="max-w-7xl mx-auto w-full pb-8">
             <Hero />
-        </>
+            <ActivityCloud />
+        </div>
     );
 };
 
