@@ -3,10 +3,10 @@ import fetchSpotifyData from '@/external/fetchSpotifyData';
 import fetchGitHubData from '@/external/fetchGitHubData';
 import fetchSteamLastPlayed from '@/external/fetchSteamLastPlayed';
 import fetchSteamGame from '@/external/fetchSteamGame';
+import fetchLiteralBooks from '@/external/fetchLiteralBooks';
 import fetchAllPosts from '@/internal/fetchAllPosts';
 
 import { Hero } from '@/components/home/Hero';
-import { About } from '@/components/home/About';
 
 import {
     statsTranformer,
@@ -17,17 +17,12 @@ import {
 } from '@/helpers/dataHelper';
 
 import { FormattedGitHubData } from '@/types/github';
+import { FormattedBooks} from '@/types/books';
 import { RawDataFromAirtable, FormattedStats } from '@/types/stats';
 import { FormattedSpotifyData, RawSpotifyPlaylistData } from '@/types/spotify';
 import { FormattedSteamData, RawSteamGameData, RawSteamLastPlayedData } from '@/types/steam';
 import { ActivityCloud } from '@/components/home/ActivityCloud';
 
-import { ActivityFeed } from '@/components/home/ActivityFeed';
-import { PostList } from '@/components/global/PostList';
-
-import { Heading } from '@/components/global/Typography';
-
-import style from './page.module.css';
 import { ContentLayerPost } from '@/types/posts';
 
 interface FetchAndFormatResult {
@@ -36,6 +31,7 @@ interface FetchAndFormatResult {
     github: FormattedGitHubData | null;
     steam: FormattedSteamData | null;
     posts: ContentLayerPost[] | null;
+    books: FormattedBooks | null;
     error: boolean;
 }
 
@@ -44,6 +40,7 @@ const fetchAndFormatData = async (): Promise<FetchAndFormatResult> => {
         playlist: null,
         stats: null,
         github: null,
+        books: null,
         steam: null,
         posts: null,
         error: false,
@@ -78,6 +75,10 @@ const fetchAndFormatData = async (): Promise<FetchAndFormatResult> => {
     const formattedGameData = steamGameTransformer(gameData);
 
     result.steam = { ...formattedGameData, ...formattedLastPlayedData };
+    const books = await fetchLiteralBooks() as FormattedBooks;
+
+    result.books = books;
+
 
     // Blog
     const posts = fetchAllPosts();
@@ -111,7 +112,7 @@ const Home = async () => {
     return (
         <div className="max-w-7xl mx-auto w-full pb-8">
             <Hero />
-            <ActivityCloud />
+            <ActivityCloud {...data} />
         </div>
     );
 };
