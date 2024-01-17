@@ -115,7 +115,7 @@ export default async function Image() {
                                     fontWeight: 300,
                                 }}
                             >
-                                Director of Engineering @ Foxtrot
+                                Software Engineer
                             </span>
                         </div>
                     </div>

@@ -126,7 +126,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
                                     fontWeight: 300,
                                 }}
                             >
-                                Director of Engineering @ Foxtrot
+                                Software Engineer
                             </span>
                         </div>
                     </div>

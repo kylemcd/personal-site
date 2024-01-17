@@ -1,6 +1,5 @@
 'use client';
 import React from 'react';
-import Image from 'next/image';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 
 type ActivityCloudItemProps = React.ComponentProps<'div'> & {
@@ -25,7 +24,7 @@ function ActivityCloudItem({ rotationMultiplier = 3, Content, ExpandedContent, c
     const rotateY = useTransform(() => -mouseX.get());
     const boxShadow = useTransform(() => {
         if (shadowX.get() === null || shadowY.get() === null) return '0 0 0 0 rgba(0,0,0,0)';
-        return `${shadowX.get()}px ${shadowY.get()}px 10px 8px rgba(239,239,240,0.6)`;
+        return `${shadowX.get()}px ${shadowY.get()}px 10px 8px rgb(0,0,0,0.08)`;
     });
 
     function calculatePositioning(): React.CSSProperties {
@@ -73,16 +72,14 @@ function ActivityCloudItem({ rotationMultiplier = 3, Content, ExpandedContent, c
     }, []);
 
     React.useEffect(() => {
-
         setWindowWidth(window.innerWidth);
         setPositioning(calculatePositioning());
         window.addEventListener('resize', handleResize);
 
         () => {
             window.removeEventListener('resize', handleResize);
-        }
+        };
     }, []);
-
 
     function handleMouseMove(event: React.MouseEvent<HTMLDivElement>) {
         const card = cardRef.current;

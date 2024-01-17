@@ -15,7 +15,7 @@ function Posts({ posts }: PostsProps) {
                         key={index}
                     >
                         <span>
-                            <Link href={`/posts/${post._raw.flattenedPath}`} className="text-accent">
+                            <Link href={`/posts/${post._raw.flattenedPath}`}>
                                 {post.title}
                             </Link>
                         </span>
