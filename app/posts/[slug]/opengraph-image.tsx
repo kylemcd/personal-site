@@ -1,4 +1,4 @@
-import { ImageResponse } from 'next/og';
+import { ImageResponse } from '@vercel/og';
 import fetchOnePost from '@/internal/fetchOnePost';
 // Route segment config
 export const runtime = 'edge';
