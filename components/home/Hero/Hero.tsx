@@ -7,7 +7,7 @@ const Hero = () => {
                     Hi, I'm Kyle McDonald
                 </h1>
             </div>
-            <div className="flex flex-col md:flex-row justify-between md:items-center py-10 px-2 gap-4">
+            <div className="flex flex-col md:flex-row justify-between md:items-center pt-10 px-2 gap-4">
                 <div className="basis-full md:basis-1/3">
                     <div className="flex flex-col gap-2">
                         <div className="grid grid-cols-[130px_100%]">

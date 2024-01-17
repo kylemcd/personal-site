@@ -99,10 +99,10 @@ const Home = async () => {
             <div className="my-8 md:my-40 ">
                 <Hero />
             </div>
-            <div className="my-40">
+            <div className="my-8 md:my-40">
                 <ActivityCloud {...data} />
             </div>
-            <div className="my-40">
+            <div className="my-8 md:my-40">
                 <Posts posts={posts!} />
             </div>
         </div>
