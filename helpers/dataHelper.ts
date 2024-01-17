@@ -42,7 +42,7 @@ export const spotifyTransformer = ({ playlist }: { playlist: RawSpotifyPlaylistD
         name: playlist?.name,
         image: playlist?.images[0],
         href: playlist?.external_urls?.spotify,
-        tracks: playlist?.tracks?.items?.slice(0, 3).map(({ track }) => ({
+        tracks: playlist?.tracks?.items?.slice(0, 4).map(({ track }) => ({
             artistName: track?.artists?.[0]?.name,
             songName: track?.name,
             duration: msToMinutesSeconds(track?.duration_ms),

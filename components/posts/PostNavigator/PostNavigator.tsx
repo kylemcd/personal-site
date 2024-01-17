@@ -8,8 +8,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import styles from './PostNavigator.module.css';
 
-import { IBM_Plex_Serif } from 'next/font/google';
-const ibm = IBM_Plex_Serif({ subsets: ['latin'], weight: '400' });
 
 type NestedItem = {
     title: string;
@@ -131,7 +129,7 @@ const PostNavigator = () => {
 
     if (primaryColor && headings?.length > 0) {
         return (
-            <div className={`${styles.container} ${ibm.className}`}>
+            <div className={`${styles.container}`}>
                 <Popover triggerType="click">
                     <Popover.Trigger>
                         {({ isOpen }) => (

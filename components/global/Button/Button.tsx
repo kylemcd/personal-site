@@ -3,128 +3,65 @@ import React from 'react';
 import Link from 'next/link';
 
 import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
-import styles from './Button.module.css';
 
-import { HSLString, Color, isHSLString, HexString, isHexString } from '@/types/colors';
-import { hexToHSL, hslToHex, pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
+import { pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
 
-type Size = 'xs' | 'sm' | 'md' | 'lg';
-type Type = 'a' | 'button' | 'Link';
+// type ButtonPropsAnchor = React.ComponentPropsWithoutRef<'a'> & {
+//     type?: 'a';
+//     buttonType?: never;
+// };
+//
+// type ButtonPropsLink = React.ComponentPropsWithoutRef<typeof Link> & {
+//     type?: 'Link';
+//     buttonType?: never;
+// };
+//
+// type ButtonPropsButton = React.ComponentPropsWithoutRef<'button'> & {
+//     type?: 'button';
+//     buttonType?: 'submit' | 'button';
+//     href?: never;
+// };
 
-interface ButtonPropsGeneric<T extends Type> {
-    type: T;
-    color: Color;
-    size: Size;
-    lightnessModifier?: number;
-    children: React.ReactElement | string;
-    shadowless?: boolean;
-    [key: string]: any; // ...otherProps
-}
+// type ButtonProps = ButtonPropsButton | ButtonPropsLink | ButtonPropsAnchor;
+// type ButtonProps<Type> = Type extends 'a'
+//     ? ButtonPropsAnchor
+//     : Type extends 'Link'
+//     ? ButtonPropsLink
+//     : ButtonPropsButton;
+//
 
-interface ButtonPropsLink extends ButtonPropsGeneric<'Link' | 'a'> {
-    href: string;
-}
+// TODO: Fix types here
+type ButtonProps<Type> = any
 
-interface ButtonPropsButton extends ButtonPropsGeneric<'button'> {
-    onClick?: Function;
-    buttonType?: 'submit' | 'button';
-}
-
-type ButtonProps = ButtonPropsButton | ButtonPropsLink;
-
-const DEFAULT_LIGHTNESS_MODIFIER = 6;
-const LIGHTNESS_FONT_MINIMUM = 65;
-
-const getColorStyle = ({
-    colorString,
-    lightnessModifier,
-}: {
-    colorString: HSLString | HexString;
-    lightnessModifier: number;
-}): { backgroundImage: string; color: string; borderColor: string } => {
-    // Default back up just in case
-    if (typeof window === 'undefined' || !colorString) {
-        return {
-            backgroundImage: `linear-gradient(to top, var(--primary-font-color), var(--secondary-font-color))`,
-            color: `var(--tertiary-font-color)`,
-            borderColor: `var(--primary-font-color))`,
-        };
-    }
-
-    const hexString = isHexString(colorString) ? (colorString as HexString) : hslToHex(colorString);
-    const hslString = isHSLString(colorString) ? (colorString as HSLString) : hexToHSL(colorString);
-
-    // Get each indiviusal HSL Value
-    const hslSplit = hslString
-        .match(/\((.*)\)/)!
-        .pop()!
-        ?.split(',')
-        .map((s) => s.trim());
-
-    // Calculate color value for the top of the gradient
-    // & set lightness value for later
-    const lighterHsl = `hsl(${hslSplit!
-        .map((each, index) => {
-            if (index === 2) {
-                const lightness = parseInt(each.split('%')[0]);
-                return `${lightness + lightnessModifier}%`;
-            }
-            return each;
-        })
-        .join(',')})`;
-
-    const backgroundImage = `linear-gradient(to top, ${hslString}, ${lighterHsl})`;
-    const borderColor = hslString;
-    const fontColor = pickFontColorBasedonBackgroundColor(hexString, '#ffffff', '#000000');
-
-    return {
-        backgroundImage,
-        color: fontColor,
-        borderColor,
-    };
-};
-
-const getSizeClassName = ({ size }: { size: Size }) => {
-    switch (size) {
-        case 'lg':
-            return styles.largeSize;
-        case 'md':
-            return styles.mediumSize;
-        case 'sm':
-            return styles.smallSize;
-        case 'xs':
-            return styles.extraSmallSize;
-        default:
-            return styles.mediumSize;
-    }
-};
-
-const getShadowClassName = ({ shadowless }: { shadowless: boolean }) => {
-    if (shadowless) {
-        return styles.shadowless;
-    }
-};
-
-const Button = ({
+const Button = <Type extends 'a' | 'Link' | 'button'>({
     type = 'button',
-    color: colorProp,
-    size = 'md',
-    lightnessModifier = DEFAULT_LIGHTNESS_MODIFIER,
+    buttonType = 'button',
     href,
     onClick,
-    buttonType,
     children,
-    shadowless = false,
+    className: passedClassName,
     ...otherProps
-}: ButtonProps) => {
-    const color = useCSSVariableObserver(colorProp);
+}: ButtonProps<Type>) => {
+    const accentColor = useCSSVariableObserver('--accent-color');
+    const contentsClassName = pickFontColorBasedonBackgroundColor(
+        accentColor,
+        'font-gray-12 [&_*]:font-gray-12 [&_*]:stroke-gray-12',
+        'font-gray-1 [&_*]:font-gray-1 [&_*]:stroke-gray-1'
+    );
+    const className = [
+        `relative bg-accent p-3 hover:brightness-125 !cursor-pointer transition-all`,
+        'before:top-0 before:left-0 before:w-full before:h-full before:absolute rounded-xl',
+        'before:shadow-[inset_0px_2px_3px_var(--white),inset_0px_-2px_3px_var(--black)] before:opacity-30 before:rounded-xl before:bg-gradient-to-t from-transparent to-[rgba(255,255,255,0.4) hover:to-[rgba(255,255,255,0.32)] focus:to-[rgba(255,255,255,0.45)]',
+        `${passedClassName} ${contentsClassName}`,
+    ].join(' ');
 
     if (type === 'Link') {
         return (
             <Link
-                href={href}
-                style={getColorStyle({ colorString: color, lightnessModifier })}
-                className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
+                href={href ?? '/'}
+                className={className}
+                // style={getColorStyle({ colorString: color, lightnessModifier })}
+                // className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
                 {...otherProps}
             >
                 {children}
@@ -135,9 +72,10 @@ const Button = ({
     if (type === 'a') {
         return (
             <a
-                href={href}
-                style={getColorStyle({ colorString: color, lightnessModifier })}
-                className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
+                href={href ?? '/'}
+                className={className}
+                // style={getColorStyle({ colorString: color, lightnessModifier })}
+                // className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
                 {...otherProps}
             >
                 {children}
@@ -148,9 +86,10 @@ const Button = ({
     return (
         <button
             onClick={onClick}
-            style={getColorStyle({ colorString: color, lightnessModifier })}
-            className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
-            type={buttonType || 'button'}
+            className={className}
+            // style={getColorStyle({ colorString: color, lightnessModifier })}
+            // className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
+            // type={buttonType || 'button'}
             {...otherProps}
         >
             {children}

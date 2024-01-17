@@ -13,6 +13,7 @@ const usePersistedState = (name: string, defaultValue: any) => {
                 maxAge: 10000 * 24 * 60 * 60 * 1000,
                 path: '/',
             });
+            setValue(value);
         }
     }, [value]);
 

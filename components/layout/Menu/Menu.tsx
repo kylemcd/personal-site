@@ -2,140 +2,149 @@
 import React from 'react';
 import Link from 'next/link';
 
-import { HslColorPicker } from 'react-colorful';
-
 import { Button } from '@/components/global/Button';
-import { Paragraph } from '@/components/global/Typography';
-import usePersistedState from '@/hooks/usePersistedState';
-import styles from './Menu.module.css';
+import { ArrowUpRight } from 'lucide-react';
 import useOnClickOutside from '@/hooks/useOnClickOutside';
-import { formatClassNames } from '@/helpers/jsxHelpers';
-import { HSLString } from '@/types/colors';
 import { THEMES } from '@/constants/theme';
+import { motion, AnimatePresence } from 'framer-motion';
+
+import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
+import { useTheme } from '@/hooks/useTheme';
+import { pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
 
 const Menu = () => {
     const menuContainer = React.useRef<HTMLDivElement>(null);
 
-    const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-    const [activeTheme, setActiveTheme] = usePersistedState('theme', THEMES[0]);
+    const accentColorCssVariable = useCSSVariableObserver('--accent-color');
+    const menuBarColor = pickFontColorBasedonBackgroundColor(accentColorCssVariable, 'bg-white', 'bg-black');
 
-    React.useEffect(() => {
-        if (activeTheme) {
-            document.documentElement.style.setProperty('--primary-color', activeTheme);
-        }
-    }, [activeTheme]);
+    const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+    const { accentColor, setAccentColor, appearance, setAppearance } = useTheme();
 
     useOnClickOutside({ ref: menuContainer, handler: () => setIsMenuOpen(false) });
 
-    const handleThemeSet = (theme: HSLString) => {
-        setActiveTheme(theme);
-    };
-
-    const handleActiveBubblePositioning = () => {
-        if (activeTheme === THEMES[0]) {
-            return {
-                transform: 'translateX(0)',
-            };
-        }
-
-        if (activeTheme === THEMES[1]) {
-            return {
-                transform: 'translateX(32px)',
-            };
-        }
-
-        if (activeTheme === THEMES[2]) {
-            return {
-                transform: 'translateX(64px)',
-            };
-        }
-
-        return {
-            transform: 'translateX(0)',
-        };
-    };
-
     return (
-        <div className={styles.menuContainer} ref={menuContainer}>
+        <div className="relative" ref={menuContainer}>
             <Button
                 type="button"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                size="sm"
+                className="z-20 relative"
                 color={`hsl(0, 0%, 84%)`}
-                lightnessModifier={2}
-                shadowless={true}
             >
-                <span className={`${styles.menuButtonContainer} ${isMenuOpen ? styles.menuButtonContainerOpen : ''}`}>
-                    <span className={styles.menuBar1 + ' menuBar1'} />
-                    <span className={styles.menuBar2 + ' menuBar2'} />
-                    <span className={styles.menuBar3 + ' menuBar3'} />
+                <span className={` w-6 h-6 relative flex flex-col items-center justify-center gap-2 `}>
+                    <span
+                        className={`transition-all w-5 h-[2px]  ${menuBarColor} ${
+                            isMenuOpen ? 'rotate-45 translate-y-[5px]' : ''
+                        }`}
+                    />
+                    <span
+                        className={`transition-all w-5 h-[2px] ${menuBarColor} ${
+                            isMenuOpen ? '-rotate-45 -translate-y-[5px] ' : ''
+                        }`}
+                    />
                 </span>
             </Button>
-            <div className={formatClassNames([[styles.menu], [styles.menuOpen, isMenuOpen]])}>
-                <ul className={styles.menuList}>
-                    <li className={styles.menuListTitle}>
-                        <Paragraph color="--secondary-font-color" size="md">
-                            Pages
-                        </Paragraph>
-                    </li>
-                    <li>
-                        <Link href="/posts" onClick={() => setIsMenuOpen(false)}>
-                            Posts
-                        </Link>
-                    </li>
-                    <li>
-                        <Link href="/contact" onClick={() => setIsMenuOpen(false)}>
-                            Contact
-                        </Link>
-                    </li>
-                    <li className={styles.menuListTitle + ' ' + styles.menuListTitleExternal}>
-                        <Paragraph color="--secondary-font-color" size="md">
-                            Links
-                        </Paragraph>
-                    </li>
-                    <li className={styles.linksListItem}>
-                        <a href="https://twitter.com/kpmdev" target="_blank">
-                            Twitter
-                        </a>
-                    </li>
-                    <li className={styles.linksListItem}>
-                        <a href="https://github.com/kylemcd" target="_blank">
-                            GitHub
-                        </a>
-                    </li>
-                    <li className={styles.linksListItem}>
-                        <a href="https://linkedin.com/in/kylemcd1" target="_blank">
-                            Linkedin
-                        </a>
-                    </li>
-                </ul>
-                <div className={styles.themesContainer}>
-                    <div className={styles.themeBubbleContainer}>
-                        {THEMES.map((theme, index) => (
-                            <button
-                                style={{ backgroundColor: theme }}
-                                className={styles.themeBubble}
-                                onClick={() => handleThemeSet(theme)}
-                                key={theme + index}
-                            />
-                        ))}
-                        {THEMES.includes(activeTheme) ? (
-                            <span className={styles.themeBubbleActive} style={handleActiveBubblePositioning()} />
-                        ) : (
-                            <span />
-                        )}
-                    </div>
-                    <div className={styles.colorPickerContainer}>
-                        <HslColorPicker
-                            color={activeTheme}
-                            onChange={(color: any) => {
-                                const hslString: HSLString = `hsl(${color.h},80%,50%)` as HSLString;
-                                setActiveTheme(hslString);
-                            }}
-                        />
-                    </div>
-                </div>
-            </div>
+            <AnimatePresence>
+                {isMenuOpen && (
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        transition={{ duration: 0.2, stiffness: 100 }}
+                        className={[
+                            'border border-gray-3 bg-gray-1 absolute -top-2 -right-2 z-10 origin-top-right rounded-xl shadow-sm',
+                        ].join(' ')}
+                    >
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                            <div className="list-none flex flex-col gap-2">
+                                <ul className="list-none flex flex-col gap-2 p-4 border-b border-b-gray-3">
+                                    <li>
+                                        <Link href="/posts" onClick={() => setIsMenuOpen(false)}>
+                                            Posts
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <Link href="/contact" onClick={() => setIsMenuOpen(false)}>
+                                            Contact
+                                        </Link>
+                                    </li>
+                                </ul>
+                                <ul className="list-none flex flex-col gap-2 p-4">
+                                    <li>
+                                        <a
+                                            href="https://twitter.com/kpmdev"
+                                            target="_blank"
+                                            className="flex items-center gap-1"
+                                        >
+                                            Twitter
+                                            <ArrowUpRight className="stroke-gray-8" size={16} />
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a
+                                            href="https://github.com/kylemcd"
+                                            target="_blank"
+                                            className="flex items-center gap-1"
+                                        >
+                                            GitHub
+                                            <ArrowUpRight className="stroke-gray-8" size={16} />
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a
+                                            href="https://linkedin.com/in/kylemcd1"
+                                            target="_blank"
+                                            className="flex items-center gap-1"
+                                        >
+                                            Linkedin
+                                            <ArrowUpRight className="stroke-gray-8" size={16} />
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 border-t border-t-gray-3">
+                                <div className="flex gap-2 relative p-4">
+                                    {THEMES.map((color) => (
+                                        <Button
+                                            style={{ backgroundColor: color }}
+                                            className={[
+                                                accentColor === color
+                                                    ? 'outline outline-gray-12 outline-offset-2 outline-2'
+                                                    : '',
+                                            ].join(' ')}
+                                            onClick={() => setAccentColor(color)}
+                                            key={color}
+                                        />
+                                    ))}
+                                </div>
+                                <div className="border-l border-l-gray-3 flex items-center gap-2 p-4">
+                                    <Button
+                                        style={{ backgroundColor: 'var(--white)' }}
+                                        className={[
+                                            'aspect-square w-4 h-6 flex items-center justify-center',
+                                            appearance === 'light'
+                                                ? 'outline outline-gray-12 outline-offset-2 outline-2'
+                                                : '',
+                                        ].join(' ')}
+                                        onClick={() => setAppearance('light')}
+                                    ></Button>
+                                    <span>/</span>
+                                    <Button
+                                        style={{ backgroundColor: 'var(--black)' }}
+                                        className={[
+                                            'aspect-square w-4 h-6 flex items-center justify-center',
+                                            appearance === 'dark'
+                                                ? 'outline outline-gray-12 outline-offset-2 outline-2'
+                                                : '',
+                                        ].join(' ')}
+                                        onClick={() => setAppearance('dark')}
+                                    ></Button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

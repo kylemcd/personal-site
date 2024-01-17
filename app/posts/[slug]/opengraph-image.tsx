@@ -1,4 +1,4 @@
-import { ImageResponse } from 'next/server';
+import { ImageResponse } from 'next/og';
 import fetchOnePost from '@/internal/fetchOnePost';
 // Route segment config
 export const runtime = 'edge';
@@ -126,7 +126,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
                                     fontWeight: 300,
                                 }}
                             >
-                                Director of Engineering @ Foxtrot
+                                Software Engineer
                             </span>
                         </div>
                     </div>

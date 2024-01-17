@@ -1,21 +1,22 @@
 import React from 'react';
 
+import '@/app/globals.css';
+
 import { cookies } from 'next/headers';
 import { Analytics } from '@vercel/analytics/react';
-import '@/app/globals.css';
 import { TopNavigation } from '@/components/layout/TopNavigation';
 import { Footer } from '@/components/layout/Footer';
 
-import { Inter } from 'next/font/google';
 import { hslToHex, pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
 import { THEMES } from '@/constants/theme';
 import { HSLString } from '@/types/colors';
 
-const inter = Inter({ subsets: ['latin'] });
+import { GeistSans as sans } from 'geist/font/sans';
+import { GeistMono as mono } from 'geist/font/mono';
 
-const getThemeColor = async () => {
+const getAccentColor = async () => {
     const nextCookies = cookies();
-    const themeColor = nextCookies.get('persisted-theme');
+    const themeColor = nextCookies.get('persisted-accent-color');
     if (themeColor?.value) {
         return themeColor?.value;
     }
@@ -23,14 +24,33 @@ const getThemeColor = async () => {
     return THEMES[0];
 };
 
+const getAppearance = async () => {
+    const nextCookies = cookies();
+    const appearance = nextCookies.get('persisted-appearance');
+    if (appearance?.value) {
+        return appearance?.value;
+    }
+
+    return null;
+};
+
 const RootLayout = async ({ children }: { children: React.ReactNode }) => {
-    const themeColor = await getThemeColor();
-    const cssVariables = themeColor ? ({ '--primary-color': themeColor } as React.CSSProperties) : {};
+    const accentColor = await getAccentColor();
+    const appearance = await getAppearance();
+    const cssAccentVariables = accentColor ? ({ '--accent-color': accentColor } as React.CSSProperties) : {};
+
     return (
-        <html lang="en" style={cssVariables}>
-            <body className={inter.className}>
-                <TopNavigation />
-                {children}
+        <html
+            lang="en"
+            style={cssAccentVariables}
+            className={`${mono.variable} ${sans.variable}`}
+            data-appearance={appearance}
+        >
+            <body className="bg-accent">
+                <div className="bg-gray-1 rounded-br-xl rounded-bl-2xl">
+                    <TopNavigation />
+                    {children}
+                </div>
                 <Footer />
                 <Analytics />
             </body>
@@ -38,11 +58,10 @@ const RootLayout = async ({ children }: { children: React.ReactNode }) => {
     );
 };
 
-
 export async function generateMetadata() {
-    const themeColor = await getThemeColor();
+    const accentColor = await getAccentColor();
     const fontColor = pickFontColorBasedonBackgroundColor(
-        hslToHex((themeColor as HSLString) || (`hsl(0,0%,0%)` as HSLString)),
+        hslToHex((accentColor as HSLString) || (THEMES[0] as HSLString)),
         '#ffffff',
         '#000000'
     );
@@ -53,7 +72,7 @@ export async function generateMetadata() {
             icon: `data:image/svg+xml,<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
             <style>
             .rect {
-                fill: ${themeColor};
+                fill: ${accentColor};
             }
             .font {
                 fill: ${encodeURIComponent(fontColor)};

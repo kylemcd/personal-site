@@ -3,8 +3,6 @@ import React from 'react';
 import { cookies } from 'next/headers';
 import fetchOnePost from '@/internal/fetchOnePost';
 import '@/app/globals.css';
-import { TopNavigation } from '@/components/layout/TopNavigation';
-import { Footer } from '@/components/layout/Footer';
 
 import { Inter } from 'next/font/google';
 import { hslToHex, pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
@@ -24,16 +22,26 @@ const getThemeColor = async () => {
 };
 
 const RootLayout = async ({ children }: { children: React.ReactNode }) => {
-    return <>{children }</>
+    return <>{children}</>;
 };
 
 type Props = {
     params: { slug: string };
 };
 
+const getAccentColor = async () => {
+    const nextCookies = cookies();
+    const themeColor = nextCookies.get('persisted-accent-color');
+    if (themeColor?.value) {
+        return themeColor?.value;
+    }
+
+    return THEMES[0];
+};
+
 export async function generateMetadata({ params }: Props) {
     const post = fetchOnePost({ slug: params?.slug as string });
-    const themeColor = await getThemeColor();
+    const themeColor = await getAccentColor();
     const fontColor = pickFontColorBasedonBackgroundColor(
         hslToHex((themeColor as HSLString) || (`hsl(0,0%,0%)` as HSLString)),
         '#ffffff',
@@ -41,7 +49,7 @@ export async function generateMetadata({ params }: Props) {
     );
 
     return {
-        title: post?.title ?? 'Kyle McDonald',
+        title: post?.title ?? ' | Kyle McDonald',
         description:
             post?.postPreview ??
             "Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",

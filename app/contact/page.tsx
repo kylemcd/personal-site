@@ -22,7 +22,7 @@ const Contact = () => {
 
                 <FormControl name="message" label="Message" fieldType="textarea" required={true} />
                 <div className={styles.buttonContainer}>
-                    <Button color="--primary-color" size="md" type="button" buttonType="submit">
+                    <Button color="--primary-color" type="button" buttonType="submit">
                         Submit
                     </Button>
                 </div>

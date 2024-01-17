@@ -6,10 +6,12 @@ import { CSSProperties } from 'react';
 
 type HeadingSize = 'xl' | 'lg' | 'md' | 'sm';
 type ParagraphSize = 'lg' | 'md' | 'sm';
+type Family = 'sans' | 'mono';
 
 export const Heading = ({
     color,
     size,
+    family = 'sans',
     element: Element,
     className,
     style,
@@ -18,6 +20,7 @@ export const Heading = ({
 }: {
     color?: string;
     size: HeadingSize;
+    family?: Family;
     element: keyof JSX.IntrinsicElements;
     className?: string;
     style?: CSSProperties;
@@ -25,7 +28,11 @@ export const Heading = ({
 }) => {
     return (
         <Element
-            className={formatClassNames([[styles[size + 'Heading']], [className!, !!className]])}
+            className={formatClassNames([
+                [styles[size + 'Heading']],
+                [family === 'sans' ? 'font-sans' : 'font-mono', true],
+                [className!, !!className],
+            ])}
             style={{ color: shapeColorVariable({ color }), ...style }}
             {...otherProps}
         >

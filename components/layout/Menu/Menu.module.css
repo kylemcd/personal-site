@@ -1,19 +1,4 @@
-.menuContainer {
-    position: relative;
-}
 
-.menuButtonContainer {
-    --menu-tranition-animation: cubic-bezier(0.4, 0, 0.2, 1);
-    display: block;
-    height: 21px;
-    position: relative;
-    width: 25px;
-}
-
-.menuButtonContainerOpen {
-    transform: translateX(1px);
-    transition: transform 0.3s var(--menu-tranition-animation);
-}
 
 .menuButtonContainerOpen > .menuBar1 {
     transform-origin: center center;
@@ -29,61 +14,7 @@
     transform: rotate(-45deg) translateY(-7px) translateX(6px) scale(1);
 }
 
-.menuBar1 {
-    display: block;
-    background-color: var(--secondary-font-color);
-    height: 2px;
-    position: absolute;
-    top: 0;
-    transform: scaleX(0.8);
-    transition: transform 0.3s var(--menu-tranition-animation);
-    transform-origin: center left;
-    width: 25px;
-}
 
-.menuBar2 {
-    display: block;
-    background-color: var(--secondary-font-color);
-    height: 2px;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    transition: opacity 0.1s ease-in;
-    width: 25px;
-}
-
-.menuBar3 {
-    display: block;
-    background-color: var(--secondary-font-color);
-    height: 2px;
-    position: absolute;
-    bottom: 0;
-    transform-origin: center right;
-    transform: scaleX(0.8);
-    transition: transform 0.3s var(--menu-tranition-animation);
-    width: 25px;
-}
-
-.menu {
-    background-color: var(--primary-background-color);
-    border-color: var(--primary-border-color);
-    border-radius: 1rem;
-    border-style: solid;
-    border-width: 1px;
-    top: 4rem;
-    box-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px,
-        rgba(168, 168, 168, 0.08) 0px 1px 1px 0px, rgba(195, 195, 195, 0.08) 0px 6px 6px 0px,
-        rgba(255, 255, 255, 0.14) 0px 0.5px 8px 2px inset, rgba(255, 255, 255, 0.08) 0px -5px 0px -4px inset;
-    min-width: 250px;
-    position: absolute;
-    transition: transform 0.2s ease-in-out;
-    transform: translateX(400px);
-    right: 0;
-}
-
-.menuOpen {
-    transform: translateX(0);
-}
 
 .menuList {
     list-style: none;
@@ -118,51 +49,14 @@
 .menuList a,
 .menuList a:focus,
 .menuList a:visited {
-    color: var(--primary-color);
+    color: var(--accent-color);
 }
 
 .menuList a:hover {
     text-decoration: underline;
 }
 
-.themesContainer {
-    border-top-width: 1px;
-    border-top-style: solid;
-    border-top-color: var(--primary-border-color);
-    display: flex;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 1.5rem;
-}
 
-.themeBubbleContainer {
-    display: flex;
-    gap: 0.5rem;
-    position: relative;
-}
-
-.themeBubble {
-    appearance: none;
-    border: none;
-    border-radius: 100%;
-    cursor: pointer;
-    height: 24px;
-    padding: 2px;
-    position: relative;
-    transition: transform ease-in-out 0.3s;
-    width: 24px;
-}
-
-.themeBubbleActive {
-    height: 24px;
-    width: 24px;
-    position: absolute;
-    transition: transform ease-in-out 0.3s;
-}
-
-.themeBubble:hover {
-    transform: scale(1.05);
-}
 
 .themeBubbleActive:after {
     content: '';
@@ -183,10 +77,11 @@
 }
 
 .colorPickerContainer :global(.react-colorful__hue) {
-    border-radius: 1rem;
+    border-radius: 0;
 }
 
 .colorPickerContainer :global(.react-colorful__pointer) {
+    border-radius: 0;
     height: 24px;
     width: 24px;
 }

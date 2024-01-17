@@ -2,9 +2,7 @@
 const { withContentlayer } = require('next-contentlayer');
 const nextConfig = {
     experimental: {
-        appDir: true,
         mdxRs: true,
-        serverActions: true,
     },
     images: {
         remotePatterns: [
@@ -23,6 +21,18 @@ const nextConfig = {
             {
                 protocol: 'https',
                 hostname: 'cdn.akamai.steamstatic.com',
+                port: '',
+                pathname: '**',
+            },
+            {
+                protocol: 'https',
+                hostname: 'assets.literal.club',
+                port: '',
+                pathname: '**',
+            },
+            {
+                protocol: 'http',
+                hostname: 'books.google.com',
                 port: '',
                 pathname: '**',
             },

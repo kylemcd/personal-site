@@ -1,12 +1,12 @@
 import fetchAllPosts from '@/internal/fetchAllPosts';
-import { PostList } from '@/components/global/PostList';
+import { Posts as PostsComponent } from '@/components/home/Posts';
 import styles from './page.module.css';
 
 const Posts = async () => {
-    const posts = await fetchAllPosts();
+    const posts = fetchAllPosts();
     return (
-        <div className={styles.container}>
-            <PostList data={posts} layout={'stackable'} />
+        <div className="py-16 max-w-[900px] mx-auto px-4">
+            <PostsComponent posts={posts} />
         </div>
     );
 };
