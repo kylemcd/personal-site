@@ -115,7 +115,7 @@ function ActivityCloud({ playlist, steam, books }: ActivityCloudProps) {
                         <ul className="list-none flex flex-col gap-2 mt-auto">
                             <li className="flex flex-col">
                                 <span className="text-md">
-                                    {steam.totalPlayTime.days} {steam.totalPlayTime.hours}
+                                    {steam.totalPlayTime.days} {steam.totalPlayTime.hours.replace(',','')}
                                 </span>
                                 <span className="text-sm text-gray-11">All-time</span>
                             </li>
