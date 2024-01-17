@@ -6,28 +6,32 @@ import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
 
 import { pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
 
-type ButtonPropsAnchor = React.ComponentPropsWithoutRef<'a'> & {
-    type?: 'Link';
-    buttonType?: never;
-};
-
-type ButtonPropsLink = React.ComponentPropsWithoutRef<typeof Link> & {
-    type?: 'a';
-    buttonType?: never;
-};
-
-type ButtonPropsButton = React.ComponentPropsWithoutRef<'button'> & {
-    type?: 'button';
-    buttonType?: 'submit' | 'button';
-    href?: never;
-};
+// type ButtonPropsAnchor = React.ComponentPropsWithoutRef<'a'> & {
+//     type?: 'a';
+//     buttonType?: never;
+// };
+//
+// type ButtonPropsLink = React.ComponentPropsWithoutRef<typeof Link> & {
+//     type?: 'Link';
+//     buttonType?: never;
+// };
+//
+// type ButtonPropsButton = React.ComponentPropsWithoutRef<'button'> & {
+//     type?: 'button';
+//     buttonType?: 'submit' | 'button';
+//     href?: never;
+// };
 
 // type ButtonProps = ButtonPropsButton | ButtonPropsLink | ButtonPropsAnchor;
-type ButtonProps<Type> = Type extends 'a'
-    ? ButtonPropsAnchor
-    : Type extends 'Link'
-    ? ButtonPropsLink
-    : ButtonPropsButton;
+// type ButtonProps<Type> = Type extends 'a'
+//     ? ButtonPropsAnchor
+//     : Type extends 'Link'
+//     ? ButtonPropsLink
+//     : ButtonPropsButton;
+//
+
+// TODO: Fix types here
+type ButtonProps<Type> = any
 
 const Button = <Type extends 'a' | 'Link' | 'button'>({
     type = 'button',
@@ -54,7 +58,7 @@ const Button = <Type extends 'a' | 'Link' | 'button'>({
     if (type === 'Link') {
         return (
             <Link
-                href={href}
+                href={href ?? '/'}
                 className={className}
                 // style={getColorStyle({ colorString: color, lightnessModifier })}
                 // className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
@@ -68,7 +72,7 @@ const Button = <Type extends 'a' | 'Link' | 'button'>({
     if (type === 'a') {
         return (
             <a
-                href={href}
+                href={href ?? '/'}
                 className={className}
                 // style={getColorStyle({ colorString: color, lightnessModifier })}
                 // className={styles.button + ' ' + getSizeClassName({ size }) + ' ' + getShadowClassName({ shadowless })}
