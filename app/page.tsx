@@ -7,6 +7,7 @@ import fetchLiteralBooks from '@/external/fetchLiteralBooks';
 import fetchAllPosts from '@/internal/fetchAllPosts';
 
 import { Hero } from '@/components/home/Hero';
+import { Posts } from '@/components/home/Posts';
 
 import {
     statsTranformer,
@@ -17,7 +18,7 @@ import {
 } from '@/helpers/dataHelper';
 
 import { FormattedGitHubData } from '@/types/github';
-import { FormattedBooks} from '@/types/books';
+import { FormattedBooks } from '@/types/books';
 import { RawDataFromAirtable, FormattedStats } from '@/types/stats';
 import { FormattedSpotifyData, RawSpotifyPlaylistData } from '@/types/spotify';
 import { FormattedSteamData, RawSteamGameData, RawSteamLastPlayedData } from '@/types/steam';
@@ -75,10 +76,9 @@ const fetchAndFormatData = async (): Promise<FetchAndFormatResult> => {
     const formattedGameData = steamGameTransformer(gameData);
 
     result.steam = { ...formattedGameData, ...formattedLastPlayedData };
-    const books = await fetchLiteralBooks() as FormattedBooks;
+    const books = (await fetchLiteralBooks()) as FormattedBooks;
 
     result.books = books;
-
 
     // Blog
     const posts = fetchAllPosts();
@@ -94,25 +94,17 @@ const Home = async () => {
         return null;
     }
 
-    // <div className={style.contentContainer}>
-    //     <div className={style.content}></div>
-    //     <div className={style.statsContainer}>
-    //         <About />
-    //         <div className={style.statsTopContainer}>
-    //             <Heading color={`--primary-font-color`} element="h2" size="lg">
-    //                 My Activity
-    //             </Heading>
-    //         </div>
-    //         <div className={style.pageContentContainer}>
-    //             <ActivityFeed data={data} />
-    //             <PostList data={posts} layout="scrollable" />
-    //         </div>
-    //     </div>
-    // </div>
     return (
-        <div className="max-w-7xl mx-auto w-full pb-8">
-            <Hero />
-            <ActivityCloud {...data} />
+        <div className="max-w-7xl mx-auto w-full pb-8 px-8 md:px-0">
+            <div className="my-8 md:my-40 ">
+                <Hero />
+            </div>
+            <div className="my-40">
+                <ActivityCloud {...data} />
+            </div>
+            <div className="my-40">
+                <Posts posts={posts!} />
+            </div>
         </div>
     );
 };

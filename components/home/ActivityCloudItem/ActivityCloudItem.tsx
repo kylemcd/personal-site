@@ -3,7 +3,7 @@ import React from 'react';
 import Image from 'next/image';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 
-type ActivityCloudItemProps = {
+type ActivityCloudItemProps = React.ComponentProps<'div'> & {
     rotationMultiplier?: number;
     Content?: () => React.ReactNode;
     ExpandedContent?: () => React.ReactNode;
@@ -11,7 +11,7 @@ type ActivityCloudItemProps = {
 
 const MOBILE_BREAKPOINT = 768;
 
-function ActivityCloudItem({ rotationMultiplier = 3, Content, ExpandedContent }: ActivityCloudItemProps) {
+function ActivityCloudItem({ rotationMultiplier = 3, Content, ExpandedContent, className }: ActivityCloudItemProps) {
     const cardRef = React.useRef<HTMLDivElement>(null);
     const mouseX = useMotionValue(0);
     const mouseY = useMotionValue(0);
@@ -51,19 +51,38 @@ function ActivityCloudItem({ rotationMultiplier = 3, Content, ExpandedContent }:
                 right: 0,
                 top: 0,
                 flexDirection: 'row-reverse',
+                borderRadius: '1rem',
             };
         }
 
         return {
             left: 0,
             top: 0,
+            borderRadius: '1rem',
         };
+    }
+
+    function handleResize() {
+        setWindowWidth(window.innerWidth);
+        setPositioning(calculatePositioning());
     }
 
     React.useLayoutEffect(() => {
         setWindowWidth(window.innerWidth);
         setPositioning(calculatePositioning());
     }, []);
+
+    React.useEffect(() => {
+
+        setWindowWidth(window.innerWidth);
+        setPositioning(calculatePositioning());
+        window.addEventListener('resize', handleResize);
+
+        () => {
+            window.removeEventListener('resize', handleResize);
+        }
+    }, []);
+
 
     function handleMouseMove(event: React.MouseEvent<HTMLDivElement>) {
         const card = cardRef.current;
@@ -160,7 +179,7 @@ function ActivityCloudItem({ rotationMultiplier = 3, Content, ExpandedContent }:
 
     return (
         <motion.div
-            className={['relative w-full h-full aspect-square [grid_column:span_1] '].join(' ')}
+            className={['relative w-full h-full aspect-square [grid_column:span_1]'].join(' ')}
             ref={cardRef}
             key={isActive.toString()}
             initial="initial"
@@ -198,16 +217,16 @@ function ActivityCloudItem({ rotationMultiplier = 3, Content, ExpandedContent }:
                     boxShadow: { duration: 0.2, ease: 'easeInOut' },
                     width: { duration: 0 },
                     scale: { duration: 0.1, type: 'spring', bounce: 1, stiffness: 90, damping: 10 },
+                    borderRadius: { duration: 0.2 },
                 }}
-                className={['bg-gray-1 flex rounded-2xl transform-gpu justify-between p-8 gap-16 h-full'].join(' ')}
+                className={['bg-gray-1 flex transform-gpu justify-between p-8 gap-16 h-full', className].join(' ')}
             >
                 <motion.div
                     variants={windowWidth < MOBILE_BREAKPOINT ? mobileContentVariants : desktopContentVariants}
-                    className="aspect-square"
+                    className="aspect-square basis-[100%]"
                     transition={{
                         width: { duration: 0 },
                     }}
-                    style={{ flexBasis: '100%' }}
                 >
                     {Content && <Content />}
                 </motion.div>
@@ -216,8 +235,7 @@ function ActivityCloudItem({ rotationMultiplier = 3, Content, ExpandedContent }:
                         windowWidth < MOBILE_BREAKPOINT ? mobileExtraContentVariants : desktopExtraContentVariants
                     }
                     transition={{ duration: 0 }}
-                    style={{ flexBasis: '50%' }}
-                    className="flex aspect-square"
+                    className="aspect-square  h-full w-full"
                 >
                     {ExpandedContent && <ExpandedContent />}
                 </motion.div>

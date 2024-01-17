@@ -31,7 +31,7 @@ const Footer = () => {
                 transition: footerHover.transition,
             }}
         >
-            <div className="flex items-center justify-between gap-4 w-full">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 w-full">
                 <Paragraph size="md">&copy; 2011-{new Date().getFullYear()} &mdash; Kyle McDonald</Paragraph>
                 <ul className={styles.linksList}>
                     <li className={styles.linksListItem}>

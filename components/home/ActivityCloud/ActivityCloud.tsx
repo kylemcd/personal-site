@@ -7,15 +7,23 @@ import type { FormattedSteamData } from '@/types/steam';
 import type { FormattedBooks } from '@/types/books';
 
 type ActivityCloudProps = {
-    playlist: FormattedSpotifyData;
-    steam: FormattedSteamData;
-    books: FormattedBooks;
+    playlist: FormattedSpotifyData | null;
+    steam: FormattedSteamData | null;
+    books: FormattedBooks | null;
 };
 
 function ActivityCloud({ playlist, steam, books }: ActivityCloudProps) {
+    if (!playlist || !steam || !books) return null;
     return (
-        <div className="my-96 grid grid-cols-1 md:grid-cols-3 rounded-2xl border-2 border-gray-3 [&>div]:border-r-2 [&>div]:border-r-gray-3 [&>div:last-child]:border-r-transparent">
+        <div
+            className={[
+                'my-0 grid grid-cols-1 md:grid-cols-3 rounded-2xl',
+                'border-2 border-gray-3 [&>div]:border-b-2 [&>div]:border-b-gray-3 [&>div:last-child]:border-b-transparent',
+                'md:[&>div]:border-b-transparent md:[&>div]:border-r-2 md:[&>div]:border-r-gray-3 [&>div:last-child]:border-r-transparent',
+            ].join(' ')}
+        >
             <ActivityCloudItem
+                className="rounded-tl-2xl rounded-tr-2xl md:rounded-bl-2xl md:rounded-tr-none"
                 Content={() => (
                     <div className="flex flex-col h-full">
                         <div className="flex flex-row gap-8 items-center w-full h-full">
@@ -70,7 +78,7 @@ function ActivityCloud({ playlist, steam, books }: ActivityCloudProps) {
                     </div>
                 )}
                 ExpandedContent={() => (
-                    <div className="flex flex-col h-full gap-2">
+                    <div className="flex flex-col h-full gap-2 w-full">
                         <ul className="list-none flex flex-col gap-2 mt-auto">
                             {playlist.tracks.map((track, index) => (
                                 <li className="flex flex-col" key={index}>
@@ -84,6 +92,7 @@ function ActivityCloud({ playlist, steam, books }: ActivityCloudProps) {
                 )}
             />
             <ActivityCloudItem
+                className="rounded-bl-2xl rounded-br-2xl md:rounded-br-2xl md:rounded-bl-none"
                 Content={() => (
                     <div className="flex flex-col h-full">
                         <div className="flex flex-row gap-4 items-center justify-center w-full h-full">

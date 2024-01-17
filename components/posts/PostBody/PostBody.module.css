@@ -45,50 +45,38 @@
     color: var(--primary-color);
 }
 
-.postStyles {
-    color: var(--primary-font-color);
-    padding: 2rem 0;
-}
-
-
 
 .postStyles h1 {
     font-size: 2.25rem;
     line-height: 3.5rem;
     margin: 2rem 0 1rem 0;
-    font-family: 'Playfair Display';
 }
 
 .postStyles h2 {
     font-size: 2rem;
     line-height: 2.25rem;
     margin: 2rem 0 1rem 0;
-    font-family: 'Playfair Display';
 }
 
 .postStyles h3 {
     font-size: 1.75rem;
     line-height: 2rem;
     margin: 2rem 0 1rem 0;
-    font-family: 'Playfair Display';
 }
 .postStyles h4 {
     font-size: 1.5rem;
     line-height: 1.75rem;
     margin: 2rem 0 1rem 0;
-    font-family: 'Playfair Display';
 }
 .postStyles h5 {
     font-size: 1.25rem;
     line-height: 1.50rem;
     margin: 2rem 0 1rem 0;
-    font-family: 'Playfair Display';
 }
 .postStyles h6 {
     font-size: 1.25rem;
     line-height: 1.50rem;
     margin: 2rem 0 1rem 0;
-    font-family: 'Playfair Display';
 }
 
 .postStyles p {
@@ -138,9 +126,8 @@
 .postStyles code:not(:has(> *)) {
     font-size: 1rem;
     line-height: 1.25rem;
-    border: 1px solid var(--primary-border-color);
-    background-color: var(--secondary-background-color);
-    color: var(--primary-font-color);
+    border: 1px solid rgb(var(--gray-4 ));
+    background-color: rgb(var(--gray-2));
     padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
+    border-radius: 0.5rem;
 }

@@ -3,8 +3,6 @@ import useCSSVariableObserver from '@/hooks/useCSSVariableObserver';
 import { hslToHex, pickFontColorBasedonBackgroundColor } from '@/helpers/colorHelper';
 import { HSLString, HexString, isHSLString } from '@/types/colors';
 
-import styles from './PostHeading.module.css';
-
 type PostHeadingProps = {
     post: {
         title: string;
@@ -27,24 +25,19 @@ const PostHeading = ({ post }: PostHeadingProps) => {
     };
 
     return (
-        <div className={styles.headerContainer}>
-            <div className={styles.headerContentContainer}>
-                <h1 className={styles.postTitle} style={{ color: calculateFontColor(color) }}>
-                    {post.title}
-                </h1>
-                <span className={styles.postDate} style={{ color: calculateFontColor(color) }}>
-                    {String(
-                        new Date(post.date).toLocaleDateString('en-us', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                        })
-                    )}
-                    &nbsp;&nbsp;&middot;&nbsp;&nbsp;
-                    {post.readingTime.text}
-                </span>
-            </div>
+        <div className="max-w-[900px] mx-auto flex flex-col gap-4 my-10">
+            <h1 className="text-accent text-4xl leading-tight">{post.title}</h1>
+            <span className="text-gray-11 font-mono text-sm">
+                {String(
+                    new Date(post.date).toLocaleDateString('en-us', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                    })
+                )}
+                &nbsp;&nbsp;//&nbsp;&nbsp;
+                {post.readingTime.text}
+            </span>
         </div>
     );
 };
