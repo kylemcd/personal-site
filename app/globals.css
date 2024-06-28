@@ -1,78 +1,14 @@
+@import '@/tokens/colors';
+@import '@/tokens/spacing';
+@import '@/tokens/rounded';
+@import '@/tokens/z-index';
 
-:root {
-    --black: hsl(0, 0%, 0%);
-    --white: hsl(0, 0%, 100%);
+@import '@/components/lib/Heading/Heading.styles';
+@import '@/components/lib/Text/Text.styles';
 
-    --gray-1: 252 252 252;
-    --gray-2: 249 249 249;
-    --gray-3: 240 240 240;
-    --gray-4: 232 232 232;
-    --gray-5: 224 224 224;
-    --gray-6: 217 217 217;
-    --gray-7: 206 206 206;
-    --gray-8: 187 187 187;
-    --gray-9: 141 141 141;
-    --gray-10: 131 131 131;
-    --gray-11: 100 100 100;
-    --gray-12: 32 32 32;
+@import '@/components/shared/Navigation/Navigation.styles';
 
-}
-
-@media(prefers-color-scheme: dark) {
-    :root {
-         --black: hsl(0, 0%, 0%);
-         --white: hsl(0, 0%, 100%);
-
-         --gray-1: 17 17 17;
-         --gray-2: 25 25 25;
-         --gray-3: 34 34 34;
-         --gray-4: 42 42 42;
-         --gray-5: 49 49 49;
-         --gray-6: 58 58 58;
-         --gray-7: 72 72 72;
-         --gray-8: 96 96 96;
-         --gray-9: 110 110 110;
-         --gray-10: 123 123 123;
-         --gray-11: 180 180 180;
-         --gray-12: 238 238 238;
-    }
-}
-
-[data-appearance="dark"] {
-     --black: hsl(0, 0%, 0%);
-     --white: hsl(0, 0%, 100%);
-
-     --gray-1: 17 17 17;
-     --gray-2: 25 25 25;
-     --gray-3: 34 34 34;
-     --gray-4: 42 42 42;
-     --gray-5: 49 49 49;
-     --gray-6: 58 58 58;
-     --gray-7: 72 72 72;
-     --gray-8: 96 96 96;
-     --gray-9: 110 110 110;
-     --gray-10: 123 123 123;
-     --gray-11: 180 180 180;
-     --gray-12: 238 238 238;
-}
-
-[data-appearance="light"]{
-    --black: hsl(0, 0%, 0%);
-    --white: hsl(0, 0%, 100%);
-
-    --gray-1: 252 252 252;
-    --gray-2: 249 249 249;
-    --gray-3: 240 240 240;
-    --gray-4: 232 232 232;
-    --gray-5: 224 224 224;
-    --gray-6: 217 217 217;
-    --gray-7: 206 206 206;
-    --gray-8: 187 187 187;
-    --gray-9: 141 141 141;
-    --gray-10: 131 131 131;
-    --gray-11: 100 100 100;
-    --gray-12: 32 32 32;
-}
+@import '@/components/home/HomeHero/HomeHero.styles';
 
 * {
     box-sizing: border-box;
@@ -82,27 +18,12 @@
 
 html,
 body {
-    background-color: rgb(var(--gray-1));
-    color: rgb(var(--gray-12));
+    background-color: var(--color-surface-1);
+    color: var(--color-text-1);
     font-family: var(--font-geist-sans);
-    max-width: 100vw;
-    overflow-x: hidden;
-    min-height: 100vh;
-}
-
-body {
-    max-width: 100vw;
-}
-
-a {
-    appearance: none;
-    outline: 0;
-    text-decoration: none;
-}
-
-a:hover {
-    text-decoration: underline;
-    text-decoration-color: var(--accent-color);
+    /* max-width: 100vw; */
+    /* overflow-x: hidden; */
+    /* min-height: 100vh; */
 }
 
 button,

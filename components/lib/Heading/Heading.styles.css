@@ -1,0 +1,11 @@
+.heading--size-1 {
+    font-size: 2rem;
+    line-height: 2.5rem;
+}
+
+.heading--size-999 {
+    font-size: 12rem;
+    line-height: 11rem;
+    font-family: var(--font-serif);
+}
+

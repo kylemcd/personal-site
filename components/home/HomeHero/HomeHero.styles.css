@@ -1,0 +1,22 @@
+.home-hero--container {
+    padding: var(--spc-25) 0;
+}
+
+.home-hero--content-container {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--spc-4);
+    margin: 0 auto;
+    max-width: 800px;
+    text-align: center;
+}
+
+.home-hero--subtitle-container {
+    border-color: var(--color-border);
+    border-style: solid;
+    border-width: var(--spc-px);
+    border-radius: var(--rnd-6);
+    padding: var(--spc-4);
+}

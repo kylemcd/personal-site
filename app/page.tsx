@@ -1,13 +1,12 @@
-
-
+import { HomeHero } from '@/components/home/HomeHero';
+import { Navigation } from '@/components/shared/Navigation';
 
 const Home = async () => {
-
-
     return (
-    <div>
-    Home
-    </div>
+        <div>
+        <Navigation/>
+            <HomeHero />
+        </div>
     );
 };
 
