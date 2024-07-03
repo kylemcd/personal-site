@@ -3,21 +3,16 @@
     appearance: none;
     background-color: var(--color-surface-1);
     border: none;
-    border-radius: 0 var(--rnd-4) var(--rnd-4) 0;
-    /* border-color: var(--color-border); */
-    /* border-radius: 0 var(--rnd-4) var(--rnd-4) 0; */
-    /* border-style: solid; */
-    /* border-width: var(--spc-px); */
+    border-radius: var(--rnd-4) 0 0 var(--rnd-4);
     cursor: pointer;
     display: flex;
     justify-content: center;
-    left: 0;
     padding: var(--spc-4);
     position: fixed;
-    top: 50%;
+    right: 0;
+    top: calc(var(--spc-4) + 1);
     height: calc(var(--navigation-button-size) - 2px);
     width: calc(var(--navigation-button-size) - 2px);
-    transform: translateY(-50%);
     z-index: var(--z-index-navigation);
 }
 
@@ -30,15 +25,24 @@
     border-color: var(--color-border);
     border-style: solid;
     border-width: var(--spc-px);
-    /* padding: var(--spc-4); */
     position: fixed;
-    top: 50%;
-    left: 0;
-    transform: translateY(-50%);
-    transform-origin: left;
+    right: 0;
+    top: var(--spc-4);
+    transform-origin: right;
     z-index: var(--z-index-navigation);
 }
 
 .navigation--menu-content {
     padding: var(--spc-4);
+}
+
+.navigation--menu-overlay {
+    background-color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    height: 100vh;
+    left: 0;
+    position: fixed;
+    top: 0;
+    width: 100vw;
+    z-index: calc(var(--z-index-navigation) - 4);
 }
