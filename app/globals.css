@@ -12,9 +12,6 @@
 
 @import '@/components/shared/Navigation/Navigation.styles';
 
-@import '@/components/home/HomeHero/HomeHero.styles';
-@import '@/components/home/HomeCards/HomeCards.styles';
-
 * {
     box-sizing: border-box;
     padding: 0;
@@ -26,12 +23,14 @@ body {
     background-color: var(--color-surface-1);
     color: var(--color-text-1);
     font-family: var(--font-geist-sans);
-    /* max-width: 100vw; */
-    /* overflow-x: hidden; */
-    /* min-height: 100vh; */
 }
 
 button,
 input {
     font-family: inherit;
+}
+
+*:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
 }

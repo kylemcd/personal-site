@@ -8,9 +8,13 @@ import { Instrument_Serif } from 'next/font/google';
 
 const serif = Instrument_Serif({ subsets: ['latin'], weight: '400', variable: '--font-serif' });
 
-const RootLayout = async ({ children }: { children: React.ReactNode }) => {
+type RootLayoutProps = {
+    children: React.ReactNode;
+};
+
+const RootLayout = async ({ children }: RootLayoutProps) => {
     return (
-        <html lang="en" className={`${mono.variable} ${sans.variable} ${serif.variable}`}>
+        <html lang="en" className={`${mono.variable} ${sans.variable} ${serif.variable}`} data-theme="default">
             <body className="bg-accent">
                 <div className="bg-gray-1 rounded-br-xl rounded-bl-2xl">{children}</div>
             </body>

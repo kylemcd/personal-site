@@ -6,4 +6,18 @@
     --color-border: #cecece;
     --color-accent: #2e4c46;
     --color-transparent: transparent;
+    --color-focus: #6bc4ff;
+
 }
+
+[data-theme="hacker"] {
+    --color-text-1: #00ff00;
+    --color-text-2: #03a103;
+    --color-surface-1: #000000;
+    --color-surface-2: #000000;
+    --color-border: #00ff00;
+    --color-accent: #00ff00;
+    --color-focus: #00FFFF;
+}
+
+

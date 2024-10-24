@@ -1,3 +1,5 @@
+import '@/app/home.css';
+
 import { HomeHero } from '@/components/home/HomeHero';
 import { Navigation } from '@/components/shared/Navigation';
 

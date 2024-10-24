@@ -3,6 +3,27 @@
     --navigation-open-height: calc(100% - (var(--spc-4) * 2));
 }
 
+.navigation--menu-container {
+    background-color: var(--color-surface-1);
+    border-color: var(--color-border);
+    border-radius: var(--rnd-4) 0 0 var(--rnd-4);
+    border-style: solid;
+    border-width: var(--spc-px);
+    height: var(--navigation-button-size);
+    position: fixed;
+    right: 0;
+    top: var(--spc-4);
+    transform-origin: right;
+    width: var(--navigation-button-size);
+    z-index: var(--z-index-navigation);
+}
+
+.navigation[data-navigation-status="closed"] .navigation--menu-container:focus-within {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+}
+
+
 @keyframes navigation-container-open {
     0% {
         height: var(--navigation-button-size);
@@ -57,6 +78,7 @@
     cursor: pointer;
     display: flex;
     justify-content: center;
+    outline: none !important;
     padding: var(--spc-4);
     position: fixed;
     right: 0;
@@ -70,20 +92,6 @@
     background-color: var(--color-surface-2);
 }
 
-.navigation--menu-container {
-    background-color: var(--color-surface-1);
-    border-color: var(--color-border);
-    border-radius: var(--rnd-4) 0 0 var(--rnd-4);
-    border-style: solid;
-    border-width: var(--spc-px);
-    height: var(--navigation-button-size);
-    position: fixed;
-    right: 0;
-    top: var(--spc-4);
-    transform-origin: right;
-    width: var(--navigation-button-size);
-    z-index: var(--z-index-navigation);
-}
 
 .navigation--menu-content {
     padding: var(--spc-4);
@@ -95,13 +103,13 @@
         display: block;
     }
     100% {
-        opacity: 1;
+        opacity: 0.8;
     }
 }
 
 @keyframes navigation-overlay-close {
     0% {
-        opacity: 1;
+        opacity: 0.8;
         display: block;
     }
     100% {
@@ -111,7 +119,8 @@
 }
 
 .navigation--menu-overlay {
-    background-color: rgba(255, 255, 255, 0.5);
+    background-color: var(--color-surface-1);
+    /* background-color: rgba(255, 255, 255, 0.5); */
     cursor: pointer;
     display: none;
     height: 100vh;
@@ -125,6 +134,7 @@
 
 .navigation[data-navigation-status="open"] .navigation--menu-overlay {
     animation: navigation-overlay-open 0.5s ease-in-out;
+    opacity: 0.8;
     display: block;
 }
 

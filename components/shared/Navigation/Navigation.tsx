@@ -31,7 +31,7 @@ const Navigation = () => {
                         onClick={handleToggle}
                         ref={menuButtonRef}
                     >
-                        <Map size="24" />
+                        <Map size="24" color="var(--color-text-1)" />
                     </button>
                 )}
                 {status === 'open' && (
