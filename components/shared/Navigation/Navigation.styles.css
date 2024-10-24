@@ -18,7 +18,7 @@
     z-index: var(--z-index-navigation);
 }
 
-.navigation[data-navigation-status="closed"] .navigation--menu-container:focus-within {
+.navigation[data-navigation-status="closed"] .navigation--menu-container:has(:focus-visible) {
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
 }
