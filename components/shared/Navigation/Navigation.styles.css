@@ -13,7 +13,7 @@
     position: fixed;
     right: 0;
     top: var(--spc-4);
-    transform-origin: right;
+    transform-origin: top right;
     width: var(--navigation-button-size);
     z-index: var(--z-index-navigation);
 }
