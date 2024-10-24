@@ -1,11 +1,14 @@
 import { HomeHero } from '@/components/home/HomeHero';
 import { Navigation } from '@/components/shared/Navigation';
 
+import { Experience } from '@/components/home/Experience';
+
 const Home = async () => {
     return (
         <div>
-        <Navigation/>
+            <Navigation />
             <HomeHero />
+            <Experience />
         </div>
     );
 };

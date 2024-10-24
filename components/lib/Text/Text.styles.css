@@ -71,3 +71,15 @@
 .text--family-mono {
     font-family: var(--font-geist-mono);
 }
+
+.text--weight-400 {
+    font-weight: 400;
+}
+
+.text--weight-500 {
+    font-weight: 500;
+}
+
+.text--weight-600 {
+    font-weight: 600;
+}

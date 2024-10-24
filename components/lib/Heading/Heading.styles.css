@@ -1,4 +1,9 @@
 .heading--size-1 {
+    font-size: 1rem;
+    line-height: 1.25rem;
+}
+
+.heading--size-2 {
     font-size: 2rem;
     line-height: 2.5rem;
 }
@@ -8,4 +13,3 @@
     line-height: 11rem;
     font-family: var(--font-serif);
 }
-
