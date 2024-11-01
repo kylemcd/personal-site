@@ -1,15 +1,15 @@
 import React from 'react';
 import clsx from 'clsx';
 
-type TextProps = React.ComponentProps<'h1'> & {
-    as: 'span' | 'p';
+type TextProps<T extends React.ElementType> = React.ComponentProps<T> & {
+    as: React.ElementType;
     size?: '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
     family?: 'sans' | 'mono' | 'serif';
     color?: 'primary' | 'secondary' | 'accent';
     weight?: '400' | '500' | '600';
 };
 
-const Text = ({
+const Text = <T extends React.ElementType>({
     size = '1',
     color = 'primary',
     family = 'sans',
@@ -17,7 +17,7 @@ const Text = ({
     as,
     className,
     ...props
-}: TextProps) => {
+}: TextProps<T>) => {
     const Component = as;
 
     return (

@@ -1,0 +1,28 @@
+.post-list-container {
+}
+
+.post-list {
+    display: flex;
+    flex-direction: column;
+    list-style: none;
+}
+
+
+.post-list-item-link {
+    align-items: center;
+    border-radius: var(--rnd-4);
+    display: inline-flex;
+    gap: var(--spc-4);
+    margin-left: calc(var(--spc-3) * -1);
+    padding: var(--spc-2) var(--spc-3);
+    text-decoration: none;
+}
+
+.post-list-item-link:hover {
+    background-color: var(--color-surface-2);
+
+}
+
+.post-list-date {
+    font-variant-numeric: tabular-nums;
+}

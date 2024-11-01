@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
-const { withContentlayer } = require('next-contentlayer');
+// const { withContentlayer } = require('next-contentlayer');
+const withMarkdoc = require('@markdoc/next.js');
 const nextConfig = {
     experimental: {
         mdxRs: true,
@@ -40,4 +41,9 @@ const nextConfig = {
     },
 };
 
-module.exports = withContentlayer(nextConfig);
+module.exports = withMarkdoc({ mode: 'static', ...nextConfig})({
+    pageExtensions: ['md', 'mdoc', 'js', 'jsx', 'ts', 'tsx']
+
+})
+
+// module.exports = withContentlayer(nextConfig);

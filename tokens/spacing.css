@@ -41,4 +41,6 @@
     --spc-38: 9.5rem;
     --spc-39: 9.75rem;
     --spc-40: 10rem;
+    --spc-full: 100%;
+    --spc-page: 1200px;
 }

@@ -12,7 +12,17 @@ const Navigation = () => {
     useKeyboardEvent({ fn: (event) => event.key === 'Escape' && setStatus('closed'), enabled: status === 'open' });
 
     const handleToggle = () => {
-        setStatus(current => current !== 'open' ? 'open' : 'closed');
+        const newStatus = status !== 'open' ? 'open' : 'closed';
+        const body = document.body;
+
+        // Lock scroll on body when navigation is open
+        if (newStatus === 'open') {
+            body.style.overflow = 'hidden';
+        } else {
+            body.style.overflow = 'auto';
+        }
+
+        setStatus(newStatus);
     };
 
     return (

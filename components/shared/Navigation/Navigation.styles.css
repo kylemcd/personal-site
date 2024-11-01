@@ -1,18 +1,24 @@
 .navigation {
     --navigation-button-size: 60px;
-    --navigation-open-height: calc(100% - (var(--spc-4) * 2));
+    --navigation-open-height: calc(100vh - (var(--spc-16) * 2));
+    --navigation-top-offset: var(--spc-8);
+
+    display: flex;
+    justify-content: flex-end;
+    position: sticky;
+    top: var(--navigation-top-offset);
 }
 
 .navigation--menu-container {
     background-color: var(--color-surface-1);
     border-color: var(--color-border);
-    border-radius: var(--rnd-4) 0 0 var(--rnd-4);
+    border-radius: var(--rnd-4);
     border-style: solid;
     border-width: var(--spc-px);
     height: var(--navigation-button-size);
-    position: fixed;
+    position: absolute;
     right: 0;
-    top: var(--spc-4);
+    top: 0;
     transform-origin: top right;
     width: var(--navigation-button-size);
     z-index: var(--z-index-navigation);
@@ -26,32 +32,21 @@
 @keyframes navigation-container-open {
     0% {
         height: var(--navigation-button-size);
-        margin-right: 0;
         width: var(--navigation-button-size);
-    }
-    50% {
-        height: calc(90% - (var(--spc-4) * 2));
-        margin-right: var(--spc-4);
     }
     100% {
         height: var(--navigation-open-height);
-        margin-right: var(--spc-4);
-        width: 400px;
+        width: var(--spc-full);
     }
 }
 
 @keyframes navigation-container-close {
     0% {
         height: var(--navigation-open-height);
-        margin-right: var(--spc-4);
-        width: 400px;
-    }
-    20% {
-        margin-right: 0;
+        width: var(--spc-full);
     }
     100% {
         height: var(--navigation-button-size);
-        margin-right: 0;
         width: var(--navigation-button-size);
     }
 }
@@ -60,8 +55,9 @@
     animation: navigation-container-open 0.3s ease-in-out;
     border-radius: var(--rnd-4);
     height: var(--navigation-open-height);
-    margin-right: var(--spc-4);
-    width: 400px;
+    padding: 0 var(--spc-4);
+    max-width: var(--spc-page);
+    width: var(--spc-full);
 }   
 
 .navigation[data-navigation-status="closed"] .navigation--menu-container {
@@ -74,17 +70,17 @@
     appearance: none;
     background-color: var(--color-surface-1);
     border: none;
-    border-radius: var(--rnd-4) 0 0 var(--rnd-4);
+    border-radius: var(--rnd-4);
     cursor: pointer;
     display: flex;
     height: calc(var(--navigation-button-size) - 2px);
     justify-content: center;
     outline: none !important;
     padding: var(--spc-4);
-    position: fixed;
+    position: absolute;
     right: 0;
-    top: calc(var(--spc-4) + 1px);
-    width: calc(var(--navigation-button-size) - 1px);
+    top: 0;
+    width: calc(var(--navigation-button-size) - 2px);
     z-index: var(--z-index-navigation);
 }
 
@@ -107,6 +103,7 @@
 
 .navigation--menu-content {
     padding: var(--spc-4);
+
 }
 
 @keyframes navigation-overlay-open {
@@ -141,7 +138,7 @@
     display: none;
     height: 100vh;
     left: 0;
-    position: fixed;
+    position: absolute;
     transition: opacity 0.5s var(--animation-spring);
     top: 0;
     width: 100vw;

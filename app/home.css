@@ -1,2 +1,15 @@
-@import '@/components/home/HomeHero/HomeHero.styles';
 @import '@/components/home/HomeCards/HomeCards.styles';
+
+.page-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spc-8);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spc-8) var(--spc-4) var(--spc-4) var(--spc-4);
+    position: relative;
+    width: var(--spc-full);
+}   
+
+.hero--container {
+}

@@ -9,6 +9,7 @@
 @import '@/components/lib/Text/Text.styles';
 @import '@/components/lib/Card/Card.styles';
 @import '@/components/lib/List/List.styles';
+@import '@/components/shared/PostList/PostList.styles';
 
 @import '@/components/shared/Navigation/Navigation.styles';
 

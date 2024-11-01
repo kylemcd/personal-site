@@ -5,7 +5,6 @@ import '@/app/globals.css';
 import { GeistSans as sans } from 'geist/font/sans';
 import { GeistMono as mono } from 'geist/font/mono';
 import { Instrument_Serif } from 'next/font/google';
-
 const serif = Instrument_Serif({ subsets: ['latin'], weight: '400', variable: '--font-serif' });
 
 type RootLayoutProps = {
