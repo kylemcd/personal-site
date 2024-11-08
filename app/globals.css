@@ -35,3 +35,39 @@ input {
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
 }
+
+.navigation-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spc-8) var(--spc-4) var(--spc-4) var(--spc-4);
+    width: var(--spc-full);
+}   
+
+.navigation-title-container {
+    display: inline-block;
+    position: relative;
+}
+
+.navigation-title {
+    text-decoration: none;
+    position: relative;
+    z-index: 2;
+}
+
+.navigation-title-underline {
+    border-color: transparent;
+    border-width: var(--spc-px) 0 0 0;
+    border-style: solid;
+    bottom: 8px;
+    height: 1px;
+    left: 0;
+    position: absolute;
+    transition: border-color 0.2s ease-in-out;
+    width: 100%;
+    z-index:1;
+}
+
+.navigation-title:hover + .navigation-title-underline {
+    border-color: var(--color-border);
+}
+

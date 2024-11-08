@@ -2,9 +2,6 @@ import Link from 'next/link';
 import { Text } from '@/components/lib/Text';
 import { getAllPosts } from '@/helpers/posts';
 
-
-
-
 const PostList = async () => {
     const posts = await getAllPosts()
 
