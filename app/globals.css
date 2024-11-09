@@ -10,6 +10,7 @@
 @import '@/components/lib/Card/Card.styles';
 @import '@/components/lib/List/List.styles';
 @import '@/components/shared/PostList/PostList.styles';
+@import '@/components/lib/AnchoredText/AnchoredText.styles';
 
 @import '@/components/shared/Navigation/Navigation.styles';
 
@@ -68,6 +69,6 @@ input {
 }
 
 .navigation-title:hover + .navigation-title-underline {
-    border-color: var(--color-border);
+    border-color: var(--color-accent);
 }
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import clsx from 'clsx';
 
-type TextProps<T extends React.ElementType> = React.ComponentProps<T> & {
+export type TextProps<T extends React.ElementType> = React.ComponentProps<T> & {
     as: React.ElementType;
     size?: '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
     family?: 'sans' | 'mono' | 'serif';

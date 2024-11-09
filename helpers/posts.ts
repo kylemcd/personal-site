@@ -1,11 +1,13 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { matter } from 'md-front-matter'
-import { type Node, Tag, transform, parse, renderers } from '@markdoc/markdoc'
+import { type Node, Tag, transform, parse, renderers, nodes } from '@markdoc/markdoc'
 import React from 'react'
+import slugify from 'slugify'
 
 import { Text } from '@/components/lib/Text'
 import { Fence } from '@/components/lib/Fence'
+import { AnchoredText } from '@/components/lib/AnchoredText'
 
 const FILTERED_FILES = [".DS_Store", "layout.tsx"]
 
@@ -19,13 +21,23 @@ type Post = {
 
 const transformContent = (raw: string) => {
     const ast = parse(raw)
+    // @ts-expect-error - idk
     const content = transform(ast, {
         nodes: {
             heading: {
-                render: 'Text',
+                render: AnchoredText,
+                children: ['inline'],
+                attributes: {
+                    id: { type: String },
+                    level: { type: Number, required: true, default: 1 },
+                    className: { type: String }
+                },
                 transform(node, config) {
+                    if (!nodes?.heading?.transform) return;
+                    const base = nodes.heading.transform(node, config)
+                    const children = node.transformChildren(config);
                     const attributes = node.transformAttributes(config)
-                    const children = node.transformChildren(config)
+                    const id = slugify(children.toString(), { lower: true })
                     const level: keyof typeof LEVEL_TO_SIZE = node.attributes.level
 
                     const LEVEL_TO_SIZE = {
@@ -35,7 +47,7 @@ const transformContent = (raw: string) => {
                         4: '2',
                         5: '1',
                         6: '0'
-                    }
+                    } as const
 
                     const LEVEL_TO_FAMILY = {
                         1: 'serif',
@@ -44,16 +56,23 @@ const transformContent = (raw: string) => {
                         4: 'sans',
                         5: 'sans',
                         6: 'sans'
+                    } as const
+
+                    const props = {
+                        ...attributes,
+                        id,
+                        size: LEVEL_TO_SIZE[level],
+                        family: LEVEL_TO_FAMILY[level],
+                        as: 'h' + level
                     }
 
-                    attributes.className = `text--size-${LEVEL_TO_SIZE[level]} text--color-primary text--family-${LEVEL_TO_FAMILY[level]} text--weight-400`
+                    // @ts-expect-error - idk
+                    return new Tag(AnchoredText, props, children);
 
-                    return new Tag(`h${level}`, attributes, children)
                 }
-
             },
             paragraph: {
-                render: 'Text',
+                render: Text,
                 transform(node, config) {
                     const attributes = node.transformAttributes(config)
                     const children = node.transformChildren(config)
@@ -62,19 +81,14 @@ const transformContent = (raw: string) => {
                 }
             },
             fence: {
-                render: 'Fence',
+                render: Fence,
                 attributes: {
                     language: { type: String }
                 },
             }
         }
     })
-    const react = renderers.react(content, React, {
-        components: {
-            Text: Text,
-            Fence: Fence
-        }
-    })
+    const react = renderers.react(content, React)
 
     return react
 }
@@ -105,12 +119,13 @@ export const getAllPosts = async (): Promise<Post[]> => {
             slug: post,
             readingTime,
             react,
+            draft: postData.data.draft,
         }
     }))
 
-    const dateSortedPosts = postListData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    const filteredAndSortedPosts = postListData.filter((post) => !post.draft).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-    return dateSortedPosts
+    return filteredAndSortedPosts
 }
 
 export const getPostBySlug = async (slug: string): Promise<Post> => {

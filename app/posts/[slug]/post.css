@@ -1,16 +1,16 @@
 
 [data-post] h1, [data-post] h2, [data-post] h3, [data-post] h4, [data-post] h5, [data-post]  h6  {
-    margin: var(--spc-10) 0 var(--spc-6) 0 ;
+    padding: var(--spc-8) 0 var(--spc-4) 0 ;
     line-height: 1.6rem !important;
 }
 
 [data-post] p {
-    margin-block: var(--spc-4);
+    padding-block: var(--spc-2);
     line-height: 1.6rem !important;
 }
 
 [data-post] code {
-    margin-block: var(--spc-2);
+    padding-block: var(--spc-2);
 }
 
 .post-container {

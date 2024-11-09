@@ -8,7 +8,6 @@
     margin: 0 auto;
     padding: var(--spc-8) 0;
     position: relative;
-    width: var(--spc-full);
 }   
 
 .posts-container {
