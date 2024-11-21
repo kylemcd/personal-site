@@ -1,6 +1,12 @@
+@import '@/components/posts/PostNavigation/PostNavigation.styles.css';
 
-[data-post] h1, [data-post] h2, [data-post] h3, [data-post] h4, [data-post] h5, [data-post]  h6  {
-    padding: var(--spc-8) 0 var(--spc-4) 0 ;
+[data-post] h1,
+[data-post] h2,
+[data-post] h3,
+[data-post] h4,
+[data-post] h5,
+[data-post] h6 {
+    padding: var(--spc-8) 0 var(--spc-4) 0;
     line-height: 1.6rem !important;
 }
 
@@ -15,7 +21,7 @@
 
 .post-container {
     padding: var(--spc-25) 0;
-    max-width: 700px;  
+    max-width: 700px;
     width: var(--spc-full);
     margin: 0 auto;
 }
@@ -27,7 +33,7 @@
 }
 
 .post-info-bottom {
-    align-items:  center;
+    align-items: center;
     display: flex;
     gap: var(--spc-2);
 }

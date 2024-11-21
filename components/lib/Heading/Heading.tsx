@@ -9,12 +9,23 @@ type HeadingProps = React.ComponentProps<'h1'> & {
     weight?: '500' | '600';
 };
 
-const Heading = ({ size = '1', color = 'primary', family = 'sans', weight = '500', as, className, ...props }: HeadingProps) => {
+const Heading = ({
+    size = '1',
+    color = 'primary',
+    family = 'sans',
+    weight = '500',
+    as,
+    className,
+    ...props
+}: HeadingProps) => {
     const Component = as;
 
     return (
         <Component
-            className={clsx(`heading--size-${size} text--color-${color} text--family-${family} text--weight-${weight}`, className)}
+            className={clsx(
+                `heading--size-${size} text--color-${color} text--family-${family} text--weight-${weight}`,
+                className
+            )}
             {...props}
         />
     );

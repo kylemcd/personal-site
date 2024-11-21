@@ -1,7 +1,7 @@
 ---
 title: Building dripdrip
-date: "2019-08-28T22:40:32.169Z"
-bg: "https://images.unsplash.com/photo-1447600514716-ca6f3974c346?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1950&q=80"
+date: '2019-08-28T22:40:32.169Z'
+bg: 'https://images.unsplash.com/photo-1447600514716-ca6f3974c346?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1950&q=80'
 ---
 
 Over the past month I've been building a fun side project for the [Fixathon](https://fixathon.io) called [dripdrip](https://dripdrip.app)! The goal of the fixathon is to build something to raise awareness, take action, or facilate stopping climate change. I had a few ideas for this competition but the one that really got me excited was a tool to help you track your water usage.
@@ -26,8 +26,9 @@ During the build I kept a dev log on Twitter, which was a lot of fun! Every new 
 <br/>
 
 ## How you can use it
+
 The app is now done and live over at [https://dripdrip.app](https://dripdrip.app)! I would recommend going to it on your phone and then adding the app to your homescreen. You can then start tracking your water usage everyday! Let me know how you do over on [Twitter](https://twitter.com/kpmdev), your results may surprise you!!
 
 ## In Conclusion
-Participating in the [Fixathon](https://fixathon.io) was a lot of fun! It was nice to take a break from normal side projects and build something that was fresh and also has the potential to make a difference! Thank you so much to the organizers of this, such a great idea and you all excuted it perfectly! 
 
+Participating in the [Fixathon](https://fixathon.io) was a lot of fun! It was nice to take a break from normal side projects and build something that was fresh and also has the potential to make a difference! Thank you so much to the organizers of this, such a great idea and you all excuted it perfectly!

@@ -1,8 +1,9 @@
 ---
 title: Lessons I’ve learned from releasing on Product Hunt
-date: "2018-08-20T22:40:32.169Z"
-bg: "https://images.unsplash.com/photo-1489389944381-3471b5b30f04?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyMDd9&s=4868cc90c3c515fb1316574d9aff1640&auto=format&fit=crop&w=1350&q=80"
+date: '2018-08-20T22:40:32.169Z'
+bg: 'https://images.unsplash.com/photo-1489389944381-3471b5b30f04?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyMDd9&s=4868cc90c3c515fb1316574d9aff1640&auto=format&fit=crop&w=1350&q=80'
 ---
+
 The day of releasing on Product Hunt is unlike anything else. The incoming feedback you will get to validate what you’ve been putting all your effort into is scary. Your analytics dashboard is more exciting than the Super Bowl. The feeling of getting your first conversion is unlike anything else you’ve experienced. But most of all, handling all of this combined is an experience that you can’t get anywhere else.
 
 ## Handling feedback
@@ -11,7 +12,7 @@ Getting positive reviews is a great feeling, but a lot of the time that’s not 
 
 I’ve always been iffy on taking feedback from others. In my mind I knew the correct answer to the problem I was solving and unless there was an obvious problem, I could usually find a way to still validate that I was correct.
 
-*Don’t do this.*
+_Don’t do this._
 
 When releasing something to the world you are at the mercy of the consumer. If they aren’t satisfied then you won’t get business. This also doesn’t mean that the “customer is always right” because sometimes they’re not. But I would recommend going through your feedback with someone else to vet out what is useful feedback and what is not. We’ve learned a lot from feedback, and satisfying a customer early on increases the chance for organic growth through word of mouth. Always reply to feedback gracefully and if you have questions, ask them.
 

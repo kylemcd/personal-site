@@ -42,7 +42,7 @@ input {
     margin: 0 auto;
     padding: var(--spc-8) var(--spc-4) var(--spc-4) var(--spc-4);
     width: var(--spc-full);
-}   
+}
 
 .navigation-title-container {
     display: inline-block;
@@ -65,10 +65,9 @@ input {
     position: absolute;
     transition: border-color 0.2s ease-in-out;
     width: 100%;
-    z-index:1;
+    z-index: 1;
 }
 
 .navigation-title:hover + .navigation-title-underline {
     border-color: var(--color-accent);
 }
-

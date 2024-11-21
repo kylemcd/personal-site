@@ -1,5 +1,5 @@
 :root {
-    --animation-spring: cubic-bezier(0.000, 0.405, 0.000, 1.285);
+    --animation-spring: cubic-bezier(0, 0.405, 0, 1.285);
 }
 
 @keyframes fade-in {

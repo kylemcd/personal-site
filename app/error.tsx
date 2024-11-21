@@ -1,15 +1,7 @@
-'use client'
-import React from 'react'
+'use client';
+import React from 'react';
 
-
-export default function Error({
-    error,
-    reset,
-}: {
-    error: Error & { digest?: string }
-    reset: () => void
-}) {
-
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
     return (
         <div>
             <h2>Something went wrong!</h2>
@@ -23,5 +15,5 @@ export default function Error({
                 Try again
             </button>
         </div>
-    )
+    );
 }

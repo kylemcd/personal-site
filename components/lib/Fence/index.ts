@@ -1,1 +1,1 @@
-export { Fence } from './Fence'
+export { Fence } from './Fence';

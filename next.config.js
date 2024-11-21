@@ -41,9 +41,8 @@ const nextConfig = {
     },
 };
 
-module.exports = withMarkdoc({ mode: 'static', ...nextConfig})({
-    pageExtensions: ['md', 'mdoc', 'js', 'jsx', 'ts', 'tsx']
-
-})
+module.exports = withMarkdoc({ mode: 'static', ...nextConfig })({
+    pageExtensions: ['md', 'mdoc', 'js', 'jsx', 'ts', 'tsx'],
+});
 
 // module.exports = withContentlayer(nextConfig);

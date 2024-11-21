@@ -23,21 +23,12 @@ const RootLayout = async ({ children }: RootLayoutProps) => {
                 <div className="navigation-container">
                     <Navigation />
                     <div className="navigation-title-container">
-                        <Text
-                            as={Link}
-                            href="/"
-                            size="9"
-                            family="serif"
-                            weight="600"
-                            className="navigation-title"
-                        >
+                        <Text as={Link} href="/" size="9" family="serif" weight="600" className="navigation-title">
                             Kyle McDonald
                         </Text>
                         <hr className="navigation-title-underline" aria-hidden />
                     </div>
-                    <div className="page-container">
-                        {children}
-                    </div>
+                    <div className="page-container">{children}</div>
                 </div>
             </body>
         </html>

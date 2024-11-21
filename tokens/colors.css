@@ -10,15 +10,13 @@
     --color-overlay: rgba(255, 255, 255, 0.8);
 }
 
-[data-theme="hacker"] {
+[data-theme='hacker'] {
     --color-text-1: #00ff00;
     --color-text-2: #03a103;
     --color-surface-1: #000000;
     --color-surface-2: #000000;
     --color-border: #00ff00;
     --color-accent: #00ff00;
-    --color-focus: #00FFFF;
+    --color-focus: #00ffff;
     --color-overlay: rgba(0, 0, 0, 0.8);
 }
-
-
