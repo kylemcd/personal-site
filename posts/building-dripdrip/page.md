@@ -2,6 +2,7 @@
 title: Building dripdrip
 date: '2019-08-28T22:40:32.169Z'
 bg: 'https://images.unsplash.com/photo-1447600514716-ca6f3974c346?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1950&q=80'
+draft: true
 ---
 
 Over the past month I've been building a fun side project for the [Fixathon](https://fixathon.io) called [dripdrip](https://dripdrip.app)! The goal of the fixathon is to build something to raise awareness, take action, or facilate stopping climate change. I had a few ideas for this competition but the one that really got me excited was a tool to help you track your water usage.

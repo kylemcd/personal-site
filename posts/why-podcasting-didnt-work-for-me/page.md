@@ -1,6 +1,7 @@
 ---
 title: Why podcasting didn't work for me
 date: '2020-02-10T22:40:32.169Z'
+draft: true
 ---
 
 Earlier this year, you may have listened to the podcast I started called [git reset](https://gitreset.com). I was so excited about starting a podcast after founding [IronMic](https://ironmic.fm), but in retrospect, my expectations weren't realistic. So let's talk about it.
