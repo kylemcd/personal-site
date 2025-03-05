@@ -4,6 +4,7 @@ import '@/app/globals.css';
 
 import { GeistMono as mono } from 'geist/font/mono';
 import Link from 'next/link';
+import { Analytics } from '@vercel/analytics/next';
 
 import { Footer } from '@/components/shared/Footer';
 import { Text } from '@/components/lib/Text';
@@ -36,6 +37,7 @@ const RootLayout = async ({ children }: RootLayoutProps) => {
                     {children}
                     <Footer />
                 </div>
+                <Analytics />
             </body>
         </html>
     );
