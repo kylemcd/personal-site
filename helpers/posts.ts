@@ -1,5 +1,5 @@
-import fs from 'fs/promises';
-import path from 'path';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { matter } from 'md-front-matter';
 import { Tag, transform, parse, renderers, nodes } from '@markdoc/markdoc';
 import React from 'react';
