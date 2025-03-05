@@ -1,5 +1,4 @@
 'use client';
-import { Map } from 'lucide-react';
 import React from 'react';
 import { FocusScope } from '@radix-ui/react-focus-scope';
 
@@ -30,7 +29,7 @@ const Navigation = () => {
             <div className="navigation--menu-container" aria-expanded={status === 'open'} key="menu">
                 {status !== 'open' && (
                     <button className="navigation--menu-button" onClick={handleToggle} ref={menuButtonRef}>
-                        <Map size="24" color="var(--color-text-1)" />
+                        {/* <Map size="24" color="var(--color-text-1)" /> */}
                     </button>
                 )}
                 {status === 'open' && (

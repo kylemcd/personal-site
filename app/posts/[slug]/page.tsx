@@ -2,12 +2,12 @@ import { Text } from '@/components/lib/Text';
 import { PostNavigation } from '@/components/posts/PostNavigation';
 
 import { getPostBySlug } from '@/helpers/posts';
-
-import './post.css';
-import './prism.css';
 import Link from 'next/link';
 import { ArrowLeft } from '@phosphor-icons/react/dist/ssr';
 import { AppProps } from 'next/app';
+
+import './post.css';
+import './prism.css';
 
 const PostPage = async ({ params }: AppProps['pageProps']) => {
     const post = await getPostBySlug(params.slug);

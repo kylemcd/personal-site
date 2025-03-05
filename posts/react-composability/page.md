@@ -1,6 +1,6 @@
 ---
 title: Why composability keeps React components maintainable
-date: '2025-03-05T22:40:32.169Z'
+date: '2025-03-04T22:40:32.169Z'
 ---
 
 Over the years, I’ve built and rebuilt component libraries in different environments, mostly in startups where speed is a priority. The biggest lesson I’ve learned? **Composability is everything.**
