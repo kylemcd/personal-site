@@ -1,31 +1,46 @@
-import { notFound } from 'next/navigation';
+import { Text } from '@/components/lib/Text';
+import { PostNavigation } from '@/components/posts/PostNavigation';
 
-import { PostBody } from '@/components/posts/PostBody';
+import { getPostBySlug } from '@/helpers/posts';
+import Link from 'next/link';
+import { ArrowLeft } from '@phosphor-icons/react/dist/ssr';
+import { AppProps } from 'next/app';
 
-import { PostHeading } from '@/components/posts/PostHeading';
+import './post.css';
+import './prism.css';
 
-import './PrismTheme.css';
-
-import fetchOnePost from '@/internal/fetchOnePost';
-
-
-const PostLayout = ({ params }: any) => {
-    const post = fetchOnePost({ slug: params.slug });
-
-    if (!post) {
-        return notFound();
-    }
+const PostPage = async ({ params }: AppProps['pageProps']) => {
+    const post = await getPostBySlug(params.slug);
 
     return (
-        <>
-            <article className="px-4 pb-20">
-                <PostHeading post={post} />
-                <div className="max-w-[900px] mx-auto">
-                    <PostBody htmlBody={post.postBody} />
-                </div>
-            </article>
-        </>
+        <div className="post-container">
+            <div className="post-back-link">
+                <Text as={Link} href="/posts" size="1" color="secondary">
+                    <ArrowLeft />
+                    All posts
+                </Text>
+            </div>
+            <div className="post-info">
+                <Text as="span" size="1" color="secondary">
+                    Published{' '}
+                    {new Date(post.date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                    })}
+                    {' — '}
+                    {post.readingTime} min read
+                </Text>
+                <Text as="h1" size="8" family="serif" weight="600">
+                    {post.title}
+                </Text>
+            </div>
+            <div className="post-body" data-post>
+                {post.react}
+            </div>
+            <PostNavigation react={post.react} />
+        </div>
     );
 };
 
-export default PostLayout;
+export default PostPage;

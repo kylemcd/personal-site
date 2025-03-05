@@ -1,0 +1,12 @@
+:root {
+    --rnd-0: 0;
+    --rnd-1: 0.125rem;
+    --rnd-2: 0.25rem;
+    --rnd-3: 0.375rem;
+    --rnd-4: 0.5rem;
+    --rnd-5: 0.625rem;
+    --rnd-6: 0.75rem;
+    --rnd-7: 0.875rem;
+    --rnd-8: 1rem;
+    --rnd-full: 9999px;
+}

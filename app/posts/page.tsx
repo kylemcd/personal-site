@@ -1,12 +1,14 @@
-import fetchAllPosts from '@/internal/fetchAllPosts';
-import { Posts as PostsComponent } from '@/components/home/Posts';
-import styles from './page.module.css';
+import { PostList } from '@/components/shared/PostList';
+import { Text } from '@/components/lib/Text';
+import './posts.css';
 
 const Posts = async () => {
-    const posts = fetchAllPosts();
     return (
-        <div className="py-16 max-w-[900px] mx-auto px-4">
-            <PostsComponent posts={posts} />
+        <div className="posts-container">
+            <Text as="h2" size="2" weight="600">
+                Writing
+            </Text>
+            <PostList />
         </div>
     );
 };

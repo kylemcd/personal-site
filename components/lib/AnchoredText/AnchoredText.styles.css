@@ -1,0 +1,43 @@
+.anchored-text {
+    position: relative;
+}
+
+.anchored-text:hover > .anchored-text-button-container,
+.anchored-text-button-container:hover {
+    transform: scale(1);
+    opacity: 1;
+}
+.anchored-text-button:hover {
+    background-color: var(--color-surface-2);
+}
+
+.anchored-text-button-container {
+    display: block;
+    left: calc(var(--spc-10) * -1);
+    top: calc(50% - var(--spc-4));
+    opacity: 0;
+    padding-right: var(--spc-4);
+    position: absolute;
+    transform: scale(0.8);
+    transform-origin: center;
+    transition: opacity 0.1s ease-in-out;
+}
+
+.anchored-text-button {
+    align-items: center;
+    background: none;
+    border-radius: var(--rnd-2);
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    display: flex;
+    height: var(--spc-8);
+    justify-content: center;
+    margin: auto 0;
+    transition: background-color 0.2s ease-in-out;
+    width: var(--spc-8);
+}
+
+.anchored-text-button-icon {
+    fill: var(--color-text-1);
+    margin-top: 0.5px;
+}

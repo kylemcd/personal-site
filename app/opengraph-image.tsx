@@ -11,9 +11,6 @@ const size = {
 export default async function Image() {
     const interMedium = fetch(new URL('../og/Inter-Medium.ttf', import.meta.url)).then((res) => res.arrayBuffer());
     const interLight = fetch(new URL('../og/Inter-Light.ttf', import.meta.url)).then((res) => res.arrayBuffer());
-    const playFairBold = fetch(new URL('../og/PlayfairDisplay-Bold.ttf', import.meta.url)).then((res) =>
-        res.arrayBuffer()
-    );
     const title = "Kyle McDonald's Personal Site";
 
     return new ImageResponse(
@@ -50,7 +47,7 @@ export default async function Image() {
                         style={{
                             color: 'white',
                             fontSize: '64px',
-                            fontFamily: 'Playfair',
+                            fontFamily: 'Inter',
                             fontWeight: 600,
                             display: 'flex',
                             maxWidth: '70%',
@@ -83,7 +80,7 @@ export default async function Image() {
                     />
                     <div style={{ display: 'flex', alignItems: 'center', padding: '36px 72px' }}>
                         <img
-                            src="https://github.com/kylemcd/personal-site/assets/29106675/1c569d73-1bb7-4b66-95f3-1547d6823e0a"
+                            src="https://avatars.githubusercontent.com/u/29106675?v=4"
                             alt="avatar"
                             width="90"
                             height="90"
@@ -139,12 +136,6 @@ export default async function Image() {
                     data: await interMedium,
                     style: 'normal',
                     weight: 400,
-                },
-                {
-                    name: 'Playfair',
-                    data: await playFairBold,
-                    style: 'normal',
-                    weight: 600,
                 },
             ],
         }
