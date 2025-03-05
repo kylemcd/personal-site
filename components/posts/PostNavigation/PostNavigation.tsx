@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import { CaretDown } from '@phosphor-icons/react';
 import { Text } from '@/components/lib/Text';
 
 type Header = {
@@ -94,7 +94,7 @@ const PostNavigation = ({ react }: PostNavigationProps) => {
             </div>
             <div className="post-navigation-expand-button-container">
                 <button onClick={() => setIsExpanded(!isExpanded)} className="post-navigation-expand-button">
-                    <ChevronDown size="16" style={{ color: 'var(--color-text-1)' }} />
+                    <CaretDown size="16" style={{ color: 'var(--color-text-1)' }} />
                 </button>
             </div>
         </div>

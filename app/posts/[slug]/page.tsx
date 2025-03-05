@@ -7,13 +7,9 @@ import './post.css';
 import './prism.css';
 import Link from 'next/link';
 import { ArrowLeft } from '@phosphor-icons/react/dist/ssr';
+import { AppProps } from 'next/app';
 
-type PostPageProps = {
-    params: {
-        slug: string;
-    };
-};
-const PostPage = async ({ params }: PostPageProps) => {
+const PostPage = async ({ params }: AppProps['pageProps']) => {
     const post = await getPostBySlug(params.slug);
 
     return (
