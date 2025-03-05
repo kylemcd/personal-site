@@ -1,12 +1,11 @@
-import { ImageResponse } from '@vercel/og';
-// Route segment config
-export const runtime = 'edge';
+import { ImageResponse } from 'next/og';
 
-// Image metadata
-const size = {
+export const size = {
     width: 1200,
     height: 630,
 };
+
+export const contentType = 'image/png';
 
 export default async function Image() {
     const interMedium = fetch(new URL('../og/Inter-Medium.ttf', import.meta.url)).then((res) => res.arrayBuffer());
