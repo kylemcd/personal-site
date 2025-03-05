@@ -5,7 +5,7 @@
 
 .text--size-1 {
     font-size: 1rem;
-    line-height: 1.5rem;
+    line-height: 1.6rem;
 }
 
 .text--size-2 {
@@ -65,7 +65,7 @@
 }
 
 .text--family-sans {
-    font-family: var(--font-geist-sans);
+    font-family: var(--font-sans);
 }
 
 .text--family-mono {

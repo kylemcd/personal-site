@@ -1,6 +1,6 @@
-.list {
+.posts-container {
     display: flex;
     flex-direction: column;
     gap: var(--spc-2);
-    list-style: none;
+    margin: var(--spc-12) 0;
 }

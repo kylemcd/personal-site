@@ -1,16 +1,48 @@
-@import '@/components/home/HomeCards/HomeCards.styles';
-
 .home-container {
     display: flex;
     flex-direction: column;
     gap: var(--spc-8);
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: 700px;
+    margin: var(--spc-8) auto;
     padding: var(--spc-8) 0;
     position: relative;
 }
 
+.about-me-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spc-2);
+    max-width: 680px;
+}
+
+.about-me-avatar {
+    border-radius: var(--rnd-full);
+    display: block;
+    margin-bottom: var(--spc-2);
+}
+
 .posts-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spc-2);
+}
+
+.reading-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-right: var(--spc-6);
+}
+
+.reading-header-link {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--spc-2);
+}
+
+.experience-container {
     display: flex;
     flex-direction: column;
     gap: var(--spc-2);

@@ -5,14 +5,14 @@
 @import '@/tokens/shadow';
 @import '@/tokens/animations';
 
+@import '@/components/home/Experience/Experience.styles';
+@import '@/components/home/Reading/Reading.styles';
+@import '@/components/lib/AnchoredText/AnchoredText.styles';
 @import '@/components/lib/Heading/Heading.styles';
 @import '@/components/lib/Text/Text.styles';
-@import '@/components/lib/Card/Card.styles';
-@import '@/components/lib/List/List.styles';
+@import '@/components/shared/Footer/Footer.styles';
 @import '@/components/shared/PostList/PostList.styles';
-@import '@/components/lib/AnchoredText/AnchoredText.styles';
-
-@import '@/components/shared/Navigation/Navigation.styles';
+@import '@/components/shared/ThemeSwitcher/ThemeSwitcher.styles';
 
 * {
     box-sizing: border-box;
@@ -24,7 +24,10 @@ html,
 body {
     background-color: var(--color-surface-1);
     color: var(--color-text-1);
-    font-family: var(--font-geist-sans);
+    --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', Helvetica,
+        'Apple Color Emoji', Arial, sans-serif, 'Segoe UI Emoji', 'Segoe UI Symbol';
+    font-family: var(--font-sans);
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
 }
 
 button,
@@ -37,9 +40,27 @@ input {
     outline-offset: 2px;
 }
 
-.navigation-container {
-    max-width: 1200px;
+a {
+    color: var(--color-accent);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.page-container {
     margin: 0 auto;
+    max-width: 700px;
+    padding: 0 var(--spc-4);
+}
+
+.navigation-container {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin: 0 auto;
+    max-width: 700px;
     padding: var(--spc-8) var(--spc-4) var(--spc-4) var(--spc-4);
     width: var(--spc-full);
 }
@@ -47,27 +68,11 @@ input {
 .navigation-title-container {
     display: inline-block;
     position: relative;
+    margin-top: var(--spc-2);
 }
 
 .navigation-title {
     text-decoration: none;
     position: relative;
     z-index: 2;
-}
-
-.navigation-title-underline {
-    border-color: transparent;
-    border-width: var(--spc-px) 0 0 0;
-    border-style: solid;
-    bottom: 8px;
-    height: 1px;
-    left: 0;
-    position: absolute;
-    transition: border-color 0.2s ease-in-out;
-    width: 100%;
-    z-index: 1;
-}
-
-.navigation-title:hover + .navigation-title-underline {
-    border-color: var(--color-accent);
 }

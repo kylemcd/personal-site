@@ -38,23 +38,7 @@ const PostNavigation = ({ react }: PostNavigationProps) => {
 
     const scrollProgressRef = React.useRef<HTMLDivElement>(null);
     const postNavigationContentRef = React.useRef<HTMLDivElement>(null);
-    const activeItemRef = React.useRef<HTMLAnchorElement>(null);
     const activeIndicatorRef = React.useRef<HTMLDivElement>(null);
-
-    const handleCurrentHeader = React.useCallback(() => {
-        const scrollPosition = window.scrollY;
-
-        const headerPositions = headers.map((header) => ({
-            ...header,
-            top: document.getElementById(header.id)?.offsetTop || 0,
-        }));
-
-        const newCurrentHeader = headerPositions.find((header) => scrollPosition <= header.top);
-
-        if (newCurrentHeader?.id === currentHeader?.id) return;
-
-        setCurrentHeader(newCurrentHeader || null);
-    }, [headers, currentHeader]);
 
     const handleScrollProgress = () => {
         if (!scrollProgressRef.current) return;
@@ -64,53 +48,12 @@ const PostNavigation = ({ react }: PostNavigationProps) => {
     };
 
     React.useEffect(() => {
-        handleCurrentHeader();
-        document.addEventListener('scroll', handleCurrentHeader);
-        return () => {
-            document.removeEventListener('scroll', handleCurrentHeader);
-        };
-    }, [headers]);
-
-    React.useEffect(() => {
         handleScrollProgress();
         document.addEventListener('scroll', handleScrollProgress);
         return () => {
             document.removeEventListener('scroll', handleScrollProgress);
         };
     }, []);
-
-    React.useEffect(() => {
-        const postNavigationContent = postNavigationContentRef.current;
-        const activeItem = activeItemRef.current;
-        const activeIndicator = activeIndicatorRef.current;
-
-        if (!activeItem || !activeIndicator || !postNavigationContent) return;
-
-        const hasCurrentTransform = activeIndicator.style.transform !== '';
-
-        const widthOfPostNavigationContent = postNavigationContent?.clientWidth || 700;
-        const widthOfActiveItem = activeItem?.clientWidth || 0;
-
-        if (!isExpanded) return;
-
-        const scaleValue = widthOfActiveItem ? widthOfActiveItem / widthOfPostNavigationContent : 1;
-
-        const indexOfActiveHeader = headers.findIndex((header) => header.id === currentHeader?.id);
-
-        const translateYValue = isExpanded ? indexOfActiveHeader * 40 + 7 : -12;
-
-        const transform = `translateY(${translateYValue}px)`;
-
-        if (!hasCurrentTransform) {
-            activeIndicatorRef.current.style.transition = 'none';
-        } else {
-            activeIndicatorRef.current.style.transition =
-                'transform 0.2s ease-in-out, width 0.2s ease-in-out, background-color 0.4s ease-in-out';
-        }
-
-        activeIndicatorRef.current.style.transform = transform;
-        activeIndicatorRef.current.style.width = `${widthOfActiveItem}px`;
-    }, [currentHeader, headers, isExpanded]);
 
     return (
         <div className="post-navigation" data-expanded={isExpanded}>
@@ -122,19 +65,19 @@ const PostNavigation = ({ react }: PostNavigationProps) => {
                             <li
                                 className="post-navigation-item"
                                 data-item-active={header.id === currentHeader?.id}
+                                data-item-level={header.level}
                                 key={header.id}
                             >
-                                <span ref={isActive ? activeItemRef : undefined}>
-                                    <Text
-                                        as="a"
-                                        size="1"
-                                        href={`#${header.id}`}
-                                        className="post-navigation-item-link"
-                                        onClick={() => setCurrentHeader(header)}
-                                    >
-                                        {header.text}
-                                    </Text>
-                                </span>
+                                <Text
+                                    as="a"
+                                    size="1"
+                                    color={isActive ? 'primary' : 'secondary'}
+                                    href={`#${header.id}`}
+                                    className="post-navigation-item-link"
+                                    onClick={() => setCurrentHeader(header)}
+                                >
+                                    {header.text}
+                                </Text>
                             </li>
                         );
                     })}
@@ -151,7 +94,7 @@ const PostNavigation = ({ react }: PostNavigationProps) => {
             </div>
             <div className="post-navigation-expand-button-container">
                 <button onClick={() => setIsExpanded(!isExpanded)} className="post-navigation-expand-button">
-                    <ChevronDown size="16" />
+                    <ChevronDown size="16" style={{ color: 'var(--color-text-1)' }} />
                 </button>
             </div>
         </div>

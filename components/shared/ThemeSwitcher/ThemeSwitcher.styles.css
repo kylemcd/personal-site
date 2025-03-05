@@ -1,0 +1,17 @@
+.theme-switcher {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--spc-2);
+}
+
+.theme-switcher-button {
+    appearance: none;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    border-radius: var(--rnd-2);
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--color-white);
+}

@@ -1,9 +1,14 @@
+.post-list-container {
+    margin-left: calc(var(--spc-5) * -1);
+    padding: 0 var(--spc-2);
+}
+
 .post-list {
     display: flex;
     flex-direction: column;
     gap: var(--spc-1);
     list-style: none;
-    max-width: 600px;
+    max-width: 700px;
     width: var(--spc-full);
 }
 
@@ -17,7 +22,6 @@
     display: inline-flex;
     gap: var(--spc-4);
     justify-content: space-between;
-    margin-left: calc(var(--spc-3) * -1);
     padding: var(--spc-2) var(--spc-3);
     position: relative;
     text-decoration: none;
@@ -27,6 +31,7 @@
 .post-list-item-link:hover,
 .post-list-item-link:focus {
     background-color: var(--color-surface-2);
+    text-decoration: none;
 }
 
 .post-list-icon-container {

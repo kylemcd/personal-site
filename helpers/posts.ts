@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { matter } from 'md-front-matter';
-import { type Node, Tag, transform, parse, renderers, nodes } from '@markdoc/markdoc';
+import { Tag, transform, parse, renderers, nodes } from '@markdoc/markdoc';
 import React from 'react';
 import slugify from 'slugify';
 
@@ -63,6 +63,7 @@ const transformContent = (raw: string) => {
                         id,
                         size: LEVEL_TO_SIZE[level],
                         family: LEVEL_TO_FAMILY[level],
+                        weight: '600',
                         as: 'h' + level,
                     };
 
@@ -128,6 +129,7 @@ export const getAllPosts = async (): Promise<Post[]> => {
         .filter((post) => !post.draft)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+    // @ts-expect-error - idk
     return filteredAndSortedPosts;
 };
 

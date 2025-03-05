@@ -2,15 +2,12 @@ import React from 'react';
 
 import '@/app/globals.css';
 
-import { GeistSans as sans } from 'geist/font/sans';
 import { GeistMono as mono } from 'geist/font/mono';
-import { Instrument_Serif } from 'next/font/google';
 import Link from 'next/link';
 
-import { Navigation } from '@/components/shared/Navigation';
+import { Footer } from '@/components/shared/Footer';
 import { Text } from '@/components/lib/Text';
-
-const serif = Instrument_Serif({ subsets: ['latin'], weight: '400', variable: '--font-serif' });
+import { ThemeSwitcher } from '@/components/shared/ThemeSwitcher';
 
 type RootLayoutProps = {
     children: React.ReactNode;
@@ -18,17 +15,22 @@ type RootLayoutProps = {
 
 const RootLayout = async ({ children }: RootLayoutProps) => {
     return (
-        <html lang="en" className={`${mono.variable} ${sans.variable} ${serif.variable}`} data-theme="default">
+        <html lang="en" className={`${mono.variable}`} data-theme="default">
+            <head>
+                <link rel="icon" href="/avatar.png" />
+            </head>
             <body className="bg-accent">
                 <div className="navigation-container">
-                    <Navigation />
                     <div className="navigation-title-container">
-                        <Text as={Link} href="/" size="9" family="serif" weight="600" className="navigation-title">
+                        <Text as={Link} href="/" size="5" family="serif" weight="600" className="navigation-title">
                             Kyle McDonald
                         </Text>
-                        <hr className="navigation-title-underline" aria-hidden />
                     </div>
-                    <div className="page-container">{children}</div>
+                    <ThemeSwitcher />
+                </div>
+                <div className="page-container">
+                    {children}
+                    <Footer />
                 </div>
             </body>
         </html>

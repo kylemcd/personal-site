@@ -6,21 +6,64 @@
 [data-post] h4,
 [data-post] h5,
 [data-post] h6 {
-    padding: var(--spc-8) 0 var(--spc-4) 0;
-    line-height: 1.6rem !important;
+    margin: var(--spc-8) 0 var(--spc-4) 0;
 }
 
 [data-post] p {
     padding-block: var(--spc-2);
-    line-height: 1.6rem !important;
+    line-height: 1.7rem !important;
 }
 
 [data-post] code {
     padding-block: var(--spc-2);
 }
 
+[data-post] hr {
+    border-color: var(--color-border);
+    border-width: 1px 0 0 0;
+    margin-block: var(--spc-4);
+}
+
+[data-post] ul,
+[data-post] ol {
+    display: flex;
+    flex-direction: column;
+    margin-left: var(--spc-8);
+    margin-block: var(--spc-2);
+    gap: var(--spc-2);
+}
+
+[data-post] li {
+    line-height: 1.7rem !important;
+}
+
+.post-back-link {
+    position: absolute;
+    left: -235px;
+}
+
+@media (max-width: 1200px) {
+    .post-back-link {
+        display: none;
+    }
+}
+
+.post-back-link a {
+    display: flex;
+    align-items: center;
+    gap: var(--spc-2);
+}
+
+[data-post] p > code {
+    background-color: var(--color-surface-2);
+    padding: var(--spc-1);
+    border-radius: var(--rnd-2);
+    font-size: 0.9rem;
+}
+
 .post-container {
     padding: var(--spc-25) 0;
+    position: relative;
     max-width: 700px;
     width: var(--spc-full);
     margin: 0 auto;
@@ -29,13 +72,8 @@
 .post-info {
     display: flex;
     flex-direction: column;
-    gap: var(--spc-4);
-}
-
-.post-info-bottom {
-    align-items: center;
-    display: flex;
     gap: var(--spc-2);
+    padding-bottom: var(--spc-4);
 }
 
 .post-body {

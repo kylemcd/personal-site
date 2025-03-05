@@ -14,14 +14,13 @@
 .anchored-text-button-container {
     display: block;
     left: calc(var(--spc-10) * -1);
-    margin-top: calc(var(--spc-1) * -1);
-    opacity: 0;
+    top: calc(50% - var(--spc-4));
     opacity: 0;
     padding-right: var(--spc-4);
     position: absolute;
     transform: scale(0.8);
     transform-origin: center;
-    transition: transform 0.3s ease-in-out, opacity 0.1s ease-in-out;
+    transition: opacity 0.1s ease-in-out;
 }
 
 .anchored-text-button {

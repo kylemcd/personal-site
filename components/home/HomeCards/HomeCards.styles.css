@@ -1,5 +1,0 @@
-.home-cards {
-    display: flex;
-    gap: var(--spc-16);
-    width: var(--spc-full);
-}
