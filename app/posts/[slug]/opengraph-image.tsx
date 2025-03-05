@@ -1,19 +1,22 @@
 import { ImageResponse } from 'next/og';
+import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { getPostBySlug } from '@/helpers/posts';
-// Route segment config
-export const runtime = 'edge';
 
-// Image metadata
-const size = {
+export const runtime = 'nodejs';
+
+export const size = {
     width: 1200,
     height: 630,
 };
 
+export const contentType = 'image/png';
+
 export default async function Image({ params }: { params: { slug: string } }) {
-    const interMedium = fetch(new URL('../../../og/Inter-Medium.ttf', import.meta.url)).then((res) =>
-        res.arrayBuffer()
-    );
-    const interLight = fetch(new URL('../../../og/Inter-Light.ttf', import.meta.url)).then((res) => res.arrayBuffer());
+    const interMediumBuffer = await readFile(path.join(process.cwd(), 'og/Inter-Medium.ttf'));
+    const interMedium = Uint8Array.from(interMediumBuffer).buffer;
+    const interLightBuffer = await readFile(path.join(process.cwd(), 'og/Inter-Light.ttf'));
+    const interLight = Uint8Array.from(interLightBuffer).buffer;
 
     let title = "Kyle McDonald's Personal Site";
 
