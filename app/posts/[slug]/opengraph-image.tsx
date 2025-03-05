@@ -3,8 +3,6 @@ import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { getPostBySlug } from '@/helpers/posts';
 
-export const runtime = 'nodejs';
-
 export const size = {
     width: 1200,
     height: 630,
