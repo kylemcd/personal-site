@@ -68,7 +68,6 @@ a:hover {
 .navigation-title-container {
     display: inline-block;
     position: relative;
-    margin-top: var(--spc-2);
 }
 
 .navigation-title {

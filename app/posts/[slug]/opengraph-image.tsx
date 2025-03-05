@@ -9,8 +9,6 @@ const size = {
     height: 630,
 };
 
-export const revalidate = 'force-cache';
-
 export default async function Image({ params }: { params: { slug: string } }) {
     const interMedium = fetch(new URL('../../../og/Inter-Medium.ttf', import.meta.url)).then((res) =>
         res.arrayBuffer()
