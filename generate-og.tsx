@@ -117,7 +117,6 @@ const constructImage = async ({ title, path }: { title: string; path: string }) 
     const svg = await satori(<OgComponent title={title} />, {
         width: OG_WIDTH,
         height: OG_HEIGHT,
-        // Provide the correct font(s) your component needs
         fonts: [
             {
                 name: 'Inter',
