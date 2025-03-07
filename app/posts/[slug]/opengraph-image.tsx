@@ -1,19 +1,20 @@
 import { ImageResponse } from 'next/og';
-import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { getPostBySlug } from '@/helpers/posts';
+import path from 'node:path';
 
 export const size = {
     width: 1200,
     height: 630,
 };
+const __dirname = path.resolve();
 
 export const contentType = 'image/png';
 
 export default async function Image({ params }: { params: { slug: string } }) {
-    const interMediumBuffer = await readFile(path.join(process.cwd(), 'og/Inter-Medium.ttf'));
+    const interMediumBuffer = await readFile(path.join(__dirname, '/og/Inter-Medium.ttf'));
     const interMedium = Uint8Array.from(interMediumBuffer).buffer;
-    const interLightBuffer = await readFile(path.join(process.cwd(), 'og/Inter-Light.ttf'));
+    const interLightBuffer = await readFile(path.join(__dirname, '/og/Inter-Light.ttf'));
     const interLight = Uint8Array.from(interLightBuffer).buffer;
 
     let title = "Kyle McDonald's Personal Site";
