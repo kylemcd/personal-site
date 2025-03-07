@@ -11,8 +11,8 @@ export const dynamic = 'force-static';
 export const contentType = 'image/png';
 
 export default async function Image() {
-    const interMedium = await readFile(path.join(process.cwd(), 'og/Inter-Medium.ttf'));
-    const interLight = await readFile(path.join(process.cwd(), 'og/Inter-Light.ttf'));
+    const interMedium = await readFile(path.join(process.cwd(), 'og/Inter-Medium.woff'));
+    const interLight = await readFile(path.join(process.cwd(), 'og/Inter-Light.woff'));
 
     const title = "Kyle McDonald's Personal Site";
 
