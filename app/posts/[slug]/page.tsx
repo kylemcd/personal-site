@@ -9,8 +9,7 @@ import { AppProps } from 'next/app';
 import './post.css';
 import './prism.css';
 
-const PostPage = async ({ params: paramsProp }: AppProps['pageProps']) => {
-    const params = await paramsProp;
+const PostPage = async ({ params }: AppProps['pageProps']) => {
     const post = await getPostBySlug(params.slug);
 
     return (
