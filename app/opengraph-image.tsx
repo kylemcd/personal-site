@@ -1,6 +1,4 @@
 import { ImageResponse } from 'next/og';
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
 
 export const size = {
     width: 1200,
@@ -11,9 +9,6 @@ export const dynamic = 'force-static';
 export const contentType = 'image/png';
 
 export default async function Image() {
-    const interMedium = await readFile(path.join(process.cwd(), 'og/Inter-Medium.woff'));
-    const interLight = await readFile(path.join(process.cwd(), 'og/Inter-Light.woff'));
-
     const title = "Kyle McDonald's Personal Site";
 
     return new ImageResponse(
@@ -127,20 +122,6 @@ export default async function Image() {
             // size config to also set the ImageResponse's width and height.
             width: 1200,
             height: 630,
-            fonts: [
-                {
-                    name: 'Inter',
-                    data: interLight,
-                    style: 'normal',
-                    weight: 300,
-                },
-                {
-                    name: 'Inter',
-                    data: interMedium,
-                    style: 'normal',
-                    weight: 400,
-                },
-            ],
         }
     );
 }
