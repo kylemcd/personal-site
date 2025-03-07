@@ -6,6 +6,7 @@ import { Reading } from '@/components/home/Reading';
 import { ArrowRight } from '@phosphor-icons/react/dist/ssr';
 import Image from 'next/image';
 import { Experience } from '@/components/home/Experience';
+
 const Home = async () => {
     return (
         <div className="home-container">

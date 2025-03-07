@@ -11,7 +11,8 @@ import './prism.css';
 
 export const dynamic = 'force-static';
 
-const PostPage = async ({ params }: AppProps['pageProps']) => {
+const PostPage = async ({ params: paramsProp }: AppProps['pageProps']) => {
+    const params = await paramsProp;
     const post = await getPostBySlug(params.slug);
 
     return (
@@ -43,6 +44,18 @@ const PostPage = async ({ params }: AppProps['pageProps']) => {
             <PostNavigation react={post.react} />
         </div>
     );
+};
+
+export const generateMetadata = async ({ params: paramsProp }: AppProps['pageProps']) => {
+    const params = await paramsProp;
+    const post = await getPostBySlug(params.slug);
+
+    return {
+        title: `${post.title} — Kyle McDonald`,
+        openGraph: {
+            images: [`https://kylemcd.com/og/${post.slug}.png`],
+        },
+    };
 };
 
 export default PostPage;

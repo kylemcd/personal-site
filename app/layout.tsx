@@ -19,10 +19,9 @@ const RootLayout = async ({ children }: RootLayoutProps) => {
         <html lang="en" className={`${mono.variable}`} data-theme="default">
             <head>
                 <link rel="icon" href="/avatar.png" />
-                <meta property="og:image" content="<generated>" />
-                <meta property="og:image:type" content="<generated>" />
-                <meta property="og:image:width" content="<generated>" />
-                <meta property="og:image:height" content="<generated>" />
+                <meta property="og:image:type" content="image/png" />
+                <meta property="og:image:width" content="1200" />
+                <meta property="og:image:height" content="630" />
             </head>
             <body className="bg-accent">
                 <div className="navigation-container">
@@ -55,6 +54,7 @@ export async function generateMetadata() {
             siteName: 'Kyle McDonald',
             locale: 'en-US',
             type: 'website',
+            images: [`https://kylemcd.com/og/home.png`],
         },
         twitter: {
             title: 'Kyle McDonald',
