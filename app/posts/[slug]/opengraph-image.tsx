@@ -1,4 +1,4 @@
-import { ImageResponse } from 'next/og';
+import { ImageResponse } from '@vercel/og';
 import { getPostBySlug } from '@/helpers/posts';
 
 export const size = {
