@@ -48,7 +48,10 @@ const finishedArgs = {
     profileId: 'clqazgb086327830htsy14mo9ld',
 };
 
-export const fetchLiteralBooks = async (): Promise<{ currentlyReading: Book | null; finished: Array<Book> | null }> => {
+export const fetchLiteralBooks = async (): Promise<{
+    currentlyReading: Array<Book> | null;
+    finished: Array<Book> | null;
+}> => {
     try {
         const currentlyReadingResponse = await fetch('https://literal.club/graphql/', {
             method: 'POST',
@@ -59,6 +62,7 @@ export const fetchLiteralBooks = async (): Promise<{ currentlyReading: Book | nu
                 query: booksByReadingStateAndProfileQuery,
                 variables: currentlyReadingArgs,
             }),
+            next: { revalidate: 3600 },
         });
         const currentlyReadingJson = await currentlyReadingResponse.json();
 
@@ -71,10 +75,11 @@ export const fetchLiteralBooks = async (): Promise<{ currentlyReading: Book | nu
                 query: booksByReadingStateAndProfileQuery,
                 variables: finishedArgs,
             }),
+            next: { revalidate: 3600 },
         });
         const finishedJson = await finishedResponse.json();
 
-        const currentlyReading = currentlyReadingJson?.data?.booksByReadingStateAndProfile?.[0];
+        const currentlyReading = currentlyReadingJson?.data?.booksByReadingStateAndProfile;
         const finished = finishedJson?.data?.booksByReadingStateAndProfile;
 
         return {

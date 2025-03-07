@@ -7,15 +7,13 @@ export const size = {
     width: 1200,
     height: 630,
 };
-const __dirname = path.resolve();
 
+export const dynamic = 'force-static';
 export const contentType = 'image/png';
 
 export default async function Image({ params }: { params: { slug: string } }) {
-    const interMediumBuffer = await readFile(path.join(__dirname, '/og/Inter-Medium.ttf'));
-    const interMedium = Uint8Array.from(interMediumBuffer).buffer;
-    const interLightBuffer = await readFile(path.join(__dirname, '/og/Inter-Light.ttf'));
-    const interLight = Uint8Array.from(interLightBuffer).buffer;
+    const interMedium = await readFile(path.join(process.cwd(), 'og/Inter-Medium.ttf'));
+    const interLight = await readFile(path.join(process.cwd(), 'og/Inter-Light.ttf'));
 
     let title = "Kyle McDonald's Personal Site";
 
@@ -139,13 +137,13 @@ export default async function Image({ params }: { params: { slug: string } }) {
             fonts: [
                 {
                     name: 'Inter',
-                    data: await interLight,
+                    data: interLight,
                     style: 'normal',
                     weight: 300,
                 },
                 {
                     name: 'Inter',
-                    data: await interMedium,
+                    data: interMedium,
                     style: 'normal',
                     weight: 400,
                 },

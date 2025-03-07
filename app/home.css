@@ -32,7 +32,7 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    margin-right: var(--spc-6);
+    margin-right: var(--spc-2);
 }
 
 .reading-header-link {

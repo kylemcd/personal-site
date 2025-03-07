@@ -7,7 +7,9 @@ const Reading = async () => {
     return (
         <div className="reading-container">
             <div className="reading-list">
-                {currentlyReading && <ReadingBook {...currentlyReading} readingStatus="currentlyReading" />}
+                {currentlyReading?.map((book) => (
+                    <ReadingBook {...book} readingStatus="currentlyReading" key={book.slug} />
+                ))}
                 {finished?.map((book) => (
                     <ReadingBook {...book} readingStatus="finished" key={book.slug} />
                 ))}

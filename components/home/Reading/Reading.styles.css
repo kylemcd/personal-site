@@ -1,15 +1,16 @@
 .reading-container {
-    max-width: 700px;
-    margin: var(--spc-4) auto 0 auto;
     position: relative;
-    width: var(--spc-full);
+    margin-top: var(--spc-4);
+    width: calc(var(--spc-full) + var(--spc-2));
 }
 
 .reading-list {
     display: flex;
     flex-direction: column;
     list-style: none;
+    padding: 0 var(--spc-2);
     gap: var(--spc-1);
+    margin-left: calc(var(--spc-5) * -1);
 }
 
 .reading-list-item {
@@ -28,7 +29,6 @@
     justify-content: space-between;
     gap: var(--spc-4);
     padding: var(--spc-2) var(--spc-3);
-    margin-left: calc(var(--spc-3) * -1);
     width: var(--spc-full);
     text-decoration: none;
 }
@@ -58,7 +58,8 @@
     background-color: var(--color-surface-2);
     border-bottom-left-radius: var(--rnd-4);
     border-bottom-right-radius: var(--rnd-4);
-    margin-left: calc(var(--spc-3) * -1);
+    width: var(--spc-full);
+    /* margin-left: calc(var(--spc-3) * -1); */
     max-width: 700px;
     z-index: 1;
     pointer-events: auto;

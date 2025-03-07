@@ -1,6 +1,6 @@
 .post-list-container {
-    margin-left: calc(var(--spc-5) * -1);
     padding: 0 var(--spc-2);
+    width: calc(var(--spc-full) + var(--spc-5));
 }
 
 .post-list {
@@ -8,8 +8,7 @@
     flex-direction: column;
     gap: var(--spc-1);
     list-style: none;
-    max-width: 700px;
-    width: var(--spc-full);
+    margin-left: calc(var(--spc-5) * -1);
 }
 
 .post-list-item {

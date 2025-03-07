@@ -9,6 +9,8 @@ import { AppProps } from 'next/app';
 import './post.css';
 import './prism.css';
 
+export const dynamic = 'force-static';
+
 const PostPage = async ({ params }: AppProps['pageProps']) => {
     const post = await getPostBySlug(params.slug);
 
