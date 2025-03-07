@@ -69,7 +69,7 @@ const OgComponent = ({ title }: { title: string }) => {
                 />
                 <div style={{ display: 'flex', alignItems: 'center', padding: '36px 72px' }}>
                     <img
-                        src="https://github.com/kylemcd/personal-site/assets/29106675/1c569d73-1bb7-4b66-95f3-1547d6823e0a"
+                        src="https://kylemcd.com/avatar.png"
                         alt="avatar"
                         width="90"
                         height="90"
