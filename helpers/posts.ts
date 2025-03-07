@@ -102,13 +102,15 @@ const getReadingTime = (raw: string) => {
 
 export const getAllPosts = async (): Promise<Post[]> => {
     const __dirname = path.resolve();
-    const posts = (await fs.readdir(`${__dirname}/posts`)).filter((post) => !FILTERED_FILES.includes(post));
+    const posts = (await fs.readdir(path.join(process.cwd(), '/posts'))).filter(
+        (post) => !FILTERED_FILES.includes(post)
+    );
 
     if (!posts) return [];
 
     const postListData = await Promise.all(
         posts.map(async (post) => {
-            const postContent = await fs.readFile(`${__dirname}/posts/${post}/page.md`, 'utf-8');
+            const postContent = await fs.readFile(path.join(process.cwd(), `/posts/${post}/page.md`), 'utf-8');
             const postData = matter(postContent);
 
             const react = transformContent(postContent);
