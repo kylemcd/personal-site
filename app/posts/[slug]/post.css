@@ -37,6 +37,12 @@
     line-height: 1.7rem !important;
 }
 
+[data-post] img {
+    display: block;
+    max-width: 700px;
+    width: 100%;
+}
+
 .post-back-link {
     position: absolute;
     left: -235px;

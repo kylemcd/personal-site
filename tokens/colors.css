@@ -4,14 +4,14 @@
     --color-surface-1: #fcfcfc;
     --color-surface-2: #f0f0f0;
     --color-border: #cecece;
-    --color-accent: #2e4c46;
+    --color-accent: #2723e9;
     --color-transparent: transparent;
     --color-focus: #6bc4ff;
     --color-overlay: rgba(255, 255, 255, 0.8);
     --color-white: #ffffff;
     --color-theme-indicator: #cecece;
 
-    --default-color: #202020;
+    --default-color: #2723e9;
     --hacker-color: #00ff00;
     --nord-color: #88c0d0;
     --synthwave-color: #ffcc00;
@@ -28,7 +28,6 @@
     --color-focus: #00ffff;
     --color-overlay: rgba(0, 0, 0, 0.8);
     --color-theme-indicator: #ffffff;
-    --default-color: #fcfcfc;
 }
 
 [data-theme='nord'] {
@@ -41,7 +40,6 @@
     --color-focus: #ebcb8b;
     --color-overlay: rgba(46, 52, 64, 0.85);
     --color-theme-indicator: #ffffff;
-    --default-color: #fcfcfc;
 }
 
 [data-theme='synthwave'] {
@@ -54,7 +52,6 @@
     --color-focus: #00ffff;
     --color-overlay: rgba(42, 33, 57, 0.85);
     --color-theme-indicator: #ffffff;
-    --default-color: #fcfcfc;
 }
 
 [data-theme='night-owl'] {
@@ -67,5 +64,4 @@
     --color-focus: #ecc48d;
     --color-overlay: rgba(1, 22, 39, 0.8);
     --color-theme-indicator: #ffffff;
-    --default-color: #fcfcfc;
 }
