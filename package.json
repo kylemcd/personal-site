@@ -35,7 +35,7 @@
         "@types/react-color": "^3.0.13",
         "@types/react-dom": "^18.3.5",
         "autoprefixer": "^10.4.20",
-        "eslint": "^8.57.1",
+        "eslint": "^9.22.0",
         "eslint-config-next": "^14.2.24",
         "postcss": "^8.5.3",
         "satori": "^0.12.1",
