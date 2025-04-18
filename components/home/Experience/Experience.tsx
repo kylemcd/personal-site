@@ -12,7 +12,7 @@ const Experience = () => {
                         Software Engineer
                     </Text>
                     <Text as="span" size="0" color="secondary" family="mono" className="experience-list-item-info-date">
-                        2023 - Present
+                        2023 - ____
                     </Text>
                 </div>
             </li>
