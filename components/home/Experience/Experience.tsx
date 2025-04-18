@@ -25,7 +25,7 @@ const Experience = () => {
                         Director of Engineering
                     </Text>
                     <Text as="span" size="0" color="secondary" family="mono" className="experience-list-item-info-date">
-                        2019-2023
+                        2019 - 2023
                     </Text>
                 </div>
             </li>
