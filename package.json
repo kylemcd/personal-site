@@ -29,7 +29,7 @@
     },
     "devDependencies": {
         "@resvg/resvg-js": "^2.6.2",
-        "@types/node": "^20.17.23",
+        "@types/node": "^22.15.19",
         "@types/prismjs": "^1.26.5",
         "@types/react": "^18.3.18",
         "@types/react-color": "^3.0.13",
