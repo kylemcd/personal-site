@@ -38,7 +38,7 @@
         "eslint": "^9.28.0",
         "eslint-config-next": "^14.2.24",
         "postcss": "^8.5.3",
-        "satori": "^0.12.1",
+        "satori": "^0.14.0",
         "typescript": "^5.8.2"
     }
 }
