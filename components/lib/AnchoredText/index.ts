@@ -1,1 +1,0 @@
-export { AnchoredText } from './AnchoredText';

@@ -1,0 +1,61 @@
+body {
+    font-family:
+        ui-sans-serif,
+        -apple-system,
+        'system-ui',
+        'Segoe UI Variable Display',
+        'Segoe UI',
+        Helvetica,
+        'Apple Color Emoji',
+        Arial,
+        sans-serif,
+        'Segoe UI Emoji',
+        'Segoe UI Symbol';
+    color: var(--color-text-1);
+    font-size: 1rem;
+    line-height: 1.6rem;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 600;
+}
+
+h1 {
+    font-size: 2rem;
+    line-height: 2.5rem;
+}
+
+h2 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+}
+
+h3,
+h4,
+h5,
+h6 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+}
+
+code,
+pre,
+pre *,
+code * {
+    font-size: 0.85rem !important;
+    font-family:
+        ui-monospace,
+        /* CSS generic for “system mono” */ 'SFMono-Regular',
+        /* macOS 10.15+ */ 'SF Mono',
+        /* older macOS */ Menlo,
+        /* macOS ≤10.9, many Linux distros */ Consolas,
+        /* Windows */ 'Liberation Mono',
+        /* most Linux distros */ 'DejaVu Sans Mono',
+        /* fallback on older Linux */ 'Courier New',
+        /* universal, but ugly—keep near the end */ monospace;
+}

@@ -38,8 +38,22 @@ next-env.d.ts
 #env
 .env
 
-# contentlayer
-.contentlayer
-
 # obsidian
 .obsidian
+
+node_modules/
+package-lock.json
+yarn.lock
+
+.DS_Store
+.cache
+.env
+.vercel
+.output
+
+/build/
+/api/
+/server/build
+/public/build
+.nitro
+.tanstack

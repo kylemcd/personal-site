@@ -1,1 +1,0 @@
-export { Reading } from './Reading';

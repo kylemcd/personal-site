@@ -1,0 +1,6 @@
+@import './global/reset.css';
+@import './global/default.css';
+@import './global/rounded.css';
+@import './global/spacing.css';
+@import './global/tokens.css';
+@import './global/animations.css';

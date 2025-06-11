@@ -1,0 +1,78 @@
+.post-container {
+    margin-inline: auto;
+    max-width: var(--spc-text-content);
+    width: var(--spc-full);
+}
+
+.post-title {
+    font-size: 2.75rem;
+    line-height: 3.25rem;
+    margin-block: var(--spc-8);
+}
+
+[data-post] h1,
+[data-post] h2,
+[data-post] h3,
+[data-post] h4,
+[data-post] h5,
+[data-post] h6 {
+    margin: var(--spc-8) 0 var(--spc-4) 0;
+}
+
+[data-post] h1 {
+    font-size: 2.5rem;
+    line-height: 3rem;
+}
+
+[data-post] h2 {
+    font-size: 2rem;
+    line-height: 2.5rem;
+}
+
+[data-post] p {
+    padding-block: var(--spc-2);
+    line-height: 1.7rem !important;
+}
+
+[data-post] code {
+    padding-block: var(--spc-2);
+}
+
+[data-post] hr {
+    border-color: var(--color-border);
+    border-width: 1px 0 0 0;
+    margin-block: var(--spc-4);
+}
+
+[data-post] ul,
+[data-post] ol {
+    display: flex;
+    flex-direction: column;
+    margin-left: var(--spc-8);
+    margin-block: var(--spc-2);
+    gap: var(--spc-1);
+}
+
+[data-post] ul {
+    list-style-type: disc;
+}
+
+[data-post] ol {
+    list-style-type: decimal;
+}
+
+[data-post] li {
+    line-height: 1.7rem !important;
+}
+
+[data-post] img {
+    display: block;
+    max-width: 700px;
+    width: 100%;
+}
+
+[data-post] p > code {
+    background-color: var(--color-surface-2);
+    padding: var(--spc-1);
+    border-radius: var(--rnd-2);
+}
