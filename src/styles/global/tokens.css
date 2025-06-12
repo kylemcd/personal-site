@@ -16,6 +16,13 @@
     --nord-color: #88c0d0;
     --synthwave-color: #ffcc00;
     --night-owl-color: #c792ea;
+
+    --font-family-sans:
+        ui-sans-serif, -apple-system, 'system-ui', 'Segoe UI Variable Display', 'Segoe UI', Helvetica,
+        'Apple Color Emoji', Arial, sans-serif, 'Segoe UI Emoji', 'Segoe UI Symbol';
+    --font-family-mono:
+        ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', 'DejaVu Sans Mono',
+        'Courier New', monospace;
 }
 
 [data-theme='hacker'] {

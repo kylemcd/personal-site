@@ -1,48 +1,13 @@
-/**
+/*!
  * MIT License
  * Copyright (c) 2018 Sarah Drasner
- * Sarah Drasner's[@sdras] Night Owl
- * Ported by Sara vieria [@SaraVieira]
- * Added by Souvik Mandal [@SimpleIndian]
+ * Sarah Drasner's Night Owl
  */
-
-/* Text Highlight Selection */
-::-moz-selection {
-    background: #4a4a57 !important;
-}
-
-code:has(> *)::selection {
-    background: #4a4a57 !important;
-}
-
-pre,
-code {
-    font-family: var(--font-geist-mono);
-}
-
-code[class*='language-'] {
-    border: none !important;
-}
 
 code[class*='language-'],
 pre[class*='language-'] {
-    color: #d6deeb;
-    text-align: left;
-    white-space: pre;
-    word-spacing: normal;
-    word-break: normal;
-    word-wrap: normal;
-    line-height: 1.5;
-    font-size: 0.9em;
-
-    -moz-tab-size: 4;
-    -o-tab-size: 4;
-    tab-size: 4;
-
-    -webkit-hyphens: none;
-    -moz-hyphens: none;
-    -ms-hyphens: none;
-    hyphens: none;
+    color: #403f53;
+    overflow-x: auto;
 }
 
 pre[class*='language-']::-moz-selection,
@@ -50,7 +15,7 @@ pre[class*='language-'] ::-moz-selection,
 code[class*='language-']::-moz-selection,
 code[class*='language-'] ::-moz-selection {
     text-shadow: none;
-    background: #16161f;
+    background: #e0e0e0;
 }
 
 pre[class*='language-']::selection,
@@ -58,29 +23,16 @@ pre[class*='language-'] ::selection,
 code[class*='language-']::selection,
 code[class*='language-'] ::selection {
     text-shadow: none;
-    background: #16161f;
-}
-
-@media print {
-    code[class*='language-'],
-    pre[class*='language-'] {
-        text-shadow: none;
-    }
-}
-
-/* Code blocks */
-pre[class*='language-'] {
-    padding: 1rem 1rem;
-    margin: 0.5em 0;
-    overflow: auto;
+    background: #e0e0e0;
 }
 
 :not(pre) > code[class*='language-'],
 pre[class*='language-'] {
     color: white;
-    background: #16161f;
-    border-radius: 8px;
-    border: 1px solid #363645;
+    background: var(--color-surface-1);
+    border: 1px solid var(--color-surface-2);
+    padding: var(--spc-4);
+    border-radius: var(--rnd-2);
 }
 
 :not(pre) > code[class*='language-'] {
@@ -89,82 +41,112 @@ pre[class*='language-'] {
     white-space: normal;
 }
 
-.token.comment,
-.token.prolog,
-.token.cdata {
-    color: rgb(99, 119, 119);
-    font-style: italic;
-}
-
-.token.punctuation {
-    color: rgb(199, 146, 234);
-}
-
-.namespace {
-    color: rgb(178, 204, 214);
+.token.changed {
+    color: #a2bffc;
 }
 
 .token.deleted {
-    color: rgba(239, 83, 80, 0.56);
-    font-style: italic;
+    color: #ef535090;
 }
 
-.token.symbol,
-.token.property {
-    color: rgb(128, 203, 196);
+.token.inserted {
+    color: #4876d6;
 }
 
-.token.tag,
-.token.operator,
-.token.keyword {
-    color: rgb(127, 219, 202);
+.token.string {
+    color: #4876d6;
 }
 
-.token.boolean {
-    color: rgb(255, 88, 116);
+.token.builtin {
+    color: #4876d6;
+}
+
+.token.char {
+    color: #4876d6;
+}
+
+.token.constant {
+    color: #4876d6;
+}
+
+.token.attr-name {
+    color: #4876d6;
+}
+
+.token.url {
+    color: #4876d6;
+}
+
+.token.comment {
+    color: #989fb1;
+}
+
+.token.variable {
+    color: #c96765;
 }
 
 .token.number {
-    color: rgb(247, 140, 108);
+    color: #aa0982;
 }
 
-.token.constant,
-.token.function,
-.token.builtin,
-.token.char {
-    color: rgb(130, 170, 255);
+.token.hexcode {
+    color: #aa0982;
 }
 
-.token.selector,
+.token.punctuation {
+    color: #994cc3;
+}
+
+.token.function {
+    color: #994cc3;
+}
+
+.token.tag {
+    color: #994cc3;
+}
+
+.token.selector {
+    color: #994cc3;
+}
+
 .token.doctype {
-    color: rgb(199, 146, 234);
-    font-style: italic;
+    color: #994cc3;
 }
 
-.token.attr-name,
-.token.inserted {
-    color: rgb(173, 219, 103);
-    font-style: italic;
+.token.regex {
+    color: #5ca7e4;
 }
 
-.token.string,
-.token.url,
-.token.entity,
-.language-css .token.string,
-.style .token.string {
-    color: rgb(173, 219, 103);
+.token.class-name {
+    color: #111111;
 }
 
-.token.class-name,
-.token.atrule,
-.token.attr-value {
-    color: rgb(255, 203, 139);
+.token.operator {
+    color: #0c969b;
 }
 
-.token.regex,
-.token.important,
-.token.variable {
-    color: rgb(214, 222, 235);
+.token.property {
+    color: #0c969b;
+}
+
+.token.keyword {
+    color: #0c969b;
+}
+
+.token.namespace {
+    color: #0c969b;
+}
+
+.token.boolean {
+    color: #bc5454;
+}
+
+.token.imports {
+    color: #403f53;
+}
+
+.token.exports {
+    color: #403f53;
 }
 
 .token.important,
@@ -174,4 +156,11 @@ pre[class*='language-'] {
 
 .token.italic {
     font-style: italic;
+}
+
+:root {
+    --am-prism-line-numbers-color: #989fb188;
+    --am-prism-border-color: #989fb144;
+    --am-prism-copy-color: #403f53;
+    --am-prism-copy-bg: #989fb122;
 }
