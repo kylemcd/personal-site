@@ -5,8 +5,10 @@
     "sideEffects": false,
     "type": "module",
     "scripts": {
-        "dev": "vite dev",
-        "build": "vite build && tsc --noEmit",
+        "dev": "bun run ./server/index.tsx",
+        "build": "bun run ./server/build.tsx",
+        "devv": "vite dev",
+        "buildd": "vite build && tsc --noEmit",
         "start": "node .output/server/index.mjs",
         "format": "prettier --write . --ignore-path .gitignore"
     },
@@ -28,6 +30,7 @@
     },
     "devDependencies": {
         "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+        "@types/bun": "^1.2.16",
         "@types/js-yaml": "^4.0.9",
         "@types/node": "^22.15.31",
         "@types/prismjs": "^1.26.5",
