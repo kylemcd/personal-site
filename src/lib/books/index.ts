@@ -1,1 +1,1 @@
-export { books, type Book } from './books';
+export { books } from './books';

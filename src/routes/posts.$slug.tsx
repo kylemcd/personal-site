@@ -4,6 +4,8 @@ import { Effect, Exit } from 'effect';
 import mermaid from 'mermaid';
 import React from 'react';
 
+import { ErrorComponent } from '@/components/ErrorComponent';
+import { Text } from '@/components/Text';
 import { markdown } from '@/lib/markdown';
 import '@/styles/posts.css';
 import '@/styles/prism.css';
@@ -25,6 +27,7 @@ const getPost = createServerFn({ method: 'GET' })
 export const Route = createFileRoute('/posts/$slug')({
     component: RouteComponent,
     loader: ({ params }) => getPost({ data: { slug: params.slug } }),
+    errorComponent: ErrorComponent,
 });
 
 function RouteComponent() {
@@ -42,15 +45,17 @@ function RouteComponent() {
             <div className="post-layout">
                 <div className="post-container">
                     <div className="post-header">
-                        <h1 className="post-title">{frontmatter.title}</h1>
+                        <Text as="h1" size="8" weight="600" align="center">
+                            {frontmatter.title}
+                        </Text>
                         <div className="post-details">
-                            <span className="post-date">
+                            <Text as="span" size="1" color="2">
                                 {new Date(frontmatter.date).toLocaleDateString('en-US', {
                                     year: 'numeric',
                                     month: 'long',
                                     day: 'numeric',
                                 })}
-                            </span>
+                            </Text>
                         </div>
                     </div>
                     <div className="post-content" data-post dangerouslySetInnerHTML={{ __html: content }} />

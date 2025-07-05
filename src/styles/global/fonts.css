@@ -1,0 +1,9 @@
+@font-face {
+    font-family: 'Inter';
+    src: url('/fonts/inter.ttf') format('truetype'); /* Adjust path and format as needed */
+}
+
+@font-face {
+    font-family: 'Geist Mono';
+    src: url('/fonts/geist-mono.ttf') format('truetype'); /* Adjust path and format as needed */
+}

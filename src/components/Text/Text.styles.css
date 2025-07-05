@@ -1,0 +1,88 @@
+[data-text-size='0'] {
+    font-size: 0.75rem;
+    line-height: 1rem;
+}
+
+[data-text-size='1'] {
+    font-size: 1rem;
+    line-height: 1.6rem;
+}
+
+[data-text-size='2'] {
+    font-size: 1.5rem;
+    line-height: 2rem;
+}
+
+[data-text-size='3'] {
+    font-size: 1.75rem;
+    line-height: 2.25rem;
+}
+
+[data-text-size='4'] {
+    font-size: 2rem;
+    line-height: 2.5rem;
+}
+
+[data-text-size='5'] {
+    font-size: 2.25rem;
+    line-height: 2.75rem;
+}
+
+[data-text-size='6'] {
+    font-size: 2.5rem;
+    line-height: 3rem;
+}
+
+[data-text-size='7'] {
+    font-size: 2.75rem;
+    line-height: 3.25rem;
+}
+
+[data-text-size='8'] {
+    font-size: 3rem;
+    line-height: 3.5rem;
+}
+
+[data-text-color='1'] {
+    color: var(--color-text-1);
+}
+
+[data-text-color='2'] {
+    color: var(--color-text-2);
+}
+
+[data-text-color='error'] {
+    color: var(--color-text-error);
+}
+
+[data-text-family='sans'] {
+    font-family: var(--font-family-sans);
+}
+
+[data-text-family='mono'] {
+    font-family: var(--font-family-mono);
+}
+
+[data-text-weight='400'] {
+    font-weight: 400;
+}
+
+[data-text-weight='500'] {
+    font-weight: 500;
+}
+
+[data-text-weight='600'] {
+    font-weight: 600;
+}
+
+[data-text-align='left'] {
+    text-align: left;
+}
+
+[data-text-align='center'] {
+    text-align: center;
+}
+
+[data-text-align='right'] {
+    text-align: right;
+}

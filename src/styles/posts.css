@@ -24,21 +24,6 @@ body {
     margin-block: var(--spc-8);
 }
 
-.post-title {
-    font-size: 3rem;
-    line-height: 3.3rem;
-    font-weight: 500;
-    text-wrap: balance;
-    text-align: center;
-}
-
-.post-details {
-    display: flex;
-    justify-content: center;
-    color: var(--color-text-2);
-    gap: var(--spc-2);
-}
-
 [data-post] h1,
 [data-post] h2,
 [data-post] h3,

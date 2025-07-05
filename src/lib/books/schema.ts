@@ -1,0 +1,20 @@
+import { Schema } from 'effect';
+
+export const BookSchema = Schema.Struct({
+    title: Schema.String,
+    subtitle: Schema.Union(Schema.String, Schema.Null),
+    description: Schema.Union(Schema.String, Schema.Null),
+    slug: Schema.String,
+    cover: Schema.String,
+    authors: Schema.Array(
+        Schema.Struct({
+            name: Schema.String,
+        })
+    ),
+}).annotations({ exact: false });
+
+export const BooksResponseSchema = Schema.Struct({
+    data: Schema.Struct({
+        booksByReadingStateAndProfile: Schema.Array(BookSchema),
+    }),
+});

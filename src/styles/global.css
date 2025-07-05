@@ -1,4 +1,5 @@
 @import './global/reset.css';
+@import './global/fonts.css';
 @import './global/default.css';
 @import './global/rounded.css';
 @import './global/spacing.css';
