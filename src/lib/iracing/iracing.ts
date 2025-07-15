@@ -2,14 +2,14 @@ import { Data, Effect, pipe } from 'effect';
 
 import { fetchFresh } from '@/lib/fetch';
 
-import { IRacingAuthSchema, IRacingMemberCareerSchema, IRacingRecentRacesSchema, LinkLookupSchema } from './schema';
+import { IRacingAuthSchema, IRacingCar, IRacingCarsSchema, IRacingRecentRacesSchema, LinkLookupSchema } from './schema';
 
 class IRacingAuthError extends Data.TaggedError('IRacingAuthError')<Error> {
     message = 'Failed to authenticate with iRacing';
 }
 
-const authenticate = () =>
-    pipe(
+const authenticate = () => {
+    return pipe(
         fetchFresh({
             schema: IRacingAuthSchema,
             url: 'https://members-ng.iracing.com/auth',
@@ -17,15 +17,20 @@ const authenticate = () =>
             headers: {
                 'Content-Type': 'application/json',
             },
+            body: JSON.stringify({
+                email: process.env.IRACING_EMAIL,
+                password: process.env.IRACING_ENCODED_PASSWORD,
+            }),
         }).pipe(
             Effect.mapError((error) => new IRacingAuthError(error as Error)),
-            Effect.flatMap(({ headers }) => Effect.succeed({ cookies: headers.getSetCookie?.() }))
+            Effect.flatMap(({ headers }) => {
+                const rawCookies = headers.getSetCookie?.();
+                const cookies = rawCookies.map((c: string) => c.split(';')[0]).join('; ');
+                return Effect.succeed({ cookies });
+            })
         )
     );
-
-class IRacingCareerError extends Data.TaggedError('IRacingCareerError')<Error> {
-    message = 'Failed to fetch career';
-}
+};
 
 class IRacingRecentRacesError extends Data.TaggedError('IRacingRecentRacesError')<Error> {
     message = 'Failed to fetch recent races';
@@ -35,38 +40,39 @@ class IRacingSummaryError extends Data.TaggedError('IRacingSummaryError')<Error>
     message = 'Failed to fetch summary';
 }
 
+class IRacingCarsError extends Data.TaggedError('IRacingCarsError')<Error> {
+    message = 'Failed to fetch cars';
+}
+
 type IRacingLookupParams = {
     cookies: string;
 };
 
-const career = ({ cookies }: IRacingLookupParams) => {
+const cars = ({ cookies }: IRacingLookupParams) => {
     return pipe(
         fetchFresh({
             schema: LinkLookupSchema,
-            url: 'https://members-ng.iracing.com/data/stats/member_career?cust_id=1008852',
+            url: 'https://members-ng.iracing.com/data/car/get',
             method: 'GET',
             headers: {
                 Cookie: cookies,
                 Accept: 'application/json',
             },
         }).pipe(
-            Effect.mapError((error) => new IRacingCareerError(error)),
-            Effect.flatMap(({ link }) =>
+            Effect.mapError((error) => new IRacingCarsError(error)),
+            Effect.flatMap(({ data: { link } }) =>
                 fetchFresh({
-                    schema: IRacingMemberCareerSchema,
+                    schema: IRacingCarsSchema,
                     url: link,
                     method: 'GET',
                     headers: {
                         Cookie: cookies,
                         Accept: 'application/json',
                     },
-                }).pipe(Effect.mapError((error) => new IRacingCareerError(error as Error)))
+                }).pipe(Effect.mapError((error) => new IRacingCarsError(error as Error)))
             ),
-            Effect.map((data) => {
-                const RELEVANT_CAR_CATEGORIES = ['Sports Car', 'Formula Car', 'Oval'];
-                return data.stats.filter((c: { category: string }) =>
-                    RELEVANT_CAR_CATEGORIES.includes(c.category as any)
-                );
+            Effect.map(({ data }) => {
+                return data;
             })
         )
     );
@@ -84,7 +90,7 @@ const recentRaces = ({ cookies }: IRacingLookupParams) => {
             },
         }).pipe(
             Effect.mapError((error) => new IRacingRecentRacesError(error)),
-            Effect.flatMap(({ link }) =>
+            Effect.flatMap(({ data: { link } }) =>
                 fetchFresh({
                     schema: IRacingRecentRacesSchema,
                     url: link,
@@ -95,7 +101,7 @@ const recentRaces = ({ cookies }: IRacingLookupParams) => {
                     },
                 }).pipe(Effect.mapError((error) => new IRacingRecentRacesError(error as Error)))
             ),
-            Effect.map((data) => data.races)
+            Effect.map(({ data }) => data.races)
         )
     );
 };
@@ -105,14 +111,19 @@ const summary = () => {
         authenticate(),
         Effect.flatMap(({ cookies }) =>
             pipe(
-                Effect.all([career({ cookies }), recentRaces({ cookies })]),
-                Effect.map(([careerData, recentRacesData]) => ({
-                    career: careerData,
-                    recentRaces: recentRacesData,
+                Effect.all([recentRaces({ cookies }), cars({ cookies })]),
+                Effect.map(([recentRacesData, carsData]) => ({
+                    races: recentRacesData.map((race) => ({
+                        ...race,
+                        car: carsData.find((car) => car.car_id === race.car_id) as typeof IRacingCar.Type,
+                    })),
                 }))
             )
         ),
-        Effect.mapError((error) => new IRacingSummaryError(error))
+        Effect.mapError((error) => {
+            console.error(error);
+            return new IRacingSummaryError(error);
+        })
     );
 };
 

@@ -43,16 +43,16 @@
     line-height: 3.5rem;
 }
 
-[data-text-color='1'] {
-    color: var(--color-text-1);
+[data-text-color='black'] {
+    color: var(--color-black);
 }
 
-[data-text-color='2'] {
-    color: var(--color-text-2);
+[data-text-color='gray'] {
+    color: var(--color-gray);
 }
 
-[data-text-color='error'] {
-    color: var(--color-text-error);
+[data-text-color='white'] {
+    color: var(--color-white);
 }
 
 [data-text-family='sans'] {

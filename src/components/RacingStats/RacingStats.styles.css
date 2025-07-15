@@ -1,0 +1,84 @@
+.racing-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spc-4);
+    width: 100%;
+    margin-bottom: var(--spc-8);
+    border-radius: var(--rnd-6);
+}
+
+.category-card {
+    display: flex;
+    flex-direction: column;
+    flex-basis: calc(50% - var(--spc-2));
+    gap: var(--spc-2);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spc-4);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spc-1);
+}
+
+.recent-races {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spc-1);
+    flex-basis: 100%;
+}
+
+.race-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spc-2);
+    border-bottom: 1px solid var(--color-border-light);
+    padding-bottom: var(--spc-1);
+}
+
+.race-item:last-child {
+    border-bottom: none;
+}
+
+.race-item-info {
+    align-items: center;
+    display: flex;
+    gap: var(--spc-4);
+}
+
+.position-change {
+    display: flex;
+    align-items: flex-start;
+}
+
+.position-stack {
+    align-items: center;
+    display: flex;
+    gap: var(--spc-1);
+}
+
+.position-number {
+    display: flex;
+    align-items: center;
+    border-radius: var(--rnd-3);
+    justify-content: center;
+    background: var(--color-off-white);
+    width: 25px;
+    height: 25px;
+    font-variant-numeric: normal;
+}
+
+.position-improved {
+    color: green;
+}
+
+.position-declined {
+    color: red;
+}

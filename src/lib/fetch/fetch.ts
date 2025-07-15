@@ -35,6 +35,14 @@ export class SchemaParseError extends Data.TaggedError('SchemaParseError')<{
     readonly error: unknown;
 }> {}
 
+/**
+ * Enhanced response type that includes both the parsed data and headers
+ */
+export type FetchResponse<A> = {
+    readonly data: A;
+    readonly headers: Headers;
+};
+
 // ---------------------------------------------------------------------------
 //  Core helper
 // ---------------------------------------------------------------------------
@@ -46,13 +54,18 @@ export class SchemaParseError extends Data.TaggedError('SchemaParseError')<{
  *  • Verifies the HTTP status is 2xx
  *  • Parses the body as JSON
  *  • Optionally validates / transforms the data via an Effect Schema
+ *  • Returns both the parsed data and response headers
  *
  * All steps are wrapped in `Effect` so that failures are typed and composable.
  */
 export const fetchJsonEffect = <A>(
     input: RequestInfo | URL,
     options?: RequestInit & { readonly schema?: Schema.Schema<A> }
-): Effect.Effect<A, FetchNetworkError | FetchResponseError | JsonParseError | SchemaParseError, never> => {
+): Effect.Effect<
+    FetchResponse<A>,
+    FetchNetworkError | FetchResponseError | JsonParseError | SchemaParseError,
+    never
+> => {
     const { schema, ...init } = options ?? {};
 
     return Effect.gen(function* () {
@@ -74,14 +87,18 @@ export const fetchJsonEffect = <A>(
         });
 
         // Step 4 – validate via Schema (optional)
-        if (schema) {
-            return yield* Effect.try({
-                try: () => (Schema.decodeUnknownSync as any)(schema)(raw) as A,
-                catch: (error) => new SchemaParseError({ error }),
-            });
-        }
+        const data = schema
+            ? yield* Effect.try({
+                  try: () => (Schema.decodeUnknownSync as any)(schema)(raw) as A,
+                  catch: (error) => new SchemaParseError({ error }),
+              })
+            : (raw as A);
 
-        return raw as A;
+        // Return both data and headers
+        return {
+            data,
+            headers: response.headers,
+        };
     });
 };
 

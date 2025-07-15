@@ -1,10 +1,11 @@
 :root {
-    --color-text-1: #202020;
-    --color-text-2: #6a6a6a;
+    --color-black: #202020;
+    --color-gray: #6a6a6a;
     --color-text-error: #ff0000;
-    --color-surface-1: #fcfcfc;
-    --color-surface-2: #f0f0f0;
-    --color-border: #cecece;
+    --color-white: #fcfcfc;
+    --color-off-white: #f0f0f0;
+    --color-border-dark: #cecece;
+    --color-border-light: #e8e8ec;
     --color-accent: #2723e9;
     --color-transparent: transparent;
     --color-focus: #6bc4ff;

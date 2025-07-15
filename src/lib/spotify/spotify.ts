@@ -22,7 +22,7 @@ const authenticate = () =>
             body: 'grant_type=client_credentials',
             schema: SpotifyAuthSchema,
         }).pipe(Effect.mapError((e) => new SpotifyAuthError(e as Error))),
-        Effect.flatMap(({ access_token }) => Effect.succeed({ accessToken: access_token }))
+        Effect.flatMap(({ data: { access_token } }) => Effect.succeed({ accessToken: access_token }))
     );
 
 const TOP_TRACKS_PLAYLIST_ID = '7DbxOr1aHI20ncXNav1bf5';
@@ -42,7 +42,7 @@ const tracks = () => {
                 schema: SpotifyPlaylistSchema,
             }).pipe(
                 Effect.mapError((e) => new SpotifyTrackLookupError(e as Error)),
-                Effect.flatMap((playlist: any) => Effect.succeed(playlist.tracks.items))
+                Effect.flatMap(({ data: { tracks } }) => Effect.succeed(tracks.items))
             )
         )
     );

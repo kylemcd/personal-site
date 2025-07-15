@@ -1,0 +1,1 @@
+export { AlbumShelf } from './AlbumShelf';

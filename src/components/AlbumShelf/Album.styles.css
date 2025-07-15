@@ -1,0 +1,25 @@
+.album-shelf {
+    display: flex;
+    gap: var(--spc-4);
+    width: 100%;
+}
+
+.album {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    gap: var(--spc-2);
+    width: 175px;
+}
+
+.album-image {
+    width: 175px;
+    height: 175px;
+    object-fit: cover;
+    border-radius: var(--rnd-5);
+}
+
+.album-info {
+    display: flex;
+    flex-direction: column;
+}
