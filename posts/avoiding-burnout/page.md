@@ -2,6 +2,7 @@
 title: Avoiding Burnout
 date: '2018-12-21T22:40:32.169Z'
 bg: 'https://images.unsplash.com/photo-1453227588063-bb302b62f50b?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1350&q=80'
+draft: true
 ---
 
 As talked about recently in [this thread](https://twitter.com/kpmdev/status/1075384871474876416), I've been experiencing major burnout over the last few weeks. This is a combination of stress from the day job coupled with wanting to push things out faster then I could on side projects. Because of this my productivity has went from an all time high to near nothing. So, I decided to take some time to reflect and also talk about how I plan to avoid this happening again.

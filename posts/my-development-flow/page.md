@@ -2,6 +2,7 @@
 title: My Development Flow
 date: '2018-12-09T22:40:32.169Z'
 bg: 'https://images.unsplash.com/photo-1482685945432-29a7abf2f466?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1366&q=80'
+draft: true
 ---
 
 I find that learning about how other people do things is so beneficial to optimizing my own processes. So with that being said, I figured I'd share my development flow with everyone. To preface, I wouldn't say that my process is wildly different then a "normal" developers flow, but maybe I can show someone something cool that they didn't know about.
