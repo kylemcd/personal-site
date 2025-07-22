@@ -141,7 +141,6 @@ export const getAllPosts = async (): Promise<Post[]> => {
         })
     );
 
-    console.log(postListData);
     const filteredAndSortedPosts = postListData
         .filter((post) => !post.draft)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
