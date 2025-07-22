@@ -86,6 +86,20 @@ const transformContent = (raw: string) => {
                     language: { type: String },
                 },
             },
+            image: {
+                render: 'img',
+                transform(node) {
+                    const attributes = node.attributes;
+
+                    // Correct images that come from obsidian that have the public path
+                    // appended to the front.
+                    if (attributes?.src?.startsWith('/public')) {
+                        attributes.src = attributes.src.replace('/public', '');
+                    }
+
+                    return new Tag('img', attributes);
+                },
+            },
         },
     });
     const react = renderers.react(content, React);
