@@ -130,7 +130,9 @@ export const getAllPosts = async (): Promise<Post[]> => {
 
             return {
                 title: postData.data.title,
-                date: postData.data.date as string,
+                date: (typeof postData.data.date === 'string'
+                    ? postData.data.date
+                    : `${new Date(postData?.data?.date?.toString()!)}`) as string,
                 slug: post,
                 readingTime,
                 react,
@@ -139,6 +141,7 @@ export const getAllPosts = async (): Promise<Post[]> => {
         })
     );
 
+    console.log(postListData);
     const filteredAndSortedPosts = postListData
         .filter((post) => !post.draft)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
