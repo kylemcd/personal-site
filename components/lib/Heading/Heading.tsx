@@ -18,7 +18,7 @@ const Heading = ({
     className,
     ...props
 }: HeadingProps) => {
-    const Component = as || 'h4';
+    const Component = as
 
     return (
         <Component
