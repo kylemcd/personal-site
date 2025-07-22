@@ -1,8 +1,9 @@
 ---
+share: "true"
+ps-path: /react-composability/page
 title: Why composability keeps React components maintainable
-date: '2025-03-04T22:40:32.169Z'
+date: 2025-03-04
 ---
-
 Over the years, I’ve built and rebuilt component libraries in different environments, mostly in startups where speed is a priority. The biggest lesson I’ve learned? **Composability is everything.**
 
 It’s tempting to make a single component that tries to handle every possible variation—just add another prop, right? But that leads to bloated APIs, fragile logic, and an eventual mess of conditionals no one wants to touch. The better approach is to break things into smaller, reusable pieces that can be combined in flexible ways. If you need to tweak behavior, **drop down a level** instead of cramming in another prop.
