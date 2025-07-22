@@ -1,6 +1,6 @@
 ---
 share: "true"
-slug: /sim-racing/page
+ps-path: /sim-racing/page
 title: Sim racing test
 date: 2025-03-07T22:40:32.169Z
 ---
