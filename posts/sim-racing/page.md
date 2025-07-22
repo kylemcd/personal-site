@@ -2,7 +2,7 @@
 share: "true"
 slug: /sim-racing/page
 title: Sim racing test
-Date: 2025-08-22
+date: 2025-03-07T22:40:32.169Z
 ---
 Over the past year, I've thrown myself headfirst into sim racing. What started with a dusty Logitech wheel from my dad turned into a full-blown obsession involving cockpit upgrades, direct-drive wheels, and deep dives into the complexities of race craft. I've learned a lot, both about motorsport and my own competitive nature, and I've made connections with people who enjoy nothing more than analyzing lap data on a Tuesday night.
 
