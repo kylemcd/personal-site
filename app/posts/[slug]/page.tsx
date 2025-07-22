@@ -53,7 +53,7 @@ export const generateMetadata = async ({ params: paramsProp }: AppProps['pagePro
     return {
         title: `${post.title} — Kyle McDonald`,
         openGraph: {
-            images: [`https://kylemcd.com/og/${post.slug}.png`],
+            // images: [`https://kylemcd.com/og/${post.slug}.png`],
         },
     };
 };
