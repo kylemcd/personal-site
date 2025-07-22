@@ -18,7 +18,7 @@ const Heading = ({
     className,
     ...props
 }: HeadingProps) => {
-    const Component = as
+    const Component = as;
 
     return (
         <Component
