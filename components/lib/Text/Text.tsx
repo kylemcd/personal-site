@@ -18,7 +18,7 @@ const Text = <T extends React.ElementType>({
     className,
     ...props
 }: TextProps<T>) => {
-    const Component = as;
+    const Component = as || 'p';
 
     return (
         <Component
