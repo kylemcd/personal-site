@@ -1,8 +1,9 @@
 ---
+share: "true"
+ps-path: /react-composability/page
 title: Why composability keeps React components maintainable
-date: '2025-03-04T22:40:32.169Z'
+date: 2025-03-04
 ---
-
 Over the years, I’ve built and rebuilt component libraries in different environments, mostly in startups where speed is a priority. The biggest lesson I’ve learned? **Composability is everything.**
 
 It’s tempting to make a single component that tries to handle every possible variation—just add another prop, right? But that leads to bloated APIs, fragile logic, and an eventual mess of conditionals no one wants to touch. The better approach is to break things into smaller, reusable pieces that can be combined in flexible ways. If you need to tweak behavior, **drop down a level** instead of cramming in another prop.
@@ -15,9 +16,9 @@ Before thinking about components, I start with **design tokens**—colors, spaci
 
 A well-structured token system makes everything easier:
 
-- **Consistent UI** – Spacing and color are always applied from a shared scale, not arbitrary pixel values.
-- **Easy updates** – Need to adjust a spacing value across the app? Change the token once, and it updates everywhere.
-- **Simpler theming** – Switching to dark mode or adjusting a brand color is a token-level change, not a rewrite of component styles.
+-   **Consistent UI** – Spacing and color are always applied from a shared scale, not arbitrary pixel values.
+-   **Easy updates** – Need to adjust a spacing value across the app? Change the token once, and it updates everywhere.
+-   **Simpler theming** – Switching to dark mode or adjusting a brand color is a token-level change, not a rewrite of component styles.
 
 Skipping tokens might feel faster early on, but you’ll end up with five different grays and random, inconsistent spacing values scattered throughout the codebase. Retrofitting a token system later is painful—it’s better to start with one from the beginning.
 
@@ -27,9 +28,9 @@ With tokens in place, the next step is **primitives**—the low-level building b
 
 These are things like:
 
-- **`Box`** – A div with token-based props for padding, margin, and color.
-- **`Stack`** – A simple way to space items vertically or horizontally.
-- **`Text`** – A wrapper around typography styles.
+-   **`Box`** – A div with token-based props for padding, margin, and color.
+-   **`Stack`** – A simple way to space items vertically or horizontally.
+-   **`Text`** – A wrapper around typography styles.
 
 These primitives do just enough to be useful but don’t introduce unnecessary complexity. Instead of writing raw CSS every time, you pass tokens via props (`margin="2"`, `color="blue-09"`), keeping everything predictable and scalable.
 
@@ -41,9 +42,9 @@ Once the primitives are in place, more advanced components—`Modal`, `Combobox`
 
 Building UI this way has a few big advantages:
 
-- **Token-aligned by default** – If a `Modal` uses a `Stack` inside, it automatically follows the same spacing system as the rest of the app.
-- **No duplication** – Fix or improve a primitive, and every component using it gets the benefit.
-- **Faster iteration** – New features come together quickly because the core building blocks already exist.
+-   **Token-aligned by default** – If a `Modal` uses a `Stack` inside, it automatically follows the same spacing system as the rest of the app.
+-   **No duplication** – Fix or improve a primitive, and every component using it gets the benefit.
+-   **Faster iteration** – New features come together quickly because the core building blocks already exist.
 
 I’ve seen teams struggle when they treat every new feature as a **one-off component**, instead of thinking about how to assemble it from existing parts. Eventually, the design system starts duplicating itself in slightly different ways across components. Keeping things modular prevents that.
 
@@ -70,9 +71,9 @@ A better approach:
 
 Now, the structure is **composable** instead of overly configured.
 
-- **Need a different layout?** Just reorder the pieces.
-- **Want a special case?** Drop down to `Button.Root` instead of modifying the main `Button`.
-- **Still want a simple API?** You can export a pre-composed `Button` that defaults to the common structure.
+-   **Need a different layout?** Just reorder the pieces.
+-   **Want a special case?** Drop down to `Button.Root` instead of modifying the main `Button`.
+-   **Still want a simple API?** You can export a pre-composed `Button` that defaults to the common structure.
 
 This pattern applies everywhere—forms, modals, dropdowns. Instead of a single component trying to do it all, **let developers compose what they need from smaller parts**.
 

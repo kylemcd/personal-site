@@ -2,6 +2,7 @@
 title: I finally have my own blog!
 date: '2018-12-01T22:40:32.169Z'
 bg: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyMDd9&s=ae2d32767e7488a5e5cb070c4457b519&auto=format&fit=crop&w=1350&q=80'
+draft: true
 ---
 
 Gone are the days of posting to Medium and not getting any real traffic to my personal site. I have now implemented a blog into my personal site! On top of that I made a few tweaks to the design and also added a mailing list which you can find on the [homepage](https://kylemcd.com).

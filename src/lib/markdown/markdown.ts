@@ -20,6 +20,7 @@ class ParseMarkdownError extends Data.TaggedError('ParseMarkdownError')<{}> {
 type toHtmlParams = {
     rawMarkdown: string;
 };
+
 const toHtml = ({ rawMarkdown }: toHtmlParams): Effect.Effect<string, InvalidMarkdownError | ParseMarkdownError> => {
     return pipe(
         Effect.succeed(rawMarkdown),
@@ -109,10 +110,56 @@ const fromPath = <F extends Frontmatter = {}>({
     );
 };
 
+const all = (): Effect.Effect<
+    { title: string; slug: string; date: string }[],
+    InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
+> => {
+    return pipe(
+        // Read the list of slug directories under ./posts
+        Effect.try<string[], InvalidMarkdownError>({
+            try: () => {
+                const __dirname = nodePath.resolve();
+                const postsPath = nodePath.join(__dirname, './posts');
+                const dirEntries = nodeFs.readdirSync(postsPath, { withFileTypes: true });
+                const slugs = dirEntries.filter((dirent) => dirent.isDirectory()).map((dirent) => dirent.name);
+                return slugs;
+            },
+            catch: () => new InvalidMarkdownError(),
+        }),
+        // For each slug, load its frontmatter and pick the required fields
+        Effect.flatMap((slugs) =>
+            pipe(
+                slugs.map((slug) =>
+                    pipe(
+                        fromPath<{ title: string; date: string; draft: string }>({
+                            path: `./posts/${slug}/page.md`,
+                        }),
+                        Effect.map(({ frontmatter }) => ({
+                            title: frontmatter.title,
+                            slug,
+                            date: frontmatter.date,
+                            draft: frontmatter.draft || 'false',
+                        }))
+                    )
+                ),
+                Effect.all,
+                // Sort by date descending
+                Effect.map((posts) =>
+                    posts
+                        .filter((p) => String(p.draft) !== 'true')
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .map(({ title, slug, date }) => ({ title, slug, date }))
+                )
+            )
+        )
+    );
+};
+
 const markdown = {
     toFrontmatter,
     toHtml,
     fromPath,
+    all,
 };
 
 export { markdown };

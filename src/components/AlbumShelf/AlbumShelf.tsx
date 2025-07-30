@@ -23,7 +23,7 @@ function AlbumShelf({ albums }: AlbumShelfProps) {
                         <Text as="p" size="1">
                             {album.track.name}
                         </Text>
-                        <Text as="p" size="1" color="gray">
+                        <Text as="p" size="0" color="2">
                             {album.track.artists.map((artist) => artist.name).join(', ')}
                         </Text>
                     </div>

@@ -1,14 +1,14 @@
 .post-layout {
-    background-color: var(--color-surface-1);
-    border-radius: var(--rnd-4);
+    border: 1px solid var(--color-ui-1);
+    max-width: var(--spc-text-content);
+    width: var(--spc-full);
+    margin: 0 auto;
+    padding: var(--spc-8);
 }
 
 .post-container {
     margin-inline: auto;
     max-width: var(--spc-text-content);
-    padding-top: var(--spc-8);
-    padding-bottom: var(--spc-10);
-    width: var(--spc-full);
 }
 
 .post-header {
@@ -57,7 +57,7 @@
 }
 
 [data-post] hr {
-    border-color: var(--color-border-1);
+    border-color: var(--color-ui-1);
     border-width: 1px 0 0 0;
     margin-block: var(--spc-4);
 }

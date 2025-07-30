@@ -1,4 +1,3 @@
-import { HorizontalScrollContainer } from '@/components/HorizontalScrollContainer';
 import { Text } from '@/components/Text/Text';
 import { BookSchema } from '@/lib/books/schema';
 
@@ -12,7 +11,7 @@ function Bookshelf({ books }: BookshelfProps) {
     if (!books) return null;
 
     return (
-        <HorizontalScrollContainer className="bookshelf">
+        <div className="bookshelf">
             {books.map((book) => (
                 <div className="book" key={book.slug}>
                     {book.cover ? (
@@ -32,7 +31,7 @@ function Bookshelf({ books }: BookshelfProps) {
                     <a className="link" href={`https://literal.club/book/${book.slug}`} target="_blank"></a>
                 </div>
             ))}
-        </HorizontalScrollContainer>
+        </div>
     );
 }
 

@@ -1,0 +1,27 @@
+.page-container {
+    max-width: var(--spc-text-content);
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-ui-1);
+}
+
+.section-stack {
+    display: flex;
+    flex-direction: column;
+}
+
+.section-container {
+    position: relative;
+    padding: var(--spc-8);
+    border-bottom: 1px solid var(--color-ui-1);
+}
+
+.section-container-flush-right {
+    padding: var(--spc-8) 0 var(--spc-8) var(--spc-8);
+}
+
+.section-container > h2 {
+    margin-bottom: var(--spc-6);
+}

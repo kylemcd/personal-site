@@ -31,9 +31,9 @@ When viewing someone's resumé, the first thing I tend to get excited about is i
 
 How do you make your site creative, though? Here are some great ones I've found, but search around for inspiration. (If you have sites that you think should be on this list [Tweet at me](https://twitter.com/kpmdev))
 
-- [https://zach.dev/](https://zach.dev/)
-- [https://sunnysingh.io/](https://sunnysingh.io/)
-- [https://joshmanders.com/](https://joshmanders.com/)
+-   [https://zach.dev/](https://zach.dev/)
+-   [https://sunnysingh.io/](https://sunnysingh.io/)
+-   [https://joshmanders.com/](https://joshmanders.com/)
 
 ## In conclusion
 

@@ -7,8 +7,8 @@ import React from 'react';
 import { ErrorComponent } from '@/components/ErrorComponent';
 import { Text } from '@/components/Text';
 import { markdown } from '@/lib/markdown';
-import '@/styles/posts.css';
 import '@/styles/prism.css';
+import '@/styles/routes/posts.css';
 
 const getPost = createServerFn({ method: 'GET' })
     .validator((data: { slug: string }) => data)

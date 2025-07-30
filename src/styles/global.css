@@ -5,3 +5,6 @@
 @import './global/spacing.css';
 @import './global/tokens.css';
 @import './global/animations.css';
+
+/* Components */
+@import './global/list.css';

@@ -1,166 +1,134 @@
-/*!
- * MIT License
- * Copyright (c) 2018 Sarah Drasner
- * Sarah Drasner's Night Owl
+/**
+ * GitHub Dark theme for Prism.js
+ * Based on GitHub: https://github.com
+ * @author Katorly
  */
-
-code[class*='language-'],
-pre[class*='language-'] {
-    color: #403f53;
-    overflow-x: auto;
-}
-
-pre[class*='language-']::-moz-selection,
-pre[class*='language-'] ::-moz-selection,
-code[class*='language-']::-moz-selection,
-code[class*='language-'] ::-moz-selection {
+/* General */
+pre[class*='language-'],
+code[class*='language-'] {
+    color: #c9d1d9;
+    font-size: 13px;
     text-shadow: none;
-    background: #e0e0e0;
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    direction: ltr;
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    line-height: 1.5;
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
+    tab-size: 4;
+    -webkit-hyphens: none;
+    -moz-hyphens: none;
+    -ms-hyphens: none;
+    hyphens: none;
 }
-
 pre[class*='language-']::selection,
-pre[class*='language-'] ::selection,
 code[class*='language-']::selection,
-code[class*='language-'] ::selection {
+pre[class*='language-']::mozselection,
+code[class*='language-']::mozselection {
     text-shadow: none;
-    background: #e0e0e0;
+    background: #234879;
 }
-
-:not(pre) > code[class*='language-'],
+@media print {
+    pre[class*='language-'],
+    code[class*='language-'] {
+        text-shadow: none;
+    }
+}
 pre[class*='language-'] {
-    color: white;
-    background: var(--color-surface-1);
-    border: 1px solid var(--color-surface-2);
-    padding: var(--spc-4);
-    border-radius: var(--rnd-2);
+    padding: 1em;
+    margin: 0.5em 0;
+    overflow: auto;
+    background: var(--color-bg-dark);
+    border: 1px solid var(--color-ui-1);
 }
-
 :not(pre) > code[class*='language-'] {
-    padding: 0.1em;
+    padding: 0.1em 0.3em;
     border-radius: 0.3em;
-    white-space: normal;
+    color: #c9d1d9;
+    background: #343942;
 }
-
-.token.changed {
-    color: #a2bffc;
+/* Line highlighting */
+pre[data-line] {
+    position: relative;
 }
-
-.token.deleted {
-    color: #ef535090;
+pre[class*='language-'] > code[class*='language-'] {
+    position: relative;
+    z-index: 1;
 }
-
-.token.inserted {
-    color: #4876d6;
+.line-highlight {
+    position: absolute;
+    left: 0;
+    right: 0;
+    padding: inherit 0;
+    margin-top: 1em;
+    background: #2f2a1e;
+    box-shadow: inset 5px 0 0 #674c16;
+    z-index: 0;
+    pointer-events: none;
+    line-height: inherit;
+    white-space: pre;
 }
-
-.token.string {
-    color: #4876d6;
+/* Tokens */
+.namespace {
+    opacity: 0.7;
 }
-
-.token.builtin {
-    color: #4876d6;
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+    color: #8b949e;
 }
-
-.token.char {
-    color: #4876d6;
-}
-
-.token.constant {
-    color: #4876d6;
-}
-
-.token.attr-name {
-    color: #4876d6;
-}
-
-.token.url {
-    color: #4876d6;
-}
-
-.token.comment {
-    color: #989fb1;
-}
-
-.token.variable {
-    color: #c96765;
-}
-
-.token.number {
-    color: #aa0982;
-}
-
-.token.hexcode {
-    color: #aa0982;
-}
-
 .token.punctuation {
-    color: #994cc3;
+    color: #c9d1d9;
 }
-
-.token.function {
-    color: #994cc3;
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+    color: #79c0ff;
 }
-
-.token.tag {
-    color: #994cc3;
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+    color: #a5d6ff;
 }
-
-.token.selector {
-    color: #994cc3;
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+    color: #a5d6ff;
+    background: #161b22;
 }
-
-.token.doctype {
-    color: #994cc3;
-}
-
-.token.regex {
-    color: #5ca7e4;
-}
-
-.token.class-name {
-    color: #111111;
-}
-
-.token.operator {
-    color: #0c969b;
-}
-
-.token.property {
-    color: #0c969b;
-}
-
+.token.atrule,
+.token.attr-value,
 .token.keyword {
-    color: #0c969b;
+    color: #a5d6ff;
 }
-
-.token.namespace {
-    color: #0c969b;
+.token.function {
+    color: #d2a8ff;
 }
-
-.token.boolean {
-    color: #bc5454;
+.token.regex,
+.token.important,
+.token.variable {
+    color: #a8daff;
 }
-
-.token.imports {
-    color: #403f53;
-}
-
-.token.exports {
-    color: #403f53;
-}
-
 .token.important,
 .token.bold {
     font-weight: bold;
 }
-
 .token.italic {
     font-style: italic;
 }
-
-:root {
-    --am-prism-line-numbers-color: #989fb188;
-    --am-prism-border-color: #989fb144;
-    --am-prism-copy-color: #403f53;
-    --am-prism-copy-bg: #989fb122;
+.token.entity {
+    cursor: help;
 }

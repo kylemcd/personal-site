@@ -15,24 +15,22 @@ function RacingStats({ races }: RacingStatsProps) {
     return (
         <div>
             {races.length > 0 && (
-                <div className="recent-races">
+                <div className="list">
                     {races.map((race) => {
                         return (
-                            <div key={race.subsession_id} className="race-item">
-                                <Text size="0">{race.track.track_name}</Text>
+                            <div key={race.subsession_id} className="list-item race-item">
                                 <div className="race-item-info">
-                                    <Text size="0" color="gray">
+                                    <Text size="1" className="race-item-track">
+                                        {race.track.track_name}
+                                    </Text>
+                                    <Text size="0" color="2" className="race-item-car">
                                         {race.car.car_name}
                                     </Text>
-                                    <div className="position-change">
-                                        <div className="position-stack">
-                                            <div className="position-number">
-                                                <Text size="0" align="right" weight="500" color="gray">
-                                                    {race.finish_position}
-                                                </Text>
-                                            </div>
-                                        </div>
-                                    </div>
+                                </div>
+                                <div className="race-item-position" data-position={race.finish_position}>
+                                    <Text size="0" align="right" weight="500" color="light">
+                                        {race.finish_position}
+                                    </Text>
                                 </div>
                             </div>
                         );

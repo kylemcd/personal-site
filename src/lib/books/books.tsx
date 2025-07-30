@@ -43,7 +43,7 @@ const shelf = () =>
     pipe(
         getBooks({ readingStatus: 'IS_READING', limit: 10 }),
         Effect.flatMap((reading) =>
-            getBooks({ readingStatus: 'FINISHED', limit: 10 }).pipe(
+            getBooks({ readingStatus: 'FINISHED', limit: 20 }).pipe(
                 Effect.map((finished) => {
                     return { reading, finished };
                 })

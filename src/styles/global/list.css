@@ -1,0 +1,20 @@
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spc-3);
+    flex-basis: 100%;
+}
+
+.list-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spc-2);
+    border-bottom: 1px solid var(--color-ui-1);
+    padding-bottom: var(--spc-1);
+}
+
+.list-item:last-child {
+    border-bottom: none;
+}

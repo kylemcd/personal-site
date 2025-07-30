@@ -1,0 +1,18 @@
+.writing-item {
+    align-items: flex-start;
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: column;
+}
+
+.writing-item:hover > .writing-item-title {
+    text-decoration: underline;
+}
+
+@media (min-width: 768px) {
+    .writing-item {
+        align-items: center;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+}
