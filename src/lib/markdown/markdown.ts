@@ -2,6 +2,8 @@
 import markdocPkg from '@markdoc/markdoc';
 import { Data, Effect, pipe } from 'effect';
 import yaml from 'js-yaml';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import { nodes } from './nodes';
 
@@ -25,19 +27,42 @@ const rawPostMap = (() => {
     // The absolute path (starting with /) is resolved from project root.
     // The Vite transform turns this into an object mapping paths to raw contents at build time
     // so nothing executes at runtime.
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    const globbed = import.meta.glob('/posts/*.md', {
-        query: '?raw',
-        import: 'default',
-        eager: true,
-    }) as Record<string, string>;
+    let files: Record<string, string> = {};
 
-    return Object.entries(globbed).reduce<Record<string, string>>((acc, [filePath, raw]) => {
-        const fileName = filePath.split('/').pop() ?? '';
-        const slug = fileName.replace(/\.md$/, '');
-        acc[slug] = raw;
-        return acc;
-    }, {});
+    const globFn = (import.meta as any).glob;
+    if (typeof globFn === 'function') {
+        const globbed = globFn('/posts/*.md', {
+            query: '?raw',
+            import: 'default',
+            eager: true,
+        }) as Record<string, string>;
+        files = Object.entries(globbed).reduce<Record<string, string>>((acc, [filePath, raw]) => {
+            const fileName = filePath.split('/').pop() ?? '';
+            const slug = fileName.replace(/\.md$/, '');
+            acc[slug] = raw;
+            return acc;
+        }, {});
+    }
+
+    if (Object.keys(files).length === 0) {
+        // Runtime fallback using filesystem (for environments where the Vite transform didn't run)
+        try {
+            const baseDir = process.cwd();
+            const postsDir = path.join(baseDir, 'posts');
+            const entries = fs.readdirSync(postsDir, { withFileTypes: true });
+            files = entries
+                .filter((e) => e.isFile() && e.name.endsWith('.md'))
+                .reduce<Record<string, string>>((acc, e) => {
+                    const slug = e.name.replace(/\.md$/, '');
+                    acc[slug] = fs.readFileSync(path.join(postsDir, e.name), 'utf8');
+                    return acc;
+                }, {});
+        } catch {
+            // ignore – will surface later as InvalidMarkdownError if accessed
+        }
+    }
+
+    return files;
 })();
 
 class InvalidMarkdownError extends Data.TaggedError('InvalidMarkdownError')<{}> {
