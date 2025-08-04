@@ -1,0 +1,8 @@
+.navigation {
+    border-bottom: 1px solid var(--color-ui-1);
+    padding: var(--spc-8);
+}
+
+.navigation a:hover {
+    text-decoration: underline;
+}

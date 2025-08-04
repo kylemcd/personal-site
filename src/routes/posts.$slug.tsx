@@ -5,6 +5,8 @@ import mermaid from 'mermaid';
 import React from 'react';
 
 import { ErrorComponent } from '@/components/ErrorComponent';
+import { Navigation } from '@/components/Navigation';
+import { TableOfContents } from '@/components/TableOfContents';
 import { Text } from '@/components/Text';
 import { markdown } from '@/lib/markdown';
 import '@/styles/prism.css';
@@ -14,7 +16,7 @@ const getPost = createServerFn({ method: 'GET' })
     .validator((data: { slug: string }) => data)
     .handler(async ({ data: { slug } }) => {
         const result = Effect.runSyncExit(
-            markdown.fromPath<{ title: string; date: string }>({ path: `./posts/${slug}/page.md` })
+            markdown.fromPath<{ title: string; date: string }>({ path: `./posts/${slug}.md` })
         );
 
         if (Exit.isFailure(result)) {
@@ -31,7 +33,7 @@ export const Route = createFileRoute('/posts/$slug')({
 });
 
 function RouteComponent() {
-    const { frontmatter, content } = Route.useLoaderData();
+    const { frontmatter, content, tableOfContents } = Route.useLoaderData();
 
     React.useEffect(() => {
         if (content.includes(`class="mermaid"`)) {
@@ -41,25 +43,25 @@ function RouteComponent() {
     }, []);
 
     return (
-        <div className="post-background">
-            <div className="post-layout">
-                <div className="post-container">
-                    <div className="post-header">
-                        <Text as="h1" size="8" weight="600" align="center">
-                            {frontmatter.title}
+        <div className="post-layout">
+            <Navigation />
+            <div className="post-container">
+                <div className="post-header">
+                    <Text as="h1" size="6" weight="500">
+                        {frontmatter.title}
+                    </Text>
+                    <div className="post-details">
+                        <Text as="span" size="1">
+                            {new Date(frontmatter.date).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                            })}
                         </Text>
-                        <div className="post-details">
-                            <Text as="span" size="1" color="2">
-                                {new Date(frontmatter.date).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric',
-                                })}
-                            </Text>
-                        </div>
                     </div>
-                    <div className="post-content" data-post dangerouslySetInnerHTML={{ __html: content }} />
                 </div>
+                <TableOfContents items={tableOfContents} />
+                <div className="post-content" data-post dangerouslySetInnerHTML={{ __html: content }} />
             </div>
         </div>
     );

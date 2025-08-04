@@ -81,6 +81,51 @@ const toFrontmatter = <F extends Frontmatter = {}>({
     );
 };
 
+export type TableOfContentsItem = {
+    text: string;
+    level: number;
+    id: string;
+    children: Array<TableOfContentsItem>;
+};
+
+const toTableOfContents = (html: string): Array<TableOfContentsItem> => {
+    // Use regex to find all headings and their IDs
+    const headingRegex = /<h([1-6])[^>]*?id="([^"]*?)"[^>]*?>([^<]*?)<\/h[1-6]>/g;
+    const headings = Array.from(html.matchAll(headingRegex)).map((match) => ({
+        level: parseInt(match[1]),
+        id: match[2],
+        text: match[3].trim(),
+    }));
+
+    // Convert to TableOfContentsItems
+    const items = headings.map((heading) => ({
+        text: heading.text,
+        level: heading.level,
+        id: heading.id,
+        children: [],
+    }));
+
+    // Nest the items
+    const result: Array<TableOfContentsItem> = [];
+    const stack: Array<TableOfContentsItem> = [];
+
+    items.forEach((item) => {
+        while (stack.length > 0 && stack[stack.length - 1].level >= item.level) {
+            stack.pop();
+        }
+
+        if (stack.length === 0) {
+            result.push(item);
+        } else {
+            stack[stack.length - 1].children.push(item);
+        }
+
+        stack.push(item);
+    });
+
+    return result;
+};
+
 type FromPathParams = {
     path: string;
 };
@@ -88,7 +133,7 @@ type FromPathParams = {
 const fromPath = <F extends Frontmatter = {}>({
     path,
 }: FromPathParams): Effect.Effect<
-    { frontmatter: F; content: string },
+    { frontmatter: F; content: string; tableOfContents: Array<TableOfContentsItem> },
     InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
     return pipe(
@@ -102,10 +147,17 @@ const fromPath = <F extends Frontmatter = {}>({
             catch: () => new InvalidMarkdownError(),
         }),
         Effect.flatMap((rawMarkdown) =>
-            Effect.all({
-                frontmatter: toFrontmatter<F>({ rawMarkdown }),
-                content: toHtml({ rawMarkdown }),
-            })
+            pipe(
+                Effect.all({
+                    frontmatter: toFrontmatter<F>({ rawMarkdown }),
+                    content: toHtml({ rawMarkdown }),
+                }),
+                Effect.map(({ frontmatter, content }) => ({
+                    frontmatter,
+                    content,
+                    tableOfContents: toTableOfContents(content),
+                }))
+            )
         )
     );
 };
@@ -115,24 +167,26 @@ const all = (): Effect.Effect<
     InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
     return pipe(
-        // Read the list of slug directories under ./posts
+        // Read the list of markdown files under ./posts
         Effect.try<string[], InvalidMarkdownError>({
             try: () => {
                 const __dirname = nodePath.resolve();
                 const postsPath = nodePath.join(__dirname, './posts');
                 const dirEntries = nodeFs.readdirSync(postsPath, { withFileTypes: true });
-                const slugs = dirEntries.filter((dirent) => dirent.isDirectory()).map((dirent) => dirent.name);
-                return slugs;
+                const mdFiles = dirEntries
+                    .filter((dirent) => dirent.isFile() && dirent.name.endsWith('.md'))
+                    .map((dirent) => dirent.name.replace(/\.md$/, ''));
+                return mdFiles;
             },
             catch: () => new InvalidMarkdownError(),
         }),
-        // For each slug, load its frontmatter and pick the required fields
+        // For each markdown file, load its frontmatter and pick the required fields
         Effect.flatMap((slugs) =>
             pipe(
                 slugs.map((slug) =>
                     pipe(
                         fromPath<{ title: string; date: string; draft: string }>({
-                            path: `./posts/${slug}/page.md`,
+                            path: `./posts/${slug}.md`,
                         }),
                         Effect.map(({ frontmatter }) => ({
                             title: frontmatter.title,

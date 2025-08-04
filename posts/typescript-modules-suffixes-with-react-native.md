@@ -169,8 +169,8 @@ export type ButtonProps<Platform> = Platform extends infer P
     ? P extends 'web'
         ? WebProps
         : P extends 'native'
-        ? NativeProps
-        : never
+          ? NativeProps
+          : never
     : never;
 ```
 

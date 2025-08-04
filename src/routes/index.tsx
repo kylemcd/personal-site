@@ -7,6 +7,7 @@ import { Bookshelf } from '@/components/Bookshelf';
 import { ErrorComponent } from '@/components/ErrorComponent';
 import { HomeHero } from '@/components/HomeHero';
 import { HorizontalScrollContainer } from '@/components/HorizontalScrollContainer';
+import { Navigation } from '@/components/Navigation';
 import { RacingStats } from '@/components/RacingStats';
 import { Text } from '@/components/Text';
 import { WritingList } from '@/components/WritingList';
@@ -40,6 +41,7 @@ function Home() {
     return (
         <>
             <div className="page-container">
+                <Navigation />
                 <HomeHero />
                 <div className="section-container ">
                     <Text as="h2" size="2">

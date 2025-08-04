@@ -29,7 +29,7 @@ export const nodes = {
             const textContent = node.transformChildren(config);
             const slugifiedId = slugify(textContent.toString(), { lower: true });
 
-            return new Tag('h' + level, { id: slugifiedId }, textContent);
+            return new Tag('h' + level, { id: slugifiedId, 'data-heading-level': level }, textContent);
         },
     },
     fence: {

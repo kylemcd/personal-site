@@ -18,6 +18,10 @@
     gap: var(--spc-4);
 }
 
+.book:hover {
+    transform: scale(0.98);
+}
+
 .bookshelf .book {
     height: auto;
     width: 180px;

@@ -17,9 +17,14 @@
     height: 175px;
     object-fit: cover;
     border-radius: var(--rnd-5);
+    transition: transform 0.1s ease-out;
 }
 
 .album-info {
     display: flex;
     flex-direction: column;
+}
+
+.album:hover .album-image {
+    transform: scale(0.98);
 }
