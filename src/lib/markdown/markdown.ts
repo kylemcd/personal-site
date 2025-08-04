@@ -195,15 +195,18 @@ const fromPath = <F extends Frontmatter = {}>({
     const slugMatch = path.match(/(?:^|\/)posts\/(.*)\.md$/);
     const slug = slugMatch ? slugMatch[1] : undefined;
 
-    const readEffect = pipe(
-        Effect.succeed(slug),
-        // Validate that the slug exists and the map contains the content
-        Effect.filterOrFail(
-            (s): s is string => typeof s === 'string' && s in rawPostMap,
-            () => new InvalidMarkdownError()
-        ),
-        Effect.map((validSlug) => rawPostMap[validSlug])
-    );
+    const readEffect = Effect.try<string, InvalidMarkdownError>({
+        try: () => {
+            if (!slug) throw new InvalidMarkdownError();
+            if (slug in rawPostMap) {
+                return rawPostMap[slug];
+            }
+            // Fallback to direct fs read (in case map is stale or missing this slug)
+            const absolutePath = nodePath.join(nodePath.resolve(), 'posts', `${slug}.md`);
+            return nodeFs.readFileSync(absolutePath, 'utf8');
+        },
+        catch: () => new InvalidMarkdownError(),
+    });
 
     return pipe(
         readEffect,
