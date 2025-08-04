@@ -2,6 +2,8 @@
 import markdocPkg from '@markdoc/markdoc';
 import { Data, Effect, pipe } from 'effect';
 import yaml from 'js-yaml';
+import nodeFs from 'node:fs';
+import nodePath from 'node:path';
 
 import { nodes } from './nodes';
 
@@ -21,20 +23,45 @@ const rawPostMap = (() => {
      * convert that object into a Record keyed by the post slug (filename without extension)
      * so look-ups are straightforward at runtime.
      */
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    const rawFiles = import.meta.glob('../../../posts/*.md', {
-        query: '?raw',
-        import: 'default',
-        eager: true,
-    }) as Record<string, string>;
+    let files: Record<string, string> = {};
 
-    return Object.entries(rawFiles).reduce<Record<string, string>>((acc, [filePath, raw]) => {
-        // Extract the filename (e.g. "my-post.md") then remove the extension to get the slug
-        const fileName = filePath.split('/').pop() ?? '';
-        const slug = fileName.replace(/\.md$/, '');
-        acc[slug] = raw;
-        return acc;
-    }, {});
+    // Prefer Vite's compile-time glob when it's available (development & build time)
+    const globFn: any = (import.meta as any).glob;
+    if (typeof globFn === 'function') {
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+        const globbed = globFn('../../../posts/*.md', {
+            query: '?raw',
+            import: 'default',
+            eager: true,
+        }) as Record<string, string>;
+        files = Object.entries(globbed).reduce<Record<string, string>>((acc, [filePath, raw]) => {
+            const fileName = filePath.split('/').pop() ?? '';
+            const slug = fileName.replace(/\.md$/, '');
+            acc[slug] = raw;
+            return acc;
+        }, {});
+    }
+
+    // Fallback for environments where import.meta.glob isn't available (e.g., Vercel runtime)
+    if (Object.keys(files).length === 0) {
+        try {
+            const __dirname = nodePath.resolve();
+            const postsPath = nodePath.join(__dirname, 'posts');
+            const dirEntries = nodeFs.readdirSync(postsPath, { withFileTypes: true });
+            files = dirEntries
+                .filter((dirent) => dirent.isFile() && dirent.name.endsWith('.md'))
+                .reduce<Record<string, string>>((acc, dirent) => {
+                    const slug = dirent.name.replace(/\.md$/, '');
+                    const content = nodeFs.readFileSync(nodePath.join(postsPath, dirent.name), 'utf8');
+                    acc[slug] = content;
+                    return acc;
+                }, {});
+        } catch {
+            // ignore; will surface as InvalidMarkdownError later if accessed
+        }
+    }
+
+    return files;
 })();
 
 class InvalidMarkdownError extends Data.TaggedError('InvalidMarkdownError')<{}> {
