@@ -1,69 +1,13 @@
-/// <reference types="vite/client" />
 import markdocPkg from '@markdoc/markdoc';
 import { Data, Effect, pipe } from 'effect';
 import yaml from 'js-yaml';
-import fs from 'node:fs';
-import path from 'node:path';
+import nodeFs from 'node:fs';
+import nodePath from 'node:path';
 
 import { nodes } from './nodes';
 
 // We need to import like this to avoid weird server / client boundary cjs issues.
 const { transform, parse, renderers } = markdocPkg;
-
-// Load markdown files at build time using Vite's import.meta.glob. This ensures the files are
-// bundled with the server output (e.g., when deployed to Vercel) so that runtime filesystem
-// access is no longer required.
-// NOTE: The relative path is from this file (`src/lib/markdown/markdown.ts`) to the project root.
-// "../../../posts/*.md" → root/posts/*.md
-const rawPostMap = (() => {
-    /*
-     * vite's `import.meta.glob` expands to an object whose keys are the paths that match the
-     * pattern and the values are the imported modules (in this case the raw string contents of
-     * the markdown file). We eagerly load them so they are inlined into the bundle. We then
-     * convert that object into a Record keyed by the post slug (filename without extension)
-     * so look-ups are straightforward at runtime.
-     */
-    // Use Vite's compile-time glob to eagerly import all markdown as raw strings.
-    // The absolute path (starting with /) is resolved from project root.
-    // The Vite transform turns this into an object mapping paths to raw contents at build time
-    // so nothing executes at runtime.
-    let files: Record<string, string> = {};
-
-    const globFn = (import.meta as any).glob;
-    if (typeof globFn === 'function') {
-        const globbed = globFn('/posts/*.md', {
-            query: '?raw',
-            import: 'default',
-            eager: true,
-        }) as Record<string, string>;
-        files = Object.entries(globbed).reduce<Record<string, string>>((acc, [filePath, raw]) => {
-            const fileName = filePath.split('/').pop() ?? '';
-            const slug = fileName.replace(/\.md$/, '');
-            acc[slug] = raw;
-            return acc;
-        }, {});
-    }
-
-    if (Object.keys(files).length === 0) {
-        // Runtime fallback using filesystem (for environments where the Vite transform didn't run)
-        try {
-            const baseDir = process.cwd();
-            const postsDir = path.join(baseDir, 'posts');
-            const entries = fs.readdirSync(postsDir, { withFileTypes: true });
-            files = entries
-                .filter((e) => e.isFile() && e.name.endsWith('.md'))
-                .reduce<Record<string, string>>((acc, e) => {
-                    const slug = e.name.replace(/\.md$/, '');
-                    acc[slug] = fs.readFileSync(path.join(postsDir, e.name), 'utf8');
-                    return acc;
-                }, {});
-        } catch {
-            // ignore – will surface later as InvalidMarkdownError if accessed
-        }
-    }
-
-    return files;
-})();
 
 class InvalidMarkdownError extends Data.TaggedError('InvalidMarkdownError')<{}> {
     message = 'Invalid markdown content provided.';
@@ -192,21 +136,16 @@ const fromPath = <F extends Frontmatter = {}>({
     { frontmatter: F; content: string; tableOfContents: Array<TableOfContentsItem> },
     InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
-    // Attempt to resolve the slug from the provided path (expects "./posts/<slug>.md")
-    const slugMatch = path.match(/(?:^|\/)posts\/(.*)\.md$/);
-    const slug = slugMatch ? slugMatch[1] : undefined;
-
-    const readEffect = pipe(
-        Effect.succeed(slug),
-        Effect.filterOrFail(
-            (s): s is string => typeof s === 'string' && s in rawPostMap,
-            () => new InvalidMarkdownError()
-        ),
-        Effect.map((validSlug) => rawPostMap[validSlug])
-    );
-
     return pipe(
-        readEffect,
+        Effect.try({
+            try: () => {
+                const __dirname = nodePath.resolve();
+                const filePath = nodePath.join(__dirname, path);
+                const fileContent = nodeFs.readFileSync(filePath, 'utf8');
+                return fileContent;
+            },
+            catch: () => new InvalidMarkdownError(),
+        }),
         Effect.flatMap((rawMarkdown) =>
             pipe(
                 Effect.all({
@@ -227,17 +166,27 @@ const all = (): Effect.Effect<
     { title: string; slug: string; date: string }[],
     InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
-    const listEffect = Effect.succeed(Object.keys(rawPostMap));
-
     return pipe(
-        listEffect,
+        // Read the list of markdown files under ./posts
+        Effect.try<string[], InvalidMarkdownError>({
+            try: () => {
+                const __dirname = nodePath.resolve();
+                const postsPath = nodePath.join(__dirname, './public/posts');
+                const dirEntries = nodeFs.readdirSync(postsPath, { withFileTypes: true });
+                const mdFiles = dirEntries
+                    .filter((dirent) => dirent.isFile() && dirent.name.endsWith('.md'))
+                    .map((dirent) => dirent.name.replace(/\.md$/, ''));
+                return mdFiles;
+            },
+            catch: () => new InvalidMarkdownError(),
+        }),
         // For each markdown file, load its frontmatter and pick the required fields
         Effect.flatMap((slugs) =>
             pipe(
                 slugs.map((slug) =>
                     pipe(
                         fromPath<{ title: string; date: string; draft: string }>({
-                            path: `./posts/${slug}.md`,
+                            path: `./public/posts/${slug}.md`,
                         }),
                         Effect.map(({ frontmatter }) => ({
                             title: frontmatter.title,
