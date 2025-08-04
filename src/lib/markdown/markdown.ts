@@ -2,8 +2,6 @@
 import markdocPkg from '@markdoc/markdoc';
 import { Data, Effect, pipe } from 'effect';
 import yaml from 'js-yaml';
-import nodeFs from 'node:fs';
-import nodePath from 'node:path';
 
 import { nodes } from './nodes';
 
@@ -23,45 +21,23 @@ const rawPostMap = (() => {
      * convert that object into a Record keyed by the post slug (filename without extension)
      * so look-ups are straightforward at runtime.
      */
-    let files: Record<string, string> = {};
+    // Use Vite's compile-time glob to eagerly import all markdown as raw strings.
+    // The absolute path (starting with /) is resolved from project root.
+    // The Vite transform turns this into an object mapping paths to raw contents at build time
+    // so nothing executes at runtime.
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    const globbed = import.meta.glob('/posts/*.md', {
+        query: '?raw',
+        import: 'default',
+        eager: true,
+    }) as Record<string, string>;
 
-    // Prefer Vite's compile-time glob when it's available (development & build time)
-    const globFn: any = (import.meta as any).glob;
-    if (typeof globFn === 'function') {
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        const globbed = globFn('../../../posts/*.md', {
-            query: '?raw',
-            import: 'default',
-            eager: true,
-        }) as Record<string, string>;
-        files = Object.entries(globbed).reduce<Record<string, string>>((acc, [filePath, raw]) => {
-            const fileName = filePath.split('/').pop() ?? '';
-            const slug = fileName.replace(/\.md$/, '');
-            acc[slug] = raw;
-            return acc;
-        }, {});
-    }
-
-    // Fallback for environments where import.meta.glob isn't available (e.g., Vercel runtime)
-    if (Object.keys(files).length === 0) {
-        try {
-            const __dirname = nodePath.resolve();
-            const postsPath = nodePath.join(__dirname, 'posts');
-            const dirEntries = nodeFs.readdirSync(postsPath, { withFileTypes: true });
-            files = dirEntries
-                .filter((dirent) => dirent.isFile() && dirent.name.endsWith('.md'))
-                .reduce<Record<string, string>>((acc, dirent) => {
-                    const slug = dirent.name.replace(/\.md$/, '');
-                    const content = nodeFs.readFileSync(nodePath.join(postsPath, dirent.name), 'utf8');
-                    acc[slug] = content;
-                    return acc;
-                }, {});
-        } catch {
-            // ignore; will surface as InvalidMarkdownError later if accessed
-        }
-    }
-
-    return files;
+    return Object.entries(globbed).reduce<Record<string, string>>((acc, [filePath, raw]) => {
+        const fileName = filePath.split('/').pop() ?? '';
+        const slug = fileName.replace(/\.md$/, '');
+        acc[slug] = raw;
+        return acc;
+    }, {});
 })();
 
 class InvalidMarkdownError extends Data.TaggedError('InvalidMarkdownError')<{}> {
@@ -195,18 +171,14 @@ const fromPath = <F extends Frontmatter = {}>({
     const slugMatch = path.match(/(?:^|\/)posts\/(.*)\.md$/);
     const slug = slugMatch ? slugMatch[1] : undefined;
 
-    const readEffect = Effect.try<string, InvalidMarkdownError>({
-        try: () => {
-            if (!slug) throw new InvalidMarkdownError();
-            if (slug in rawPostMap) {
-                return rawPostMap[slug];
-            }
-            // Fallback to direct fs read (in case map is stale or missing this slug)
-            const absolutePath = nodePath.join(nodePath.resolve(), 'posts', `${slug}.md`);
-            return nodeFs.readFileSync(absolutePath, 'utf8');
-        },
-        catch: () => new InvalidMarkdownError(),
-    });
+    const readEffect = pipe(
+        Effect.succeed(slug),
+        Effect.filterOrFail(
+            (s): s is string => typeof s === 'string' && s in rawPostMap,
+            () => new InvalidMarkdownError()
+        ),
+        Effect.map((validSlug) => rawPostMap[validSlug])
+    );
 
     return pipe(
         readEffect,
