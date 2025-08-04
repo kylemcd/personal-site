@@ -1,13 +1,41 @@
+/// <reference types="vite/client" />
 import markdocPkg from '@markdoc/markdoc';
 import { Data, Effect, pipe } from 'effect';
 import yaml from 'js-yaml';
-import nodeFs from 'node:fs';
-import nodePath from 'node:path';
 
 import { nodes } from './nodes';
 
 // We need to import like this to avoid weird server / client boundary cjs issues.
 const { transform, parse, renderers } = markdocPkg;
+
+// Load markdown files at build time using Vite's import.meta.glob. This ensures the files are
+// bundled with the server output (e.g., when deployed to Vercel) so that runtime filesystem
+// access is no longer required.
+// NOTE: The relative path is from this file (`src/lib/markdown/markdown.ts`) to the project root.
+// "../../../posts/*.md" → root/posts/*.md
+const rawPostMap = (() => {
+    /*
+     * vite's `import.meta.glob` expands to an object whose keys are the paths that match the
+     * pattern and the values are the imported modules (in this case the raw string contents of
+     * the markdown file). We eagerly load them so they are inlined into the bundle. We then
+     * convert that object into a Record keyed by the post slug (filename without extension)
+     * so look-ups are straightforward at runtime.
+     */
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    const rawFiles = import.meta.glob('../../../posts/*.md', {
+        query: '?raw',
+        import: 'default',
+        eager: true,
+    }) as Record<string, string>;
+
+    return Object.entries(rawFiles).reduce<Record<string, string>>((acc, [filePath, raw]) => {
+        // Extract the filename (e.g. "my-post.md") then remove the extension to get the slug
+        const fileName = filePath.split('/').pop() ?? '';
+        const slug = fileName.replace(/\.md$/, '');
+        acc[slug] = raw;
+        return acc;
+    }, {});
+})();
 
 class InvalidMarkdownError extends Data.TaggedError('InvalidMarkdownError')<{}> {
     message = 'Invalid markdown content provided.';
@@ -136,16 +164,22 @@ const fromPath = <F extends Frontmatter = {}>({
     { frontmatter: F; content: string; tableOfContents: Array<TableOfContentsItem> },
     InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
+    // Attempt to resolve the slug from the provided path (expects "./posts/<slug>.md")
+    const slugMatch = path.match(/(?:^|\/)posts\/(.*)\.md$/);
+    const slug = slugMatch ? slugMatch[1] : undefined;
+
+    const readEffect = pipe(
+        Effect.succeed(slug),
+        // Validate that the slug exists and the map contains the content
+        Effect.filterOrFail(
+            (s): s is string => typeof s === 'string' && s in rawPostMap,
+            () => new InvalidMarkdownError()
+        ),
+        Effect.map((validSlug) => rawPostMap[validSlug])
+    );
+
     return pipe(
-        Effect.try({
-            try: () => {
-                const __dirname = nodePath.resolve();
-                const filePath = nodePath.join(__dirname, path);
-                const fileContent = nodeFs.readFileSync(filePath, 'utf8');
-                return fileContent;
-            },
-            catch: () => new InvalidMarkdownError(),
-        }),
+        readEffect,
         Effect.flatMap((rawMarkdown) =>
             pipe(
                 Effect.all({
@@ -166,20 +200,10 @@ const all = (): Effect.Effect<
     { title: string; slug: string; date: string }[],
     InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
+    const listEffect = Effect.succeed(Object.keys(rawPostMap));
+
     return pipe(
-        // Read the list of markdown files under ./posts
-        Effect.try<string[], InvalidMarkdownError>({
-            try: () => {
-                const __dirname = nodePath.resolve();
-                const postsPath = nodePath.join(__dirname, './posts');
-                const dirEntries = nodeFs.readdirSync(postsPath, { withFileTypes: true });
-                const mdFiles = dirEntries
-                    .filter((dirent) => dirent.isFile() && dirent.name.endsWith('.md'))
-                    .map((dirent) => dirent.name.replace(/\.md$/, ''));
-                return mdFiles;
-            },
-            catch: () => new InvalidMarkdownError(),
-        }),
+        listEffect,
         // For each markdown file, load its frontmatter and pick the required fields
         Effect.flatMap((slugs) =>
             pipe(
