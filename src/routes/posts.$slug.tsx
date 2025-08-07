@@ -16,7 +16,7 @@ const getPost = createServerFn({ method: 'GET' })
     .validator((data: { slug: string }) => data)
     .handler(async ({ data: { slug } }) => {
         const result = Effect.runSyncExit(
-            markdown.fromPath<{ title: string; date: string }>({ path: `./public/posts/${slug}.md` })
+            markdown.fromPath<{ title: string; date: string }>({ path: `./posts/${slug}.md` })
         );
 
         if (Exit.isFailure(result)) {

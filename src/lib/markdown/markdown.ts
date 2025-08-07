@@ -171,7 +171,7 @@ const all = (): Effect.Effect<
         Effect.try<string[], InvalidMarkdownError>({
             try: () => {
                 const __dirname = nodePath.resolve();
-                const postsPath = nodePath.join(__dirname, './public/posts');
+                const postsPath = nodePath.join(__dirname, './posts');
                 const dirEntries = nodeFs.readdirSync(postsPath, { withFileTypes: true });
                 const mdFiles = dirEntries
                     .filter((dirent) => dirent.isFile() && dirent.name.endsWith('.md'))
@@ -186,7 +186,7 @@ const all = (): Effect.Effect<
                 slugs.map((slug) =>
                     pipe(
                         fromPath<{ title: string; date: string; draft: string }>({
-                            path: `./public/posts/${slug}.md`,
+                            path: `./posts/${slug}.md`,
                         }),
                         Effect.map(({ frontmatter }) => ({
                             title: frontmatter.title,

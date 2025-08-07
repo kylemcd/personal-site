@@ -1,6 +1,5 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
-import { Analytics } from '@vercel/analytics/react';
 
 import '@/styles/global.css';
 
