@@ -42,23 +42,37 @@ function RouteComponent() {
         }
     }, []);
 
+    const calculateReadingTime = (content: string) => {
+        const words = content.split(' ').length;
+        const readingTime = Math.ceil(words / 200);
+        return readingTime;
+    };
+
     return (
         <div className="post-layout">
-            <Navigation />
             <div className="post-container">
                 <div className="post-header">
-                    <Text as="h1" size="6" weight="500">
+                    <Text as="h1" size="6" weight="500" className="post-title">
                         {frontmatter.title}
                     </Text>
-                    <div className="post-details">
-                        <Text as="span" size="1">
-                            {new Date(frontmatter.date).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                            })}
+                    <div className="post-author">
+                        <img src="/images/avatar.png" alt="Kyle McDonald" className="post-author-avatar" />
+                        <Text as="span" size="1" color="2">
+                            Kyle McDonald
                         </Text>
                     </div>
+                </div>
+                <div className="post-details">
+                    <Text as="span" size="1" color="2">
+                        {new Date(frontmatter.date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                        })}
+                    </Text>
+                    <Text as="span" size="1" color="2">
+                        {calculateReadingTime(content)} min read
+                    </Text>
                 </div>
                 <TableOfContents items={tableOfContents} />
                 <div className="post-content" data-post dangerouslySetInnerHTML={{ __html: content }} />

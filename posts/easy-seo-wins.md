@@ -1,6 +1,7 @@
 ---
 title: Easy SEO Wins
 date: '2020-02-14T22:40:32.169Z'
+draft: true
 ---
 
 Over the last year, I've been putting a lot of time into learning the ins-and-outs of SEO. I see it as the best way to generate organic traffic and also one of the easiest. All it takes is a little behind the scenes work, and you're off to the races.

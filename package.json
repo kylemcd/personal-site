@@ -12,6 +12,7 @@
         "og": "bun run src/lib/open-graph"
     },
     "dependencies": {
+        "@hackernoon/pixel-icon-library": "^1.0.6",
         "@markdoc/markdoc": "^0.5.2",
         "@resvg/resvg-js": "^2.6.2",
         "@tanstack/react-router": "^1.121.0",

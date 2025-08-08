@@ -5,9 +5,9 @@ import { Effect, Exit } from 'effect';
 import { AlbumShelf } from '@/components/AlbumShelf';
 import { Bookshelf } from '@/components/Bookshelf';
 import { ErrorComponent } from '@/components/ErrorComponent';
+import { Experience } from '@/components/Experience';
 import { HomeHero } from '@/components/HomeHero';
 import { HorizontalScrollContainer } from '@/components/HorizontalScrollContainer';
-import { Navigation } from '@/components/Navigation';
 import { RacingStats } from '@/components/RacingStats';
 import { Text } from '@/components/Text';
 import { WritingList } from '@/components/WritingList';
@@ -40,45 +40,48 @@ function Home() {
 
     return (
         <>
-            <div className="page-container">
-                <Navigation />
-                <HomeHero />
-                <div className="section-container ">
-                    <Text as="h2" size="2">
-                        Writing
-                    </Text>
-                    <WritingList writing={writing} />
-                </div>
+            <HomeHero />
+            <div className="section-container">
+                <Text as="h2" size="2">
+                    Writing
+                </Text>
+                <WritingList writing={writing} />
+            </div>
+            <div className="section-container">
+                <Text as="h2" size="2">
+                    Experience
+                </Text>
+                <Experience />
+            </div>
+            <div className="section-container section-container-flush-right">
+                <Text as="h2" size="2">
+                    Listening
+                </Text>
+                <AlbumShelf albums={spotify} />
+            </div>
+            <div className="section-stack">
                 <div className="section-container section-container-flush-right">
-                    <Text as="h2" size="2">
-                        Listening
-                    </Text>
-                    <AlbumShelf albums={spotify} />
+                    <HorizontalScrollContainer className="bookshelf-container">
+                        <div className="bookshelf-section">
+                            <Text as="h2" size="2">
+                                Reading
+                            </Text>
+                            <Bookshelf books={books.reading} />
+                        </div>
+                        <div className="bookshelf-section">
+                            <Text as="h2" size="2">
+                                Finished
+                            </Text>
+                            <Bookshelf books={books.finished} />
+                        </div>
+                    </HorizontalScrollContainer>
                 </div>
-                <div className="section-stack">
-                    <div className="section-container section-container-flush-right">
-                        <HorizontalScrollContainer className="bookshelf-container">
-                            <div className="bookshelf-section">
-                                <Text as="h2" size="2">
-                                    Reading
-                                </Text>
-                                <Bookshelf books={books.reading} />
-                            </div>
-                            <div className="bookshelf-section">
-                                <Text as="h2" size="2">
-                                    Finished
-                                </Text>
-                                <Bookshelf books={books.finished} />
-                            </div>
-                        </HorizontalScrollContainer>
-                    </div>
-                </div>
-                <div className="section-container">
-                    <Text as="h2" size="2" weight="500">
-                        Racing
-                    </Text>
-                    <RacingStats races={iracing.races} />
-                </div>
+            </div>
+            <div className="section-container">
+                <Text as="h2" size="2" weight="500">
+                    Racing
+                </Text>
+                <RacingStats races={iracing.races} />
             </div>
         </>
     );

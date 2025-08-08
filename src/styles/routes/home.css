@@ -25,3 +25,7 @@
 .section-container > h2 {
     margin-bottom: var(--spc-6);
 }
+
+.section-container:last-child {
+    border-bottom: none;
+}

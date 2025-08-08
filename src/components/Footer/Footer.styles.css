@@ -1,0 +1,8 @@
+.footer-container {
+    max-width: var(--spc-text-content);
+    width: var(--spc-full);
+    margin: 0 auto;
+    display: flex;
+    padding: var(--spc-6) 0;
+    margin-bottom: 60vh;
+}
