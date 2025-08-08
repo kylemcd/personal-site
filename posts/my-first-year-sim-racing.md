@@ -13,7 +13,7 @@ My journey began with an old Logitech wheel and plastic pedals. The setup didn't
 
 I decided to upgrade piece by piece. A Playseat Trophy cockpit gave me a stable platform, which stopped the rig from sliding across the floor under force-feedback loads. Next, I moved to Simagic pedals and a Simagic direct-drive wheelbase for sharper inputs and stronger, more nuanced feedback. Haptic feedback pedals helped me detect lock-ups, while a button box and display unit gave me better control over in-car settings. My most recent addition, a GSI Hyper P1 wheel, changed how I interact and engage with my car. Each upgrade brought me closer to that "real car" sensation.
 
-![My sim racing setup](/article-images/Pasted%20image 20250722125706.png)
+![My sim racing setup](/article-images/Pasted%20image%2020250722125706.png)
 
 ## Going deeper into the driving craft
 
