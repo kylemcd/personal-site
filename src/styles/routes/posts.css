@@ -114,10 +114,9 @@
 
 [data-post] img {
     display: block;
-    max-width: 700px;
-    max-height: 700px;
+    max-height: 600px;
     width: auto;
-    height: auto;
+    height: 100%;
     margin: var(--spc-4) auto;
 }
 
