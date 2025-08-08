@@ -3,13 +3,6 @@
     display: flex;
     justify-content: flex-start;
     flex-direction: column;
-    padding-bottom: var(--spc-4);
-}
-
-@media (min-width: 768px) {
-    .writing-item {
-        padding-bottom: var(--spc-2);
-    }
 }
 
 .writing-item:hover > .writing-item-title {

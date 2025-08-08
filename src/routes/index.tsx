@@ -59,23 +59,21 @@ function Home() {
                 </Text>
                 <AlbumShelf albums={spotify} />
             </div>
-            <div className="section-stack">
-                <div className="section-container section-container-flush-right">
-                    <HorizontalScrollContainer className="bookshelf-container">
-                        <div className="bookshelf-section">
-                            <Text as="h2" size="2">
-                                Reading
-                            </Text>
-                            <Bookshelf books={books.reading} />
-                        </div>
-                        <div className="bookshelf-section">
-                            <Text as="h2" size="2">
-                                Finished
-                            </Text>
-                            <Bookshelf books={books.finished} />
-                        </div>
-                    </HorizontalScrollContainer>
-                </div>
+            <div className="section-container section-container-flush-right">
+                <HorizontalScrollContainer className="bookshelf-container">
+                    <div className="bookshelf-section">
+                        <Text as="h2" size="2">
+                            Reading
+                        </Text>
+                        <Bookshelf books={books.reading} />
+                    </div>
+                    <div className="bookshelf-section">
+                        <Text as="h2" size="2">
+                            Finished
+                        </Text>
+                        <Bookshelf books={books.finished} />
+                    </div>
+                </HorizontalScrollContainer>
             </div>
             <div className="section-container">
                 <Text as="h2" size="2" weight="500">

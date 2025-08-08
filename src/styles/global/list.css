@@ -12,7 +12,13 @@
     justify-content: space-between;
     gap: var(--spc-2);
     border-bottom: 1px solid var(--color-ui-1);
-    padding-bottom: var(--spc-1);
+    padding-bottom: var(--spc-3);
+}
+
+@media (min-width: 768px) {
+    .list-item {
+        padding-bottom: var(--spc-2);
+    }
 }
 
 .list-item:last-child {
