@@ -29,7 +29,27 @@ const RootDocument = ({ children }: RootDocumentProps) => {
         <html>
             <head>
                 <HeadContent />
-                <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+                <link rel="icon" href="/images/avatar.png" />
+                <meta property="og:image:type" content="image/png" />
+                <meta property="og:image:width" content="1200" />
+                <meta property="og:image:height" content="630" />
+                <meta property="og:title" content="Kyle McDonald" />
+                <meta
+                    property="og:description"
+                    content="Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff."
+                />
+                <meta property="og:url" content="https://kylemcd.com" />
+                <meta property="og:site_name" content="Kyle McDonald" />
+                <meta property="og:locale" content="en-US" />
+                <meta property="og:image" content="https://kylemcd.com/og/home.png" />
+                <meta property="og:type" content="website" />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="Kyle McDonald" />
+                <meta
+                    name="twitter:description"
+                    content="Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff."
+                />
+                <meta name="twitter:image" content="https://kylemcd.com/og/home.png" />
             </head>
             <body>
                 <div className="page-container">
@@ -39,6 +59,7 @@ const RootDocument = ({ children }: RootDocumentProps) => {
                 <Footer />
                 <TanStackRouterDevtools position="bottom-right" />
                 <Scripts />
+                <script dangerouslySetInnerHTML={{ __html: themeScript }} />
                 {process.env.NODE_ENV === 'production' && (
                     <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
                 )}
