@@ -70,7 +70,7 @@ const OgComponent = ({ title }: { title: string }) => {
                     }}
                 >
                     <img
-                        src="https://kylemcd.com/avatar.png"
+                        src="https://kylemcd.com/images/avatar.png"
                         alt="avatar"
                         style={{
                             border: '1px solid rgba(255,255,255,0.2)',

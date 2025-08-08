@@ -13,6 +13,7 @@ FROM base as build
 COPY . .
 ENV NODE_ENV=production
 RUN bun run build
+RUN bun run og
 
 # Release stage
 FROM oven/bun:${BUN_VERSION}-slim as release

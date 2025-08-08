@@ -22,7 +22,7 @@ function Experience() {
                     <Text as="span" color="2" size="0">
                         Software Engineer
                     </Text>
-                    <Text as="span" size="0" color="2" className="experience-list-item-info-date">
+                    <Text as="span" size="0" color="2" family="mono" className="experience-list-item-info-date">
                         2023 - ____
                     </Text>
                 </div>
@@ -44,7 +44,7 @@ function Experience() {
                     <Text as="span" color="2" size="0">
                         Director of Engineering
                     </Text>
-                    <Text as="span" size="0" color="2" className="experience-list-item-info-date">
+                    <Text as="span" size="0" color="2" family="mono" className="experience-list-item-info-date">
                         2019 - 2023
                     </Text>
                 </div>
@@ -66,7 +66,7 @@ function Experience() {
                     <Text as="span" color="2" size="0">
                         Software Engineer
                     </Text>
-                    <Text as="span" size="0" color="2" className="experience-list-item-info-date">
+                    <Text as="span" size="0" color="2" family="mono" className="experience-list-item-info-date">
                         2017 - 2019
                     </Text>
                 </div>
