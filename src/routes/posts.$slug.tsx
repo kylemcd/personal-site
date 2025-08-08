@@ -64,7 +64,7 @@ function RouteComponent() {
                 <meta property="og:url" content={`https://kylemcd.com/posts/${slug}`} />
                 <meta property="og:site_name" content="Kyle McDonald" />
                 <meta property="og:locale" content="en-US" />
-                <meta property="og:image" content={`https://kylemcd.com/og/${slug}.png`} />
+                <meta property="og:image" content={`https://kylemcd.com/open-graph/${slug}.png`} />
                 <meta property="og:type" content="website" />
                 <meta name="twitter:card" content="summary_large_image" />
                 <meta name="twitter:title" content="Kyle McDonald" />
@@ -72,7 +72,7 @@ function RouteComponent() {
                     name="twitter:description"
                     content="Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff."
                 />
-                <meta name="twitter:image" content={`https://kylemcd.com/og/${slug}.png`} />
+                <meta name="twitter:image" content={`https://kylemcd.com/open-graph/${slug}.png`} />
             </head>
             <div className="post-layout">
                 <div className="post-container">
