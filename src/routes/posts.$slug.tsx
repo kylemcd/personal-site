@@ -33,7 +33,7 @@ export const Route = createFileRoute('/posts/$slug')({
 });
 
 function RouteComponent() {
-    const { frontmatter, content, tableOfContents } = Route.useLoaderData();
+    const { frontmatter, content, tableOfContents, readingTime } = Route.useLoaderData();
     const { slug } = Route.useParams();
 
     React.useEffect(() => {
@@ -96,7 +96,7 @@ function RouteComponent() {
                             })}
                         </Text>
                         <Text as="span" size="1" color="2">
-                            {calculateReadingTime(content)} min read
+                            {readingTime} min read
                         </Text>
                     </div>
                     <TableOfContents items={tableOfContents} />

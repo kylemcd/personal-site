@@ -126,6 +126,22 @@ const toTableOfContents = (html: string): Array<TableOfContentsItem> => {
     return result;
 };
 
+type ReadingTimeParams = {
+    rawMarkdown: string;
+};
+
+const toReadingTime = ({
+    rawMarkdown,
+}: ReadingTimeParams): Effect.Effect<number, InvalidMarkdownError | ParseMarkdownError> => {
+    return pipe(
+        Effect.succeed(rawMarkdown),
+        Effect.map((rawMarkdown) => {
+            const words = rawMarkdown.split(' ').length;
+            return Math.ceil(words / 200);
+        })
+    );
+};
+
 type FromPathParams = {
     path: string;
 };
@@ -133,7 +149,7 @@ type FromPathParams = {
 const fromPath = <F extends Frontmatter = {}>({
     path,
 }: FromPathParams): Effect.Effect<
-    { frontmatter: F; content: string; tableOfContents: Array<TableOfContentsItem> },
+    { frontmatter: F; content: string; tableOfContents: Array<TableOfContentsItem>; readingTime: number },
     InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
     return pipe(
@@ -151,11 +167,13 @@ const fromPath = <F extends Frontmatter = {}>({
                 Effect.all({
                     frontmatter: toFrontmatter<F>({ rawMarkdown }),
                     content: toHtml({ rawMarkdown }),
+                    readingTime: toReadingTime({ rawMarkdown }),
                 }),
-                Effect.map(({ frontmatter, content }) => ({
+                Effect.map(({ frontmatter, content, readingTime }) => ({
                     frontmatter,
                     content,
                     tableOfContents: toTableOfContents(content),
+                    readingTime,
                 }))
             )
         )
