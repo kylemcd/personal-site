@@ -29,5 +29,5 @@ COPY --from=build /docker-build/posts ./posts
 RUN bun install --production
 
 USER bun
-EXPOSE 8080/tcp
+EXPOSE 3000/tcp
 CMD ["bun", "run", "--env-file=.env", ".output/server/index.mjs"]
