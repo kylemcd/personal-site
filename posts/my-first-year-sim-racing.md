@@ -1,21 +1,19 @@
 ---
-share: 'true'
-ps-path: /my-first-year-sim-racing/page
-title: 'My first year sim racing: a journey of learning and community'
+share: "true"
+ps-path: /my-first-year-sim-racing
+title: "My first year sim racing: a journey of learning and community"
 date: 2025-03-07
 ---
-
 Over the past year, I've thrown myself headfirst into sim racing. What started with a dusty Logitech wheel from my dad turned into a full-blown obsession involving cockpit upgrades, direct-drive wheels, and deep dives into the complexities of race craft. I've learned a lot, both about motorsport and my own competitive nature, and I've made connections with people who enjoy nothing more than analyzing lap data on a Tuesday night.
 
 Sim racing isn't a shallow pastime. It mirrors real-world racing in many ways, from pit-stop strategy and tire management to corner geometry and mental focus. Each race reveals something new—about technique, the physics in these modern sims, or the community behind it all.
-
 ## Starting from scratch
 
 My journey began with an old Logitech wheel and plastic pedals. The setup didn't provide much force feedback, and I could feel the hardware straining when I cranked the steering in tight corners. Still, it was enough to show me how realistic sim racing can be. I spent the first few months spinning out in every other race, especially once I tried cars with more power than a basic Mazda MX-5. It was humbling, but it showed me how much I had to learn.
 
 I decided to upgrade piece by piece. A Playseat Trophy cockpit gave me a stable platform, which stopped the rig from sliding across the floor under force-feedback loads. Next, I moved to Simagic pedals and a Simagic direct-drive wheelbase for sharper inputs and stronger, more nuanced feedback. Haptic feedback pedals helped me detect lock-ups, while a button box and display unit gave me better control over in-car settings. My most recent addition, a GSI Hyper P1 wheel, changed how I interact and engage with my car. Each upgrade brought me closer to that "real car" sensation.
 
-![My sim racing setup](/article-images/Pasted%20image%2020250722125706.png)
+![[/public/article-images/Pasted image 20250722125706.png|My sim racing setup]]
 
 ## Going deeper into the driving craft
 
