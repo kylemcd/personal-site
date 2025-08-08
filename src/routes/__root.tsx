@@ -39,6 +39,9 @@ const RootDocument = ({ children }: RootDocumentProps) => {
                 <Footer />
                 <TanStackRouterDevtools position="bottom-right" />
                 <Scripts />
+                {process.env.NODE_ENV === 'production' && (
+                    <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
+                )}
             </body>
         </html>
     );
