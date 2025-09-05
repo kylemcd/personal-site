@@ -41,6 +41,7 @@ function Home() {
     return (
         <>
             <HomeHero />
+            test
             <div className="section-container">
                 <Text as="h2" size="2">
                     Writing
