@@ -181,7 +181,7 @@ const fromPath = <F extends Frontmatter = {}>({
 };
 
 const all = (): Effect.Effect<
-    { title: string; slug: string; date: string }[],
+    { title: string; slug: string; date: string; 'substack-link'?: string }[],
     InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
     return pipe(
@@ -203,7 +203,7 @@ const all = (): Effect.Effect<
             pipe(
                 slugs.map((slug) =>
                     pipe(
-                        fromPath<{ title: string; date: string; draft: string }>({
+                        fromPath<{ title: string; date: string; draft: string; 'substack-link'?: string }>({
                             path: `./posts/${slug}.md`,
                         }),
                         Effect.map(({ frontmatter }) => ({
@@ -211,6 +211,7 @@ const all = (): Effect.Effect<
                             slug,
                             date: frontmatter.date,
                             draft: frontmatter.draft || 'false',
+                            'substack-link': frontmatter['substack-link'],
                         }))
                     )
                 ),
