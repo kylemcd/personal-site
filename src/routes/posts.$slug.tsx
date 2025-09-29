@@ -29,6 +29,39 @@ export const Route = createFileRoute('/posts/$slug')({
     component: RouteComponent,
     loader: ({ params }) => getPost({ data: { slug: params.slug } }),
     errorComponent: ErrorComponent,
+    head: ({ loaderData, params }) => {
+        const postTitle = loaderData?.frontmatter?.title;
+        const fullTitle = postTitle ? `${postTitle} - Kyle McDonald` : 'Kyle McDonald';
+        const imageUrl = `https://kylemcd.com/open-graph/${params.slug}.png`;
+
+        return {
+            meta: [
+                { title: fullTitle },
+                { property: 'og:title', content: postTitle ?? 'Kyle McDonald' },
+                {
+                    property: 'og:description',
+                    content:
+                        "Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
+                },
+                { property: 'og:url', content: `https://kylemcd.com/posts/${params.slug}` },
+                { property: 'og:image', content: imageUrl },
+                { property: 'og:image:type', content: 'image/png' },
+                { property: 'og:image:width', content: '1200' },
+                { property: 'og:image:height', content: '630' },
+                { property: 'og:site_name', content: 'Kyle McDonald' },
+                { property: 'og:locale', content: 'en-US' },
+                { property: 'og:type', content: 'website' },
+                { name: 'twitter:card', content: 'summary_large_image' },
+                { name: 'twitter:title', content: postTitle ?? 'Kyle McDonald' },
+                {
+                    name: 'twitter:description',
+                    content:
+                        "Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
+                },
+                { name: 'twitter:image', content: imageUrl },
+            ],
+        };
+    },
 });
 
 function RouteComponent() {
@@ -50,29 +83,6 @@ function RouteComponent() {
 
     return (
         <>
-            <head>
-                <title>{frontmatter.title} - Kyle McDonald</title>
-                <meta property="og:image:type" content="image/png" />
-                <meta property="og:image:width" content="1200" />
-                <meta property="og:image:height" content="630" />
-                <meta property="og:title" content="Kyle McDonald" />
-                <meta
-                    property="og:description"
-                    content="Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff."
-                />
-                <meta property="og:url" content={`https://kylemcd.com/posts/${slug}`} />
-                <meta property="og:site_name" content="Kyle McDonald" />
-                <meta property="og:locale" content="en-US" />
-                <meta property="og:image" content={`https://kylemcd.com/open-graph/${slug}.png`} />
-                <meta property="og:type" content="website" />
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content="Kyle McDonald" />
-                <meta
-                    name="twitter:description"
-                    content="Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff."
-                />
-                <meta name="twitter:image" content={`https://kylemcd.com/open-graph/${slug}.png`} />
-            </head>
             <div className="post-layout">
                 <div className="post-container">
                     <div className="post-header">
