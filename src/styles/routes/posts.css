@@ -18,6 +18,10 @@
     padding: var(--spc-16) var(--spc-8);
 }
 
+.post-header:has(.post-substack) {
+    padding-bottom: var(--spc-8);
+}
+
 .post-title {
     text-wrap: balance;
 }
@@ -29,6 +33,25 @@
     flex-direction: row;
     padding: var(--spc-4) var(--spc-8);
     border-bottom: 1px solid var(--color-ui-1);
+}
+
+.post-substack {
+    align-items: center;
+    display: flex;
+    position: relative;
+    padding-left: var(--spc-8);
+    gap: var(--spc-2);
+    align-self: flex-end;
+}
+
+.post-substack a,
+.post-substack i {
+    color: #ff6719; /* Substack orange */
+}
+
+.post-substack a:hover,
+.post-substack a:focus {
+    text-decoration: underline;
 }
 
 .post-author {

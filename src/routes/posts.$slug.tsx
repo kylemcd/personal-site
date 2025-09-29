@@ -15,7 +15,7 @@ const getPost = createServerFn({ method: 'GET' })
     .validator((data: { slug: string }) => data)
     .handler(async ({ data: { slug } }) => {
         const result = Effect.runSyncExit(
-            markdown.fromPath<{ title: string; date: string }>({ path: `./posts/${slug}.md` })
+            markdown.fromPath<{ title: string; date: string; 'substack-link'?: string }>({ path: `./posts/${slug}.md` })
         );
 
         if (Exit.isFailure(result)) {
@@ -50,7 +50,7 @@ export const Route = createFileRoute('/posts/$slug')({
                 { property: 'og:image:height', content: '630' },
                 { property: 'og:site_name', content: 'Kyle McDonald' },
                 { property: 'og:locale', content: 'en-US' },
-                { property: 'og:type', content: 'website' },
+                { property: 'og:type', content: 'article' },
                 { name: 'twitter:card', content: 'summary_large_image' },
                 { name: 'twitter:title', content: postTitle ?? 'Kyle McDonald' },
                 {
@@ -59,6 +59,7 @@ export const Route = createFileRoute('/posts/$slug')({
                         "Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
                 },
                 { name: 'twitter:image', content: imageUrl },
+                { name: 'twitter:image:alt', content: postTitle ?? 'Open graph image' },
             ],
         };
     },
@@ -66,7 +67,6 @@ export const Route = createFileRoute('/posts/$slug')({
 
 function RouteComponent() {
     const { frontmatter, content, tableOfContents, readingTime } = Route.useLoaderData();
-    const { slug } = Route.useParams();
 
     React.useEffect(() => {
         if (content.includes(`class="mermaid"`)) {
@@ -74,12 +74,6 @@ function RouteComponent() {
             mermaid.run();
         }
     }, []);
-
-    const calculateReadingTime = (content: string) => {
-        const words = content.split(' ').length;
-        const readingTime = Math.ceil(words / 200);
-        return readingTime;
-    };
 
     return (
         <>
@@ -95,6 +89,14 @@ function RouteComponent() {
                                 Kyle McDonald
                             </Text>
                         </div>
+                        {frontmatter?.['substack-link'] && (
+                            <div className="post-substack">
+                                <Text as="a" size="0" href={frontmatter['substack-link']} target="_blank">
+                                    Read on Substack
+                                </Text>
+                                <i className="hn hn-external-link" data-text-size="0" />
+                            </div>
+                        )}
                     </div>
                     <div className="post-details">
                         <Text as="span" size="1" color="2">

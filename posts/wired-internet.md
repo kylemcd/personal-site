@@ -3,6 +3,7 @@ title: "Screwdrivers, RJ45, and eye rolls: The struggle for wired internet"
 ps-path: /wired-internet
 date: 2025-09-29
 share: "true"
+substack-link: https://kpmdev.substack.com/p/screwdrivers-rj45-and-eye-rolls-the
 ---
 Since moving into our apartment my office has been as far away from our router as it can possibly get. For day to day use this didn't matter much, but when gaming the latency was becoming unbearable. So of course, something needed to be done and I wasn't going to settle for this unstable wifi connection any longer. 
 ## Living with lag
