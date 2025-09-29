@@ -5,7 +5,6 @@ import mermaid from 'mermaid';
 import React from 'react';
 
 import { ErrorComponent } from '@/components/ErrorComponent';
-import { Navigation } from '@/components/Navigation';
 import { TableOfContents } from '@/components/TableOfContents';
 import { Text } from '@/components/Text';
 import { markdown } from '@/lib/markdown';
