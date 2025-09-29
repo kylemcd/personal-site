@@ -125,3 +125,7 @@
     padding: var(--spc-1);
     border-radius: var(--rnd-2);
 }
+
+[data-post] a {
+    text-decoration: underline;
+}
