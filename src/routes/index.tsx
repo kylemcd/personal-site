@@ -33,6 +33,33 @@ export const Route = createFileRoute('/')({
     component: Home,
     loader: () => getData(),
     errorComponent: ErrorComponent,
+    head: () => ({
+        meta: [
+            { title: 'Kyle McDonald' },
+            { property: 'og:title', content: 'Kyle McDonald' },
+            {
+                property: 'og:description',
+                content:
+                    "Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
+            },
+            { property: 'og:url', content: 'https://kylemcd.com' },
+            { property: 'og:image', content: 'https://kylemcd.com/open-graph/home.png' },
+            { property: 'og:image:type', content: 'image/png' },
+            { property: 'og:image:width', content: '1200' },
+            { property: 'og:image:height', content: '630' },
+            { property: 'og:site_name', content: 'Kyle McDonald' },
+            { property: 'og:locale', content: 'en-US' },
+            { property: 'og:type', content: 'website' },
+            { name: 'twitter:card', content: 'summary_large_image' },
+            { name: 'twitter:title', content: 'Kyle McDonald' },
+            {
+                name: 'twitter:description',
+                content:
+                    "Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
+            },
+            { name: 'twitter:image', content: 'https://kylemcd.com/open-graph/home.png' },
+        ],
+    }),
 });
 
 function Home() {
