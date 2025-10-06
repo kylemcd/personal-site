@@ -19,6 +19,8 @@ RUN bun run og
 FROM oven/bun:${BUN_VERSION}-slim as release
 WORKDIR /docker-build
 
+RUN sed -i 's/hostname:[[:space:]]*["'\'']localhost["'\'']/hostname:"0.0.0.0"/g' .output/server/index.mjs || true
+
 # Copy build output and necessary files
 COPY --from=build /docker-build/.output ./.output
 COPY --from=build /docker-build/package.json ./
