@@ -3,6 +3,24 @@ import { defineConfig } from 'vite';
 import type { PluginOption } from 'vite';
 import tsConfigPaths from 'vite-tsconfig-paths';
 
+function stubHeavyLibsForSSR(): PluginOption {
+    return {
+        name: 'stub-heavy-libs-for-ssr',
+        resolveId(id, _importer, options) {
+            if (options?.ssr && (id === 'fast-check' || id.startsWith('pure-rand'))) {
+                return '\0empty-ssr-stub';
+            }
+            return null;
+        },
+        load(id) {
+            if (id === '\0empty-ssr-stub') {
+                return 'export {}';
+            }
+            return null;
+        },
+    } as PluginOption;
+}
+
 export default defineConfig({
     server: {
         port: 3000,
@@ -20,5 +38,6 @@ export default defineConfig({
             projects: ['./tsconfig.json'],
         }),
         tanstackStart({ target: 'cloudflare' }) as unknown as PluginOption,
+        stubHeavyLibsForSSR(),
     ] as any,
 });
