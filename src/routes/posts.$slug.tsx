@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { Effect, Exit } from 'effect';
-import mermaid from 'mermaid';
 import React from 'react';
 
 import { ErrorComponent } from '@/components/ErrorComponent';
@@ -70,8 +69,12 @@ function RouteComponent() {
 
     React.useEffect(() => {
         if (content.includes(`class="mermaid"`)) {
-            mermaid.initialize({ startOnLoad: true });
-            mermaid.run();
+            // Dynamically import mermaid on the client to avoid bundling it in SSR
+            (async () => {
+                const { default: mermaid } = await import('mermaid');
+                mermaid.initialize({ startOnLoad: true });
+                mermaid.run();
+            })();
         }
     }, []);
 
