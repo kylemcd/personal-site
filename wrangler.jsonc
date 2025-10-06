@@ -4,7 +4,7 @@
     "name": "kylemcd-com",
     "main": ".output/server/index.mjs",
     "build": {
-        "command": "bun run build",
+        "command": "NODE_OPTIONS=--max-old-space-size=3072 bun run build",
         "upload": {
             "format": "modules",
         },
