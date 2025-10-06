@@ -3,6 +3,12 @@
     // Secrets are NOT stored here. Set them with `wrangler secret put`.
     "name": "kylemcd-com",
     "main": ".output/server/index.mjs",
+    "build": {
+        "command": "bun run build",
+        "upload": {
+            "format": "modules",
+        },
+    },
     "compatibility_date": "2025-10-01",
     "compatibility_flags": ["nodejs_compat"],
     // Enable modules syntax for Worker bundle
