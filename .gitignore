@@ -59,3 +59,5 @@ yarn.lock
 /public/build
 .nitro
 .tanstack
+# Local Netlify folder
+.netlify

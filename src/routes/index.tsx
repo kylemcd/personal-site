@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import { Effect, Exit } from 'effect';
+import { Effect } from 'effect';
 
 import { AlbumShelf } from '@/components/AlbumShelf';
 import { Bookshelf } from '@/components/Bookshelf';
@@ -18,15 +18,16 @@ import { spotify } from '@/lib/spotify';
 import '@/styles/routes/home.css';
 
 const getData = createServerFn({ method: 'GET' }).handler(async () => {
-    const result = await Effect.runPromiseExit(
-        Effect.all([iracing.summary(), spotify.tracks(), books.shelf(), markdown.all()])
+    const result = await Effect.runPromise(
+        Effect.all([
+            iracing.summary().pipe(Effect.catchAll(() => Effect.succeed({ races: [] }))),
+            spotify.tracks().pipe(Effect.catchAll(() => Effect.succeed([]))),
+            books.shelf().pipe(Effect.catchAll(() => Effect.succeed({ reading: [], finished: [], next: [] }))),
+            markdown.all().pipe(Effect.catchAll(() => Effect.succeed([]))),
+        ])
     );
 
-    if (Exit.isFailure(result)) {
-        throw result;
-    }
-
-    return { iracing: result.value[0], spotify: result.value[1], books: result.value[2], writing: result.value[3] };
+    return { iracing: result[0], spotify: result[1], books: result[2], writing: result[3] };
 });
 
 export const Route = createFileRoute('/')({
