@@ -32,6 +32,10 @@ export default defineConfig({
     ssr: {
         // Keep mermaid out of the server bundle; it's loaded dynamically on the client
         external: ['mermaid'],
+        noExternal: [
+            // ensure Effect stays ESM-resolved while stubbing FastCheck subpath
+            /^effect\/dist\/(esm|cjs)\/Schema\.js$/,
+        ],
     },
     plugins: [
         tsConfigPaths({
