@@ -21,11 +21,8 @@ const getData = createServerFn({ method: 'GET' }).handler(async () => {
     const result = await Effect.runPromise(
         Effect.all([
             iracing.summary().pipe(Effect.catchAll(() => Effect.succeed({ races: [] }))),
-
             spotify.tracks().pipe(Effect.catchAll(() => Effect.succeed([]))),
-
             books.shelf().pipe(Effect.catchAll(() => Effect.succeed({ reading: [], finished: [], next: [] }))),
-
             markdown.all().pipe(Effect.catchAll(() => Effect.succeed([]))),
         ])
     );
