@@ -1,29 +1,14 @@
 {
-    // Cloudflare Worker configuration for personal-site
-    // Secrets are NOT stored here. Set them with `wrangler secret put`.
+    "$schema": "node_modules/wrangler/config-schema.json",
     "name": "kylemcd-com",
-    "main": ".output/server/index.mjs",
-    "build": {
-        "command": "NODE_OPTIONS=--max-old-space-size=3072 bun run build",
-        "upload": {
-            "format": "modules",
-        },
-    },
-    "compatibility_date": "2025-10-01",
-    "compatibility_flags": ["nodejs_compat"],
-    // Enable modules syntax for Worker bundle
-    "workers_dev": true,
-    "assets": {
-        // Serve static assets from the public directory if needed
-        "directory": "public",
-        "binding": "__STATIC_CONTENT",
-    },
-    // Declare environment variable bindings (names only). Do NOT put values here.
-    // Use `wrangler secret put <NAME>` to set them per environment.
-    "vars": {
-        // Placeholder keys only; values are provided via secrets at deploy time.
-    },
+    "main": "./.output/server/index.mjs",
+    "compatibility_date": "2025-06-14",
     "observability": {
         "enabled": true,
     },
+    "vars": {},
+    "assets": {
+        "directory": "./.output/public/",
+    },
+    "compatibility_flags": ["nodejs_compat"],
 }
