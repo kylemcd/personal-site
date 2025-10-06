@@ -2,7 +2,7 @@ import { defineNitroConfig } from 'nitropack/config';
 
 export default defineNitroConfig({
     preset: 'cloudflare-worker',
-    sourcemap: false,
+    sourceMap: false,
     externals: {
         // Keep heavy, client-only, or test-only libs out of the server bundle
         external: ['mermaid', 'katex', 'cytoscape', '@resvg/resvg-js', 'satori'],
