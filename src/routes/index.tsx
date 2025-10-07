@@ -3,15 +3,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { Effect } from "effect";
 
 import { AlbumShelf } from "@/components/AlbumShelf";
-// import { Bookshelf } from "@/components/Bookshelf";
+import { Bookshelf } from "@/components/Bookshelf";
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { Experience } from "@/components/Experience";
 import { HomeHero } from "@/components/HomeHero";
-// import { HorizontalScrollContainer } from "@/components/HorizontalScrollContainer";
+import { HorizontalScrollContainer } from "@/components/HorizontalScrollContainer";
 import { RacingStats } from "@/components/RacingStats";
 import { Text } from "@/components/Text";
 import { WritingList } from "@/components/WritingList";
-// import { books } from "@/lib/books";
+import { books } from "@/lib/books";
 import { iracing } from "@/lib/iracing";
 import { markdown } from "@/lib/markdown";
 import { spotify } from "@/lib/spotify";
@@ -24,17 +24,14 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 				.summary()
 				.pipe(Effect.catchAll(() => Effect.succeed({ races: [] }))),
 			spotify.tracks().pipe(Effect.catchAll(() => Effect.succeed([]))),
-			markdown
-				.all()
-				.pipe(Effect.catchAll(() => Effect.succeed([]))),
-			// TODO: Add back once literal.club is back up
-			// books
-			// 	.shelf()
-			// 	.pipe(
-			// 		Effect.catchAll(() =>
-			// 			Effect.succeed({ reading: [], finished: [], next: [] }),
-			// 		),
-			// 	),
+			markdown.all().pipe(Effect.catchAll(() => Effect.succeed([]))),
+			books
+				.shelf()
+				.pipe(
+					Effect.catchAll(() =>
+						Effect.succeed({ reading: [], finished: [], next: [] }),
+					),
+				),
 		]),
 	);
 
@@ -42,7 +39,7 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 		iracing: result[0],
 		spotify: result[1],
 		writing: result[2],
-		// books: result[3],
+		books: result[3],
 	};
 });
 
@@ -86,7 +83,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-	const { iracing, spotify, writing } = Route.useLoaderData();
+	const { iracing, spotify, writing, books } = Route.useLoaderData();
 
 	return (
 		<>
@@ -109,22 +106,24 @@ function Home() {
 				</Text>
 				<AlbumShelf albums={spotify} />
 			</div>
-			{/* <div className="section-container section-container-flush-right">
-				<HorizontalScrollContainer className="bookshelf-container">
-					<div className="bookshelf-section">
-						<Text as="h2" size="2">
-							Reading
-						</Text>
-						<Bookshelf books={books.reading} />
-					</div>
-					<div className="bookshelf-section">
-						<Text as="h2" size="2">
-							Finished
-						</Text>
-						<Bookshelf books={books.finished} />
-					</div>
-				</HorizontalScrollContainer>
-			</div> */}
+			{(books?.reading || books?.finished) && (
+				<div className="section-container section-container-flush-right">
+					<HorizontalScrollContainer className="bookshelf-container">
+						<div className="bookshelf-section">
+							<Text as="h2" size="2">
+								Reading
+							</Text>
+							<Bookshelf books={books.reading} />
+						</div>
+						<div className="bookshelf-section">
+							<Text as="h2" size="2">
+								Finished
+							</Text>
+							<Bookshelf books={books.finished} />
+						</div>
+					</HorizontalScrollContainer>
+				</div>
+			)}
 			<div className="section-container">
 				<Text as="h2" size="2" weight="500">
 					Racing
