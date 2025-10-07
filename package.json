@@ -11,7 +11,9 @@
     "lint": "biome lint",
     "check": "biome check",
     "deploy": "wrangler deploy",
-    "og": "vite-node src/lib/open-graph/index.tsx"
+    "og": "npx vite-node --config vite.og.config.ts src/lib/open-graph/index.tsx"
+    
+
   },
   "dependencies": {
     "@hackernoon/pixel-icon-library": "^1.0.6",
@@ -48,10 +50,10 @@
     "jsdom": "^27.0.0",
     "typescript": "^5.7.2",
     "vite": "^7.1.7",
-    "vitest": "^3.0.5",
-    "web-vitals": "^5.1.0",
     "vite-node": "^3.2.4",
     "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.0.5",
+    "web-vitals": "^5.1.0",
     "wrangler": "^4.40.3"
   }
 }

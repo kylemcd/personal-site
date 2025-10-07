@@ -4,7 +4,10 @@
   "compatibility_date": "2025-09-02",
   "compatibility_flags": ["nodejs_compat"],
   "main": "@tanstack/react-start/server-entry",
-  "vars": {
-    "MY_VAR": "Hello from Cloudflare"
-  }
+  "routes": [
+    { "pattern": "kpm.sh", "custom_domain": true },
+    { "pattern": "www.kpm.sh", "custom_domain": true },
+    { "pattern": "kylemcd.com", "custom_domain": true },
+    { "pattern": "www.kylemcd.com", "custom_domain": true }
+  ]
 }
