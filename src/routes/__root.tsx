@@ -78,6 +78,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 		<html lang="en">
 			<head>
 				<HeadContent />
+				<link rel="icon" href="/images/avatar.png" type="image/png" />
 			</head>
 			<body>
 				<div className="page-container">
@@ -85,17 +86,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					{children}
 				</div>
 				<Footer />
-				<TanStackDevtools
-					config={{
-						position: "bottom-right",
-					}}
-					plugins={[
-						{
-							name: "Tanstack Router",
-							render: <TanStackRouterDevtoolsPanel />,
-						},
-					]}
-				/>
 				<Scripts />
 				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: I want to do this. */}
 				<script dangerouslySetInnerHTML={{ __html: themeScript }} />
