@@ -1,30 +1,30 @@
 import { HorizontalScrollContainer } from '@/components/HorizontalScrollContainer';
 import { Text } from '@/components/Text';
-import { TrackItemSchema } from '@/lib/spotify/schema';
+import { AlbumSchema } from '@/lib/lastfm/schema';
 
 import './Album.styles.css';
 
 type AlbumShelfProps = {
-    albums: ReadonlyArray<typeof TrackItemSchema.Type>;
+    albums: ReadonlyArray<typeof AlbumSchema.Type>;
+};
+
+const getAlbumImage = (images: typeof AlbumSchema.Type['image']) => {
+    const extralarge = images.find((img) => img.size === 'extralarge');
+    return extralarge?.['#text'] ?? images[images.length - 1]?.['#text'] ?? '';
 };
 
 function AlbumShelf({ albums }: AlbumShelfProps) {
     return (
         <HorizontalScrollContainer className="album-shelf">
             {albums.map((album) => (
-                <a
-                    className="album"
-                    key={album.track.id}
-                    href={`https://open.spotify.com/track/${album.track.id}`}
-                    target="_blank"
-                >
-                    <img src={album.track.album.images[0].url} alt={album.track.name} className="album-image" />
+                <a className="album" key={album.url} href={album.url} target="_blank" rel="noopener noreferrer">
+                    <img src={getAlbumImage(album.image)} alt={album.name} className="album-image" />
                     <div className="album-info">
                         <Text as="p" size="1">
-                            {album.track.name}
+                            {album.name}
                         </Text>
                         <Text as="p" size="0" color="2">
-                            {album.track.artists.map((artist) => artist.name).join(', ')}
+                            {album.artist.name}
                         </Text>
                     </div>
                 </a>
