@@ -19,6 +19,11 @@ export const NowPlayingAttrSchema = Schema.Struct({
 	nowplaying: Schema.String,
 }).annotations({ exact: false });
 
+export const TrackDateSchema = Schema.Struct({
+	uts: Schema.String,
+	"#text": Schema.String,
+}).annotations({ exact: false });
+
 export const TrackSchema = Schema.Struct({
 	name: Schema.String,
 	artist: TrackArtistSchema,
@@ -26,6 +31,7 @@ export const TrackSchema = Schema.Struct({
 	image: Schema.Array(ImageSchema),
 	url: Schema.String,
 	"@attr": Schema.optional(NowPlayingAttrSchema),
+	date: Schema.optional(TrackDateSchema),
 }).annotations({ exact: false });
 
 export const RecentTracksResponseSchema = Schema.Struct({
@@ -46,9 +52,17 @@ export type Album = {
 };
 
 /**
+ * Now playing album with track info
+ */
+export type NowPlayingAlbum = Album & {
+	trackName: string;
+	trackUrl: string;
+};
+
+/**
  * Combined listening data
  */
 export type ListeningData = {
-	nowPlaying: Album | null;
+	nowPlaying: NowPlayingAlbum | null;
 	albums: Album[];
 };

@@ -5,6 +5,7 @@ import { fetchFresh } from "@/lib/fetch";
 import {
 	type Album,
 	type ListeningData,
+	type NowPlayingAlbum,
 	RecentTracksResponseSchema,
 	type TrackSchema,
 } from "./schema";
@@ -18,41 +19,93 @@ class LastFmRecentAlbumsError extends Data.TaggedError(
 const LASTFM_USERNAME = "kylemcd1";
 const LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
 const ALBUMS_LIMIT = 20;
+const RECENTLY_PLAYED_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
 const getAlbumImage = (images: (typeof TrackSchema.Type)["image"]) => {
 	const extralarge = images.find((img) => img.size === "extralarge");
 	return extralarge?.["#text"] ?? images[images.length - 1]?.["#text"] ?? "";
 };
 
+const encode = (str: string) => encodeURIComponent(str).replace(/%20/g, "+");
+
 const getAlbumUrl = (artist: string, album: string) => {
-	const encode = (str: string) => encodeURIComponent(str).replace(/%20/g, "+");
 	return `https://www.last.fm/music/${encode(artist)}/${encode(album)}`;
+};
+
+const getTrackUrl = (artist: string, track: string) => {
+	return `https://www.last.fm/music/${encode(artist)}/_/${encode(track)}`;
+};
+
+const trackToAlbum = (
+	track: typeof TrackSchema.Type,
+	requireMbid = true,
+): Album | null => {
+	if (requireMbid && !track.album.mbid) return null;
+
+	// Generate a fallback mbid from album + artist if not present
+	const mbid =
+		track.album.mbid ||
+		`${track.album["#text"]}-${track.artist["#text"]}`.toLowerCase();
+
+	return {
+		name: track.album["#text"],
+		mbid,
+		artist: track.artist["#text"],
+		image: getAlbumImage(track.image),
+		url: getAlbumUrl(track.artist["#text"], track.album["#text"]),
+	};
+};
+
+const trackToNowPlayingAlbum = (
+	track: typeof TrackSchema.Type,
+): NowPlayingAlbum | null => {
+	const album = trackToAlbum(track, false);
+	if (!album) return null;
+
+	return {
+		...album,
+		trackName: track.name,
+		trackUrl: getTrackUrl(track.artist["#text"], track.name),
+	};
+};
+
+/**
+ * Checks if a track was played within the threshold (5 minutes).
+ */
+const isRecentlyPlayed = (track: typeof TrackSchema.Type): boolean => {
+	if (!track.date?.uts) return false;
+
+	const playedAt = Number.parseInt(track.date.uts, 10) * 1000;
+	const now = Date.now();
+
+	return now - playedAt <= RECENTLY_PLAYED_THRESHOLD_MS;
 };
 
 /**
  * Extracts the now playing album if present.
- * Returns null if not currently playing or if the album has no mbid.
+ * First checks for a track tagged as now playing.
+ * Falls back to a recently played track (within 5 minutes).
+ * Returns null if nothing is playing or recently played.
  */
 const extractNowPlaying = (
 	tracks: ReadonlyArray<typeof TrackSchema.Type>,
-): Album | null => {
+): NowPlayingAlbum | null => {
+	// First, check for a track tagged as now playing
 	const nowPlayingTrack = tracks.find(
 		(track) => track["@attr"]?.nowplaying === "true",
 	);
 
-	if (!nowPlayingTrack) return null;
-	if (!nowPlayingTrack.album.mbid) return null;
+	if (nowPlayingTrack) {
+		return trackToNowPlayingAlbum(nowPlayingTrack);
+	}
 
-	return {
-		name: nowPlayingTrack.album["#text"],
-		mbid: nowPlayingTrack.album.mbid,
-		artist: nowPlayingTrack.artist["#text"],
-		image: getAlbumImage(nowPlayingTrack.image),
-		url: getAlbumUrl(
-			nowPlayingTrack.artist["#text"],
-			nowPlayingTrack.album["#text"],
-		),
-	};
+	// Fall back to the most recent track if played within 5 minutes
+	const mostRecentTrack = tracks[0];
+	if (mostRecentTrack?.date?.uts && isRecentlyPlayed(mostRecentTrack)) {
+		return trackToNowPlayingAlbum(mostRecentTrack);
+	}
+
+	return null;
 };
 
 /**

@@ -1,6 +1,8 @@
+import { useEffect, useRef, useState } from "react";
+
 import { HorizontalScrollContainer } from "@/components/HorizontalScrollContainer";
 import { Text } from "@/components/Text";
-import type { Album } from "@/lib/lastfm/schema";
+import type { Album, NowPlayingAlbum } from "@/lib/lastfm/schema";
 
 import "./Album.styles.css";
 
@@ -14,23 +16,58 @@ function Equalizer() {
 	);
 }
 
+type MarqueeProps = {
+	text: string;
+	size?: "0" | "1";
+	color?: "1" | "2";
+};
+
+function Marquee({ text, size = "1", color = "1" }: MarqueeProps) {
+	const containerRef = useRef<HTMLSpanElement>(null);
+	const textRef = useRef<HTMLSpanElement>(null);
+	const [shouldScroll, setShouldScroll] = useState(false);
+
+	useEffect(() => {
+		const container = containerRef.current;
+		const textEl = textRef.current;
+
+		if (container && textEl) {
+			const isOverflowing = textEl.scrollWidth > container.clientWidth;
+			setShouldScroll(isOverflowing);
+		}
+	}, []);
+
+	return (
+		<span
+			className="marquee"
+			data-size={size}
+			data-color={color}
+			data-scroll={shouldScroll}
+			ref={containerRef}
+		>
+			<span className="marquee-content">
+				<span ref={textRef}>{text}</span>
+				{shouldScroll && <span aria-hidden="true">{text}</span>}
+			</span>
+		</span>
+	);
+}
+
 type NowPlayingProps = {
-	album: Album;
+	album: NowPlayingAlbum;
 };
 
 function NowPlaying({ album }: NowPlayingProps) {
 	return (
 		<a
 			className="now-playing"
-			href={album.url}
+			href={album.trackUrl}
 			target="_blank"
 			rel="noopener noreferrer"
 		>
 			<img src={album.image} alt={album.name} className="now-playing-image" />
 			<div className="now-playing-info">
-				<Text as="p" size="1">
-					{album.name}
-				</Text>
+				<Marquee text={album.trackName} size="1" color="1" />
 				<Text as="p" size="0" color="2">
 					{album.artist}
 				</Text>
