@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Effect } from "effect";
 
-import { AlbumShelf } from "@/components/AlbumShelf";
+import { AlbumShelf, Equalizer, NowPlaying } from "@/components/AlbumShelf";
 import { Bookshelf } from "@/components/Bookshelf";
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { Experience } from "@/components/Experience";
@@ -18,7 +18,13 @@ import "@/styles/routes/home.css";
 const getData = createServerFn({ method: "GET" }).handler(async () => {
 	const result = await Effect.runPromise(
 		Effect.all([
-			lastfm.topAlbums().pipe(Effect.catchAll(() => Effect.succeed([]))),
+			lastfm
+				.recentActivity()
+				.pipe(
+					Effect.catchAll(() =>
+						Effect.succeed({ nowPlaying: null, albums: [] }),
+					),
+				),
 			markdown.all().pipe(Effect.catchAll(() => Effect.succeed([]))),
 			books
 				.shelf()
@@ -31,7 +37,7 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 	);
 
 	return {
-		albums: result[0],
+		listening: result[0],
 		writing: result[1],
 		books: result[2],
 	};
@@ -77,7 +83,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-	const { albums, writing, books } = Route.useLoaderData();
+	const { listening, writing, books } = Route.useLoaderData();
 
 	return (
 		<>
@@ -95,10 +101,25 @@ function Home() {
 				<Experience />
 			</div>
 			<div className="section-container section-container-flush-right">
-				<Text as="h2" size="2">
-					Listening
-				</Text>
-				<AlbumShelf albums={albums} />
+				<HorizontalScrollContainer className="listening-container">
+					{listening.nowPlaying && (
+						<div className="listening-section">
+							<div className="listening-section-header">
+								<Text as="h2" size="2">
+									Now
+								</Text>
+								<Equalizer />
+							</div>
+							<NowPlaying album={listening.nowPlaying} />
+						</div>
+					)}
+					<div className="listening-section">
+						<Text as="h2" size="2">
+							Recently Played
+						</Text>
+						<AlbumShelf albums={listening.albums} />
+					</div>
+				</HorizontalScrollContainer>
 			</div>
 			{(books?.reading || books?.finished) && (
 				<div className="section-container section-container-flush-right">

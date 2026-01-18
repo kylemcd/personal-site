@@ -1,1 +1,1 @@
-export { AlbumShelf } from './AlbumShelf';
+export { AlbumShelf, Equalizer, NowPlaying } from "./AlbumShelf";
