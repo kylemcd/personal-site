@@ -120,6 +120,7 @@
 	max-width: 175px;
 	overflow: hidden;
 	white-space: nowrap;
+	font-weight: 400;
 }
 
 .marquee[data-scroll="true"] {
