@@ -12,8 +12,6 @@
     "check": "biome check",
     "deploy": "wrangler deploy",
     "og": "npx vite-node --config vite.og.config.ts src/lib/open-graph/index.tsx"
-    
-
   },
   "dependencies": {
     "@hackernoon/pixel-icon-library": "^1.0.6",
@@ -29,6 +27,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/prismjs": "^1.26.5",
     "effect": "^3.18.4",
+    "fast-xml-parser": "^5.3.4",
     "js-yaml": "^4.1.0",
     "lucide-react": "^0.544.0",
     "mermaid": "^11.12.0",

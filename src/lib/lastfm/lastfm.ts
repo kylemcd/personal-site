@@ -21,6 +21,17 @@ const LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
 const ALBUMS_LIMIT = 20;
 const RECENTLY_PLAYED_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
+// Last.fm's default placeholder image (the star icon) hash
+const LASTFM_PLACEHOLDER_HASH = "2a96cbd8b46e442fc41c2b86b821562f";
+
+/**
+ * Checks if an image URL is Last.fm's default placeholder (star icon).
+ */
+const isPlaceholderImage = (imageUrl: string): boolean => {
+	if (!imageUrl) return true;
+	return imageUrl.includes(LASTFM_PLACEHOLDER_HASH);
+};
+
 const getAlbumImage = (images: (typeof TrackSchema.Type)["image"]) => {
 	const extralarge = images.find((img) => img.size === "extralarge");
 	return extralarge?.["#text"] ?? images[images.length - 1]?.["#text"] ?? "";
@@ -42,17 +53,19 @@ const trackToAlbum = (
 ): Album | null => {
 	if (requireMbid && !track.album.mbid) return null;
 
-	// Generate a fallback mbid from album + artist if not present
+	const primaryArtist = getPrimaryArtist(track.artist["#text"]);
+
+	// Generate a fallback mbid from album + primary artist if not present
 	const mbid =
 		track.album.mbid ||
-		`${track.album["#text"]}-${track.artist["#text"]}`.toLowerCase();
+		`${track.album["#text"]}-${primaryArtist}`.toLowerCase();
 
 	return {
 		name: track.album["#text"],
 		mbid,
-		artist: track.artist["#text"],
+		artist: primaryArtist,
 		image: getAlbumImage(track.image),
-		url: getAlbumUrl(track.artist["#text"], track.album["#text"]),
+		url: getAlbumUrl(primaryArtist, track.album["#text"]),
 	};
 };
 
@@ -109,36 +122,89 @@ const extractNowPlaying = (
 };
 
 /**
+ * Extracts the primary artist name, removing featured artists.
+ * e.g., "Grayscale & Derek Sanders" -> "Grayscale"
+ *       "Artist feat. Other" -> "Artist"
+ */
+const getPrimaryArtist = (artistName: string): string => {
+	// Split on common featured artist separators
+	const separators = [
+		" & ",
+		" and ",
+		" feat. ",
+		" feat ",
+		" ft. ",
+		" ft ",
+		" x ",
+		" X ",
+	];
+
+	let primary = artistName;
+	for (const sep of separators) {
+		const index = primary.toLowerCase().indexOf(sep.toLowerCase());
+		if (index > 0) {
+			primary = primary.substring(0, index);
+		}
+	}
+
+	return primary.trim();
+};
+
+/**
+ * Creates a unique key for an album based on name and primary artist.
+ * Uses primary artist to avoid duplicates from featured artist variations.
+ */
+const getAlbumKey = (albumName: string, artistName: string): string => {
+	const primaryArtist = getPrimaryArtist(artistName);
+	return `${albumName.toLowerCase()}::${primaryArtist.toLowerCase()}`;
+};
+
+/**
  * Extracts unique albums from recent tracks.
- * Albums without an mbid are excluded.
+ * Uses album name + artist as unique identifier (not mbid, since many albums lack it).
  * Excludes the now playing album if provided.
  * Maintains order (newest first).
  */
 const extractUniqueAlbums = (
 	tracks: ReadonlyArray<typeof TrackSchema.Type>,
-	nowPlayingMbid: string | null,
+	nowPlayingKey: string | null,
 ): Album[] => {
 	const seen = new Set<string>();
 	const albums: Album[] = [];
 
-	// Pre-add now playing mbid to seen set to exclude it
-	if (nowPlayingMbid) {
-		seen.add(nowPlayingMbid);
+	// Pre-add now playing key to seen set to exclude it
+	if (nowPlayingKey) {
+		seen.add(nowPlayingKey);
 	}
 
 	for (const track of tracks) {
 		// Skip now playing track
 		if (track["@attr"]?.nowplaying === "true") continue;
-		if (!track.album.mbid) continue;
-		if (seen.has(track.album.mbid)) continue;
 
-		seen.add(track.album.mbid);
+		// Skip tracks without album name
+		if (!track.album["#text"]) continue;
+
+		// Skip albums with placeholder/default cover art
+		const image = getAlbumImage(track.image);
+		if (isPlaceholderImage(image)) continue;
+
+		const primaryArtist = getPrimaryArtist(track.artist["#text"]);
+		const albumKey = getAlbumKey(track.album["#text"], track.artist["#text"]);
+		if (seen.has(albumKey)) continue;
+
+		seen.add(albumKey);
+
+		// Use mbid if available, otherwise generate from album + primary artist
+		const mbid =
+			track.album.mbid ||
+			`${track.album["#text"]}-${primaryArtist}`.toLowerCase();
+
 		albums.push({
 			name: track.album["#text"],
-			mbid: track.album.mbid,
-			artist: track.artist["#text"],
-			image: getAlbumImage(track.image),
-			url: getAlbumUrl(track.artist["#text"], track.album["#text"]),
+			mbid,
+			artist: primaryArtist,
+			image,
+			url: getAlbumUrl(primaryArtist, track.album["#text"]),
 		});
 
 		if (albums.length >= ALBUMS_LIMIT) break;
@@ -154,7 +220,10 @@ const extractListeningData = (
 	tracks: ReadonlyArray<typeof TrackSchema.Type>,
 ): ListeningData => {
 	const nowPlaying = extractNowPlaying(tracks);
-	const albums = extractUniqueAlbums(tracks, nowPlaying?.mbid ?? null);
+	const nowPlayingKey = nowPlaying
+		? getAlbumKey(nowPlaying.name, nowPlaying.artist)
+		: null;
+	const albums = extractUniqueAlbums(tracks, nowPlayingKey);
 
 	return { nowPlaying, albums };
 };

@@ -10,7 +10,7 @@ import { HomeHero } from "@/components/HomeHero";
 import { HorizontalScrollContainer } from "@/components/HorizontalScrollContainer";
 import { Text } from "@/components/Text";
 import { WritingList } from "@/components/WritingList";
-import { books } from "@/lib/books";
+import { goodreads } from "@/lib/goodreads";
 import { lastfm } from "@/lib/lastfm";
 import { markdown } from "@/lib/markdown";
 import "@/styles/routes/home.css";
@@ -26,7 +26,7 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 					),
 				),
 			markdown.all().pipe(Effect.catchAll(() => Effect.succeed([]))),
-			books
+			goodreads
 				.shelf()
 				.pipe(
 					Effect.catchAll(() =>
