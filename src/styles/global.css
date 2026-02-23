@@ -1,13 +1,13 @@
-@import './global/reset.css';
-@import './global/fonts.css';
-@import './global/default.css';
-@import './global/rounded.css';
-@import './global/spacing.css';
-@import './global/tokens.css';
-@import './global/animations.css';
+@import "./global/reset.css";
+@import "./global/fonts.css";
+@import "./global/default.css";
+@import "./global/rounded.css";
+@import "./global/spacing.css";
+@import "./global/tokens.css";
+@import "./global/animations.css";
 
 /* Components */
-@import './global/list.css';
+@import "./global/list.css";
 
 /* Icons */
-@import '@hackernoon/pixel-icon-library/fonts/iconfont.css';
+@import "@hackernoon/pixel-icon-library/fonts/iconfont.css";

@@ -4,6 +4,12 @@
 	gap: var(--spc-8);
 }
 
+.listening-stack {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spc-6) + var(--spc-1));
+}
+
 .listening-section {
 	display: flex;
 	flex-direction: column;

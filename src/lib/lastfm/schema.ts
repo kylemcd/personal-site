@@ -40,6 +40,52 @@ export const RecentTracksResponseSchema = Schema.Struct({
 	}).annotations({ exact: false }),
 }).annotations({ exact: false });
 
+export const TopTrackItemSchema = Schema.Struct({
+	name: Schema.String,
+	playcount: Schema.String,
+	url: Schema.String,
+	duration: Schema.optional(Schema.String),
+	artist: Schema.Struct({
+		name: Schema.String,
+	}).annotations({ exact: false }),
+	image: Schema.Array(ImageSchema),
+}).annotations({ exact: false });
+
+export const TopTracksResponseSchema = Schema.Struct({
+	toptracks: Schema.Struct({
+		track: Schema.Array(TopTrackItemSchema),
+	}).annotations({ exact: false }),
+}).annotations({ exact: false });
+
+export const TopArtistItemSchema = Schema.Struct({
+	name: Schema.String,
+	playcount: Schema.String,
+	url: Schema.String,
+	image: Schema.Array(ImageSchema),
+}).annotations({ exact: false });
+
+export const TopArtistsResponseSchema = Schema.Struct({
+	topartists: Schema.Struct({
+		artist: Schema.Array(TopArtistItemSchema),
+	}).annotations({ exact: false }),
+}).annotations({ exact: false });
+
+export const TopAlbumItemSchema = Schema.Struct({
+	name: Schema.String,
+	playcount: Schema.String,
+	url: Schema.String,
+	artist: Schema.Struct({
+		name: Schema.String,
+	}).annotations({ exact: false }),
+	image: Schema.Array(ImageSchema),
+}).annotations({ exact: false });
+
+export const TopAlbumsResponseSchema = Schema.Struct({
+	topalbums: Schema.Struct({
+		album: Schema.Array(TopAlbumItemSchema),
+	}).annotations({ exact: false }),
+}).annotations({ exact: false });
+
 /**
  * Normalized album type for use in components
  */
@@ -60,9 +106,54 @@ export type NowPlayingAlbum = Album & {
 };
 
 /**
+ * Monthly listening summary for wrapped-style UI
+ */
+export type WrappedData = {
+	monthStartIso: string;
+	totalScrobbles: number;
+	uniqueArtists: number;
+	topArtist: {
+		name: string;
+		plays: number;
+		share: number;
+	};
+	topTrack: {
+		name: string;
+		artist: string;
+		artistUrl: string;
+		plays: number;
+		url: string;
+	};
+	topArtists: Array<{
+		name: string;
+		plays: number;
+		share: number;
+		url: string;
+	}>;
+	topTracks: Array<{
+		name: string;
+		artist: string;
+		artistUrl: string;
+		plays: number;
+		share: number;
+		url: string;
+	}>;
+	topAlbums: Array<{
+		name: string;
+		artist: string;
+		artistUrl: string;
+		plays: number;
+		share: number;
+		url: string;
+	}>;
+	funFacts: string[];
+};
+
+/**
  * Combined listening data
  */
 export type ListeningData = {
 	nowPlaying: NowPlayingAlbum | null;
 	albums: Album[];
+	wrapped: WrappedData | null;
 };

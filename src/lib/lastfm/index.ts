@@ -1,1 +1,1 @@
-export { lastfm } from './lastfm';
+export { lastfm } from "./lastfm";

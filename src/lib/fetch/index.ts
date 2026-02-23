@@ -1,1 +1,1 @@
-export { fetchFresh, fetchCache, fetchRevalidate } from './fetch';
+export { fetchFresh, fetchCache, fetchRevalidate } from "./fetch";

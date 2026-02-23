@@ -9,6 +9,7 @@ import { Experience } from "@/components/Experience";
 import { HomeHero } from "@/components/HomeHero";
 import { HorizontalScrollContainer } from "@/components/HorizontalScrollContainer";
 import { Text } from "@/components/Text";
+import { WrappedListening } from "@/components/WrappedListening";
 import { WritingList } from "@/components/WritingList";
 import { goodreads } from "@/lib/goodreads";
 import { lastfm } from "@/lib/lastfm";
@@ -22,7 +23,7 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 				.recentActivity()
 				.pipe(
 					Effect.catchAll(() =>
-						Effect.succeed({ nowPlaying: null, albums: [] }),
+						Effect.succeed({ nowPlaying: null, albums: [], wrapped: null }),
 					),
 				),
 			markdown.all().pipe(Effect.catchAll(() => Effect.succeed([]))),
@@ -101,25 +102,30 @@ function Home() {
 				<Experience />
 			</div>
 			<div className="section-container section-container-flush-right">
-				<HorizontalScrollContainer className="listening-container">
-					{listening.nowPlaying && (
-						<div className="listening-section">
-							<div className="listening-section-header">
-								<Text as="h2" size="2">
-									Now
-								</Text>
-								<Equalizer />
-							</div>
-							<NowPlaying album={listening.nowPlaying} />
-						</div>
+				<div className="listening-stack">
+					{listening.wrapped && (
+						<WrappedListening wrapped={listening.wrapped} />
 					)}
-					<div className="listening-section">
-						<Text as="h2" size="2">
-							Recently Played
-						</Text>
-						<AlbumShelf albums={listening.albums} />
-					</div>
-				</HorizontalScrollContainer>
+					<HorizontalScrollContainer className="listening-container">
+						{listening.nowPlaying && (
+							<div className="listening-section">
+								<div className="listening-section-header">
+									<Text as="h2" size="2">
+										Now
+									</Text>
+									<Equalizer />
+								</div>
+								<NowPlaying album={listening.nowPlaying} />
+							</div>
+						)}
+						<div className="listening-section">
+							<Text as="h2" size="2">
+								Recently Played
+							</Text>
+							<AlbumShelf albums={listening.albums} />
+						</div>
+					</HorizontalScrollContainer>
+				</div>
 			</div>
 			{(books?.reading || books?.finished) && (
 				<div className="section-container section-container-flush-right">

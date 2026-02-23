@@ -1,11 +1,11 @@
 html,
 body {
-    font-family: var(--font-family-sans);
-    font-weight: 300;
-    color: var(--color-text-1);
-    font-size: 1rem;
-    line-height: 1.6rem;
-    background-color: var(--color-bg-1);
+	font-family: var(--font-family-sans);
+	font-weight: 300;
+	color: var(--color-text-1);
+	font-size: 1rem;
+	line-height: 1.6rem;
+	background-color: var(--color-bg-1);
 }
 
 h1,
@@ -14,31 +14,31 @@ h3,
 h4,
 h5,
 h6 {
-    font-weight: 500;
+	font-weight: 500;
 }
 
 h1 {
-    font-size: 1.75rem;
-    line-height: 2.25rem;
+	font-size: 1.75rem;
+	line-height: 2.25rem;
 }
 
 h2 {
-    font-size: 1.5rem;
-    line-height: 2rem;
+	font-size: 1.5rem;
+	line-height: 2rem;
 }
 
 h3,
 h4,
 h5,
 h6 {
-    font-size: 1.25rem;
-    line-height: 1.75rem;
+	font-size: 1.25rem;
+	line-height: 1.75rem;
 }
 
 code,
 pre,
 pre *,
 code * {
-    font-size: 0.85rem !important;
-    font-family: var(--font-family-mono);
+	font-size: 0.85rem !important;
+	font-family: var(--font-family-mono);
 }
