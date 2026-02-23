@@ -19,6 +19,7 @@
 	grid-template-columns: 1fr;
 	gap: var(--spc-8);
 	padding-top: var(--spc-4);
+	min-width: 0;
 }
 
 .g61-racing-scroller {
@@ -26,18 +27,22 @@
 	flex-wrap: nowrap;
 	align-items: stretch;
 	gap: var(--spc-2);
-	padding-left: var(--spc-8);
-	padding-right: var(--spc-8);
-}
-
-.g61-racing .g61-racing-scroller > *:last-child {
-	margin-right: 0;
 }
 
 .g61-racing-list-block {
 	display: flex;
 	flex-direction: column;
 	gap: var(--spc-2);
+	min-width: 0;
+}
+
+.g61-racing .horizontal-scroll-container {
+	min-width: 0;
+	max-width: 100%;
+}
+
+.g61-racing-scroller {
+	min-width: 0;
 }
 
 .g61-racing-list-block > h2,
@@ -224,8 +229,6 @@
 
 	.g61-racing-scroller {
 		gap: var(--spc-2);
-		padding-left: var(--spc-4);
-		padding-right: var(--spc-4);
 	}
 
 	.g61-racing-square-card {

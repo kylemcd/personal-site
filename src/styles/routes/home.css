@@ -43,6 +43,16 @@
 	margin-left: var(--spc-8);
 }
 
+/* Same left inset for Garage61 nested horizontal rows */
+.section-container-flush-right > .g61-racing
+	> .g61-racing-recent-lists
+	> .g61-racing-list-block
+	> .horizontal-scroll-container
+	> .horizontal-scroll-container-items
+	> *:first-child {
+	margin-left: var(--spc-8);
+}
+
 .section-container > h2 {
 	margin-bottom: var(--spc-6);
 }
