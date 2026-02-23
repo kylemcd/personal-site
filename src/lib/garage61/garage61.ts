@@ -1,6 +1,7 @@
 import { Config, Data, Effect } from "effect";
 
 import { fetchFresh } from "@/lib/fetch";
+import { getOrComputeJson } from "@/lib/store";
 
 import type { Garage61Summary } from "./schema";
 
@@ -10,6 +11,8 @@ class Garage61Error extends Data.TaggedError("Garage61Error")<Error> {
 
 const GARAGE61_API_URL = "https://garage61.net/api/v1";
 const GARAGE61_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const GARAGE61_SUMMARY_CACHE_TTL_SECONDS = 60 * 60; // 1 hour
+const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v1";
 const LAST_30_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_RECENT_ITEMS = 10;
 const PACE_LADDER_MIN_LAPS = 10;
@@ -491,7 +494,7 @@ const filteredAverageFromLaps = (
 	return safe.reduce((sum, value) => sum + value, 0) / safe.length;
 };
 
-const summary = () =>
+const summaryUncached = () =>
 	Effect.gen(function* () {
 		const nowMs = Date.now();
 		const garage61ApiKey = yield* GARAGE61_API_KEY_CONFIG;
@@ -1188,10 +1191,6 @@ const summary = () =>
 			sharedInsightListLength,
 		);
 
-		yield* Effect.logInfo(
-			`[garage61] window=${windowLabel} tracks=${trackIds.length} cars=${carIds.length} stats=${nonOvalStatistics.length}`,
-		);
-
 		return {
 			profile: parseProfile(meRes.data),
 			statistics: statisticsRes.data,
@@ -1220,6 +1219,13 @@ const summary = () =>
 			},
 		} satisfies Garage61Summary;
 	}).pipe(Effect.mapError((error) => new Garage61Error(error as Error)));
+
+const summary = () =>
+	getOrComputeJson({
+		key: GARAGE61_SUMMARY_CACHE_KEY,
+		ttlSeconds: GARAGE61_SUMMARY_CACHE_TTL_SECONDS,
+		compute: summaryUncached(),
+	});
 
 const garage61 = {
 	summary,

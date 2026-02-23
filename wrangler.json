@@ -3,11 +3,20 @@
   "name": "kylemcd-com",
   "compatibility_date": "2025-09-02",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry",
+  "main": "./worker.ts",
   "routes": [
     { "pattern": "kpm.sh", "custom_domain": true },
     { "pattern": "www.kpm.sh", "custom_domain": true },
     { "pattern": "kylemcd.com", "custom_domain": true },
     { "pattern": "www.kylemcd.com", "custom_domain": true }
-  ]
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "APP_STORE",
+      "id": "80244ef92fd3460587eca71c1c482b07"
+    }
+  ],
+  "triggers": {
+    "crons": ["0 * * * *"]
+  }
 }

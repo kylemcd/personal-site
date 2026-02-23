@@ -2,23 +2,17 @@ import { Data, Effect } from "effect";
 import { XMLParser } from "fast-xml-parser";
 
 import type { BookSchema } from "@/lib/books/schema";
+import { getOrComputeJson } from "@/lib/store";
 
 const GOODREADS_USER_ID = "149477581-kyle-mcdonald";
-const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const GOODREADS_SHELF_CACHE_KEY = "goodreads:shelf:v1";
+const GOODREADS_SHELF_CACHE_TTL_SECONDS = 60 * 60; // 1 hour
 
-// Simple in-memory cache
 type ShelfData = {
 	reading: ReadonlyArray<typeof BookSchema.Type>;
 	finished: ReadonlyArray<typeof BookSchema.Type>;
 	next: ReadonlyArray<typeof BookSchema.Type>;
 };
-
-type CacheEntry = {
-	data: ShelfData;
-	timestamp: number;
-};
-
-let shelfCache: CacheEntry | null = null;
 
 class FetchGoodreadsError extends Data.TaggedError("FetchGoodreadsError")<{
 	readonly error: unknown;
@@ -187,11 +181,6 @@ const getBooks = ({
 	});
 };
 
-const isCacheValid = (): boolean => {
-	if (!shelfCache) return false;
-	return Date.now() - shelfCache.timestamp < CACHE_TTL_MS;
-};
-
 const fetchShelfData = () =>
 	Effect.gen(function* () {
 		const reading = yield* getBooks({ shelf: "currently-reading", limit: 10 });
@@ -207,23 +196,13 @@ const fetchShelfData = () =>
 	});
 
 const shelf = () =>
-	Effect.gen(function* () {
-		// Return cached data if still valid
-		if (isCacheValid() && shelfCache) {
-			return shelfCache.data;
-		}
-
-		// Fetch fresh data
-		const data = yield* fetchShelfData();
-
-		// Update cache
-		shelfCache = {
-			data,
-			timestamp: Date.now(),
-		};
-
-		return data;
-	});
+	getOrComputeJson<ShelfData, FetchGoodreadsError | ParseGoodreadsError, never>(
+		{
+			key: GOODREADS_SHELF_CACHE_KEY,
+			ttlSeconds: GOODREADS_SHELF_CACHE_TTL_SECONDS,
+			compute: fetchShelfData(),
+		},
+	);
 
 export const goodreads = {
 	getBooks,
