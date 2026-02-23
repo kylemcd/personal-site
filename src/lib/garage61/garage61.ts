@@ -12,7 +12,7 @@ class Garage61Error extends Data.TaggedError("Garage61Error")<Error> {
 const GARAGE61_API_URL = "https://garage61.net/api/v1";
 const GARAGE61_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const GARAGE61_SUMMARY_CACHE_TTL_SECONDS = 60 * 60; // 1 hour
-const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v3";
+const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v4";
 const GARAGE61_REQUEST_TIMEOUT = "15 seconds";
 const LAST_30_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_RECENT_ITEMS = 10;
