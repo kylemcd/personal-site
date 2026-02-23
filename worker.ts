@@ -29,7 +29,10 @@ const prewarm = Effect.all(
 );
 
 export default {
-	fetch: server.fetch,
+	fetch: (request: Request, env: WorkerEnv, ctx: ExecutionContext) => {
+		(globalThis as Record<string, unknown>).APP_STORE = env.APP_STORE;
+		return server.fetch(request, { context: { env, cloudflare: { env, ctx } } });
+	},
 	scheduled: (_controller: ScheduledController, env: WorkerEnv, ctx: ExecutionContext) => {
 		(globalThis as Record<string, unknown>).APP_STORE = env.APP_STORE;
 		ctx.waitUntil(Effect.runPromise(prewarm));
