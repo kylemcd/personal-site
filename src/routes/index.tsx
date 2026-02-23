@@ -6,11 +6,13 @@ import { AlbumShelf, Equalizer, NowPlaying } from "@/components/AlbumShelf";
 import { Bookshelf } from "@/components/Bookshelf";
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { Experience } from "@/components/Experience";
+import { Garage61 } from "@/components/Garage61";
 import { HomeHero } from "@/components/HomeHero";
 import { HorizontalScrollContainer } from "@/components/HorizontalScrollContainer";
 import { Text } from "@/components/Text";
 import { WrappedListening } from "@/components/WrappedListening";
 import { WritingList } from "@/components/WritingList";
+import { garage61 } from "@/lib/garage61";
 import { goodreads } from "@/lib/goodreads";
 import { lastfm } from "@/lib/lastfm";
 import { markdown } from "@/lib/markdown";
@@ -34,6 +36,41 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 						Effect.succeed({ reading: [], finished: [], next: [] }),
 					),
 				),
+			garage61.summary().pipe(
+				Effect.tapError((error) =>
+					Effect.sync(() => {
+						console.error("Garage61 summary failed:", error);
+					}),
+				),
+				Effect.catchAll(() =>
+					Effect.succeed({
+						profile: { id: 0, name: "Kyle" },
+						statistics: null,
+						sessions: null,
+						derived: {
+							sessionCount: null,
+							trackCount: null,
+							fastestLaps: [],
+							recentStatistics: [],
+							overview: {
+								totalTimeOnTrackSeconds: 0,
+								totalLapsDriven: 0,
+								totalCleanLapsDriven: 0,
+								cleanLapPercentage: null,
+								windowLabel: "Last 30 Days",
+								recentTracks: [],
+								recentCars: [],
+								insights: {
+									secondsOffRecord: null,
+									cleanestCombo: null,
+									paceLadder: [],
+									trackConfidence: [],
+								},
+							},
+						},
+					}),
+				),
+			),
 		]),
 	);
 
@@ -41,6 +78,7 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 		listening: result[0],
 		writing: result[1],
 		books: result[2],
+		racing: result[3],
 	};
 });
 
@@ -84,7 +122,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-	const { listening, writing, books } = Route.useLoaderData();
+	const { listening, writing, books, racing } = Route.useLoaderData();
 
 	return (
 		<>
@@ -143,6 +181,13 @@ function Home() {
 							<Bookshelf books={books.finished} />
 						</div>
 					</HorizontalScrollContainer>
+				</div>
+			)}
+			{(racing.derived.overview.recentTracks.length > 0 ||
+				racing.derived.overview.recentCars.length > 0 ||
+				racing.derived.overview.totalTimeOnTrackSeconds > 0) && (
+				<div className="section-container section-container-flush-right">
+					<Garage61 overview={racing.derived.overview} />
 				</div>
 			)}
 		</>

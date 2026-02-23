@@ -47,11 +47,6 @@
 	margin-bottom: var(--spc-6);
 }
 
-.section-container:last-child {
-	border-bottom: none;
-}
-
-/* Remove border from books section (last meaningful section) */
-.section-container-flush-right:has(.bookshelf-container) {
+.section-container:not(:has(+ .section-container)) {
 	border-bottom: none;
 }

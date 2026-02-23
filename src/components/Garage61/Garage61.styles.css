@@ -1,0 +1,234 @@
+.g61-racing {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spc-4);
+}
+
+.g61-racing-header {
+	margin-bottom: var(--spc-2);
+}
+
+.g61-racing-list {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--spc-2);
+}
+
+.g61-racing-recent-lists {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--spc-8);
+	padding-top: var(--spc-4);
+}
+
+.g61-racing-scroller {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: stretch;
+	gap: var(--spc-2);
+	padding-left: var(--spc-8);
+	padding-right: var(--spc-8);
+}
+
+.g61-racing .g61-racing-scroller > *:last-child {
+	margin-right: 0;
+}
+
+.g61-racing-list-block {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spc-2);
+}
+
+.g61-racing-list-block > h2,
+.g61-racing-list-block > h3,
+.g61-racing-list-block > .g61-racing-list {
+	padding: 0 var(--spc-8);
+}
+
+.g61-racing-insights {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	align-items: stretch;
+}
+
+.g61-racing-insights > .g61-racing-row:nth-child(-n + 4) {
+	aspect-ratio: 1 / 1;
+}
+
+.g61-racing-insights > .g61-racing-row:nth-last-child(-n + 2) {
+	grid-column: span 2;
+}
+
+.g61-racing-row {
+	display: block;
+	border: 1px solid var(--color-ui-1);
+}
+
+.g61-racing-square-card {
+	flex: 0 0 205px;
+	aspect-ratio: 1 / 1;
+}
+
+.g61-racing-row-content {
+	display: grid;
+	grid-template-columns: 1fr;
+	align-items: center;
+	gap: var(--spc-3);
+	padding: var(--spc-3) var(--spc-4);
+	min-width: 0;
+}
+
+.g61-racing-square-card .g61-racing-row-content {
+	height: 100%;
+	align-items: stretch;
+}
+
+.g61-racing-insights .g61-racing-row-content {
+	align-items: flex-start;
+}
+
+.g61-racing-meta {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.g61-racing-track,
+.g61-racing-car {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.g61-racing-square-card .g61-racing-meta {
+	height: 100%;
+}
+
+.g61-racing-square-card .g61-racing-track {
+	white-space: normal;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 4;
+	-webkit-box-orient: vertical;
+}
+
+.g61-racing-square-card .g61-racing-car {
+	margin-top: auto;
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.g61-racing-variant {
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.g61-racing-description {
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.g61-racing-kpi-label {
+	font-size: var(--font-size-1);
+	color: var(--color-text-1);
+}
+
+.g61-racing-kpi-value {
+	font-family: var(--font-family-mono);
+	line-height: 1.15;
+}
+
+.g61-racing-combo {
+	margin-top: 2px;
+}
+
+.g61-racing-combo-container {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.g61-racing-meter {
+	height: 6px;
+	width: 100%;
+	border: 1px solid var(--color-ui-1);
+	background: var(--color-bg-2);
+	margin: var(--spc-1) 0;
+}
+
+.g61-racing-meter-fill {
+	display: block;
+	height: 100%;
+	min-width: 2px;
+	background: var(--color-text-light);
+}
+
+.g61-racing-ladder {
+	display: grid;
+	gap: 6px;
+	margin-top: var(--spc-1);
+}
+
+.g61-racing-ladder-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: baseline;
+	gap: var(--spc-2);
+	min-width: 0;
+	width: 100%;
+}
+
+.g61-racing-ladder-track {
+	display: block;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	width: 100%;
+}
+
+.g61-racing-ladder-time {
+	display: block;
+	font-family: var(--font-family-mono);
+	white-space: nowrap;
+	justify-self: start;
+}
+
+.g61-racing-insights .g61-racing-track,
+.g61-racing-insights .g61-racing-car {
+	white-space: normal;
+	overflow: visible;
+	text-overflow: clip;
+}
+
+@media (max-width: 900px) {
+	.g61-racing-list-block > h2,
+	.g61-racing-list-block > h3,
+	.g61-racing-list-block > .g61-racing-list {
+		padding: 0 var(--spc-4);
+	}
+
+	.g61-racing-insights {
+		grid-template-columns: 1fr;
+	}
+
+	.g61-racing-insights > .g61-racing-row:nth-child(-n + 4) {
+		aspect-ratio: auto;
+	}
+
+	.g61-racing-insights > .g61-racing-row:nth-last-child(-n + 2) {
+		grid-column: auto;
+	}
+
+	.g61-racing-scroller {
+		gap: var(--spc-2);
+		padding-left: var(--spc-4);
+		padding-right: var(--spc-4);
+	}
+
+	.g61-racing-square-card {
+		flex-basis: 180px;
+	}
+}
