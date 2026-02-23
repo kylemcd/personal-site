@@ -114,7 +114,7 @@ function WrappedListening({ wrapped }: WrappedListeningProps) {
 									</a>
 								</Text>
 								<Text as="p" size="0" color="2" className="wrapped-row-detail">
-									{track.share}% of his monthly listening ({track.plays} plays)
+									{track.share}% of his listening ({track.plays} plays)
 								</Text>
 							</div>
 						))}
@@ -181,7 +181,7 @@ function WrappedListening({ wrapped }: WrappedListeningProps) {
 									</a>
 								</Text>
 								<Text as="p" size="0" color="2" className="wrapped-row-detail">
-									{album.share}% of his monthly listening ({album.plays} plays)
+									{album.share}% of his listening ({album.plays} plays)
 								</Text>
 							</div>
 						))}
