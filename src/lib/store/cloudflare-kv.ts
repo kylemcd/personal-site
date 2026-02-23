@@ -50,6 +50,38 @@ const CACHE_BINDING_NAMES = [
 ] as const;
 
 const inMemoryStore = new Map<string, MemoryCacheEntry>();
+const DEFAULT_CACHE_VERSION = "v1";
+
+const isDevRuntime = (): boolean => import.meta.env.DEV;
+const isDevCacheEnabled = (): boolean =>
+	process.env.KV_ENABLE_DEV_CACHE?.toLowerCase() === "true";
+
+const isCacheBypassed = (): boolean =>
+	process.env.KV_BYPASS_CACHE?.toLowerCase() === "true" ||
+	(isDevRuntime() && !isDevCacheEnabled());
+const isKvLookupDisabled = (): boolean =>
+	process.env.KV_DISABLE_KV_LOOKUP?.toLowerCase() === "true" ||
+	(isDevRuntime() && !isDevCacheEnabled());
+const isKvWriteDisabled = (): boolean =>
+	process.env.KV_READ_ONLY_CACHE?.toLowerCase() === "true" ||
+	(isDevRuntime() && !isDevCacheEnabled());
+
+const getCacheVersion = (): string => {
+	const globalRecord = asRecord(globalThis);
+	const fromGlobal = globalRecord?.KV_CACHE_VERSION;
+	if (typeof fromGlobal === "string" && fromGlobal.trim()) {
+		return fromGlobal.trim();
+	}
+
+	const fromEnv = process.env.KV_CACHE_VERSION;
+	if (typeof fromEnv === "string" && fromEnv.trim()) {
+		return fromEnv.trim();
+	}
+
+	return DEFAULT_CACHE_VERSION;
+};
+
+const toScopedKey = (key: string): string => `${getCacheVersion()}:${key}`;
 
 const asRecord = (value: unknown): Record<string, unknown> | null => {
 	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -134,25 +166,27 @@ const deleteFromMemory = (key: string): void => {
 };
 
 const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
-	const namespace = resolveKvNamespace();
+	const namespace =
+		isCacheBypassed() || isKvLookupDisabled() ? null : resolveKvNamespace();
 
 	const getJson: CloudflareKvStoreService["getJson"] = <A>({ key }) =>
 		Effect.gen(function* () {
+			const scopedKey = toScopedKey(key);
 			if (namespace) {
 				const raw = yield* Effect.tryPromise({
-					try: () => namespace.get(key, "text"),
+					try: () => namespace.get(scopedKey, "text"),
 					catch: () => null,
 				});
 				if (raw) {
 					try {
 						return JSON.parse(raw) as A;
 					} catch {
-						return getFromMemory<A>(key);
+						return getFromMemory<A>(scopedKey);
 					}
 				}
 			}
 
-			return getFromMemory<A>(key);
+			return getFromMemory<A>(scopedKey);
 		});
 
 	const putJson: CloudflareKvStoreService["putJson"] = ({
@@ -161,25 +195,27 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 		ttlSeconds,
 	}) =>
 		Effect.gen(function* () {
-			writeToMemory(key, value, ttlSeconds);
-			if (!namespace) return;
+			const scopedKey = toScopedKey(key);
+			writeToMemory(scopedKey, value, ttlSeconds);
+			if (!namespace || isKvWriteDisabled()) return;
 			yield* Effect.tryPromise({
 				try: () =>
 					typeof ttlSeconds === "number"
-						? namespace.put(key, JSON.stringify(value), {
+						? namespace.put(scopedKey, JSON.stringify(value), {
 								expirationTtl: ttlSeconds,
 							})
-						: namespace.put(key, JSON.stringify(value)),
+						: namespace.put(scopedKey, JSON.stringify(value)),
 				catch: () => null,
 			});
 		});
 
 	const del: CloudflareKvStoreService["delete"] = (key) =>
 		Effect.gen(function* () {
-			deleteFromMemory(key);
-			if (!namespace) return;
+			const scopedKey = toScopedKey(key);
+			deleteFromMemory(scopedKey);
+			if (!namespace || isKvWriteDisabled()) return;
 			yield* Effect.tryPromise({
-				try: () => namespace.delete(key),
+				try: () => namespace.delete(scopedKey),
 				catch: () => null,
 			});
 		});
@@ -190,6 +226,9 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 		compute,
 	}) =>
 		Effect.gen(function* () {
+			if (isCacheBypassed()) {
+				return yield* compute;
+			}
 			const cached = yield* getJson<A>({ key });
 			if (cached !== null) return cached;
 			const value = yield* compute;

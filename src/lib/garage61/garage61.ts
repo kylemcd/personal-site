@@ -12,12 +12,15 @@ class Garage61Error extends Data.TaggedError("Garage61Error")<Error> {
 const GARAGE61_API_URL = "https://garage61.net/api/v1";
 const GARAGE61_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const GARAGE61_SUMMARY_CACHE_TTL_SECONDS = 60 * 60; // 1 hour
-const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v1";
+const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v3";
+const GARAGE61_REQUEST_TIMEOUT = "15 seconds";
 const LAST_30_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_RECENT_ITEMS = 10;
 const PACE_LADDER_MIN_LAPS = 10;
 const PACE_LADDER_MAX_ITEMS = 12;
 const GARAGE61_COMPARISON_TEAM = "team-gotouchgrass";
+const QUALI_RACE_SESSION_TYPES = [2, 3] as const;
+const QUALI_RACE_SESSION_TYPES_PARAM = QUALI_RACE_SESSION_TYPES.join(",");
 const GARAGE61_API_KEY_CONFIG = Config.string("GARAGE61_API_KEY").pipe(
 	Config.withDefault(""),
 );
@@ -60,7 +63,13 @@ const fetchGarage61 = <A>(params: Parameters<typeof fetchFresh<A>>[0]) =>
 		}
 
 		const request = yield* Effect.cachedWithTTL(
-			fetchFresh<A>(params),
+			fetchFresh<A>(params).pipe(
+				Effect.timeoutFail({
+					duration: GARAGE61_REQUEST_TIMEOUT,
+					onTimeout: () =>
+						new Error(`Garage61 request timed out: ${String(params.url)}`),
+				}),
+			),
 			GARAGE61_CACHE_TTL_MS,
 		);
 		garage61CachedRequests.set(key, {
@@ -144,6 +153,7 @@ const laps = (
 		carFilter: string;
 		drivers?: string;
 		teams?: string;
+		sessionTypes?: ReadonlyArray<number>;
 		age?: number;
 		limit?: number;
 		round?: "metric" | "englishStandard";
@@ -161,6 +171,9 @@ const laps = (
 	});
 	if (params.drivers) query.set("drivers", params.drivers);
 	if (params.teams) query.set("teams", params.teams);
+	if (params.sessionTypes && params.sessionTypes.length > 0) {
+		query.set("sessionTypes", params.sessionTypes.join(","));
+	}
 	if (params.unclean) query.set("unclean", "true");
 
 	return fetchGarage61({
@@ -172,7 +185,7 @@ const laps = (
 
 const lapsForTrack = (apiKey: string, trackId: number) =>
 	fetchGarage61({
-		url: `${GARAGE61_API_URL}/laps?drivers=me&tracks=${trackId}&age=-1&group=none&lapTypes=1&round=metric&limit=20`,
+		url: `${GARAGE61_API_URL}/laps?drivers=me&tracks=${trackId}&sessionTypes=${QUALI_RACE_SESSION_TYPES_PARAM}&age=-1&group=none&lapTypes=1&round=metric&limit=20`,
 		method: "GET",
 		headers: authHeaders(apiKey),
 	});
@@ -182,7 +195,7 @@ const lapsForTrackWindow = (
 	params: { trackId: number; ageDays: number },
 ) =>
 	fetchGarage61({
-		url: `${GARAGE61_API_URL}/laps?drivers=me&tracks=${params.trackId}&age=${params.ageDays}&group=none&lapTypes=1&round=metric&limit=1000`,
+		url: `${GARAGE61_API_URL}/laps?drivers=me&tracks=${params.trackId}&sessionTypes=${QUALI_RACE_SESSION_TYPES_PARAM}&age=${params.ageDays}&group=none&lapTypes=1&round=metric&limit=1000`,
 		method: "GET",
 		headers: authHeaders(apiKey),
 	});
@@ -235,6 +248,16 @@ const parseProfile = (value: unknown): Garage61Summary["profile"] => {
 		image:
 			typeof imageRaw === "string" && imageRaw.trim() ? imageRaw : undefined,
 	};
+};
+
+const isRaceOrQualiSession = (sessionType: string | null): boolean => {
+	if (!sessionType) return false;
+	const normalized = sessionType.trim().toLowerCase();
+	if (!normalized) return false;
+	if (normalized === "2" || normalized === "3") return true;
+	if (normalized.includes("qual")) return true;
+	if (normalized.includes("race")) return true;
+	return false;
 };
 
 const getFirstValue = (
@@ -300,6 +323,15 @@ const extractRecentStatistics = (statisticsData: unknown) => {
 				typeof dayValue === "string" && dayValue.trim() ? dayValue : null;
 			const trackValue = getFirstValue(row, ["track", "trackId", "track_id"]);
 			const carValue = getFirstValue(row, ["car", "carId", "car_id"]);
+			const sessionTypeValue = getFirstValue(row, [
+				"sessionType",
+				"session_type",
+				"session",
+				"type",
+			]);
+			const sessionTypeText = getTextValue(sessionTypeValue);
+			const sessionTypeNumber = getNumberValue(sessionTypeValue);
+			const sessionTypeId = getIdValue(sessionTypeValue);
 			return {
 				day,
 				trackId: getIdValue(trackValue),
@@ -313,8 +345,12 @@ const extractRecentStatistics = (statisticsData: unknown) => {
 					getTextValue(getFirstValue(row, ["carName"])) ??
 					"Unknown car",
 				sessionType:
-					getTextValue(getFirstValue(row, ["sessionType", "session_type"])) ??
-					null,
+					sessionTypeText ??
+					(sessionTypeNumber !== null
+						? String(sessionTypeNumber)
+						: sessionTypeId !== null
+							? String(sessionTypeId)
+							: null),
 				events: getNumberValue(getFirstValue(row, ["events", "eventCount"])),
 				lapsDriven: getNumberValue(
 					getFirstValue(row, ["lapsDriven", "laps_driven"]),
@@ -494,13 +530,9 @@ const filteredAverageFromLaps = (
 	return safe.reduce((sum, value) => sum + value, 0) / safe.length;
 };
 
-const summaryUncached = () =>
+const summaryUncached = (garage61ApiKey: string) =>
 	Effect.gen(function* () {
 		const nowMs = Date.now();
-		const garage61ApiKey = yield* GARAGE61_API_KEY_CONFIG;
-		if (!garage61ApiKey) {
-			return emptySummary();
-		}
 
 		const meRes = yield* me(garage61ApiKey).pipe(
 			Effect.catchAll(() =>
@@ -522,21 +554,32 @@ const summaryUncached = () =>
 		const last30StatsRes = yield* meStatistics(garage61ApiKey, {
 			start: last30Start,
 			end,
-		});
+		}).pipe(
+			Effect.catchAll(() =>
+				Effect.succeed(emptyFetchResponse({ drivingStatistics: [] })),
+			),
+		);
 		const last30Stats = extractRecentStatistics(last30StatsRes.data);
 		const shouldFallback = last30Stats.length === 0;
 		const statisticsRes = shouldFallback
 			? yield* meStatistics(garage61ApiKey, {
 					start: lastSixMonthsStart,
 					end,
-				})
+				}).pipe(
+					Effect.catchAll(() =>
+						Effect.succeed(emptyFetchResponse({ drivingStatistics: [] })),
+					),
+				)
 			: last30StatsRes;
 
 		const allStatisticsRows = shouldFallback
 			? extractRecentStatistics(statisticsRes.data)
 			: last30Stats;
+		const raceQualiStatisticsRows = allStatisticsRows.filter((row) =>
+			isRaceOrQualiSession(row.sessionType),
+		);
 		const windowLabel = shouldFallback ? "Last 6 Months" : "Last 30 Days";
-		const { trackIds, carIds } = extractUniqueIds(allStatisticsRows);
+		const { trackIds, carIds } = extractUniqueIds(raceQualiStatisticsRows);
 
 		const trackLookups = yield* Effect.all(
 			trackIds.map((id) =>
@@ -645,7 +688,7 @@ const summaryUncached = () =>
 			carLookups.map((car) => [car.id, car.categoryId]),
 		);
 
-		const enrichedRecentStatistics = allStatisticsRows.map((row) => ({
+		const enrichedRecentStatistics = raceQualiStatisticsRows.map((row) => ({
 			...row,
 			track:
 				row.trackId !== null
@@ -678,26 +721,52 @@ const summaryUncached = () =>
 
 		const trackTimeMap = new Map<
 			string,
-			{ id: number; name: string; timeOnTrackSeconds: number }
+			{
+				id: number;
+				name: string;
+				timeOnTrackSeconds: number;
+				latestTimestamp: number;
+				latestIndex: number;
+			}
 		>();
 		const carTimeMap = new Map<
 			string,
-			{ id: number; name: string; timeOnTrackSeconds: number }
+			{
+				id: number;
+				name: string;
+				timeOnTrackSeconds: number;
+				latestTimestamp: number;
+				latestIndex: number;
+			}
 		>();
 
-		for (const row of nonOvalStatistics) {
+		for (const [rowIndex, row] of nonOvalStatistics.entries()) {
 			const rowTime = row.timeOnTrack ?? 0;
+			const rowTimestamp = row.day ? Date.parse(row.day) : Number.NaN;
+			const validTimestamp = Number.isFinite(rowTimestamp)
+				? rowTimestamp
+				: Number.NEGATIVE_INFINITY;
 			if (row.trackId !== null) {
 				const name = trackNameById.get(row.trackId) ?? row.track;
 				const key = normalizeName(name);
 				const current = trackTimeMap.get(key);
 				if (current) {
 					current.timeOnTrackSeconds += rowTime;
+					if (
+						validTimestamp > current.latestTimestamp ||
+						(validTimestamp === current.latestTimestamp &&
+							rowIndex < current.latestIndex)
+					) {
+						current.latestTimestamp = validTimestamp;
+						current.latestIndex = rowIndex;
+					}
 				} else {
 					trackTimeMap.set(key, {
 						id: row.trackId,
 						name,
 						timeOnTrackSeconds: rowTime,
+						latestTimestamp: validTimestamp,
+						latestIndex: rowIndex,
 					});
 				}
 			}
@@ -708,21 +777,40 @@ const summaryUncached = () =>
 				const current = carTimeMap.get(key);
 				if (current) {
 					current.timeOnTrackSeconds += rowTime;
+					if (
+						validTimestamp > current.latestTimestamp ||
+						(validTimestamp === current.latestTimestamp &&
+							rowIndex < current.latestIndex)
+					) {
+						current.latestTimestamp = validTimestamp;
+						current.latestIndex = rowIndex;
+					}
 				} else {
 					carTimeMap.set(key, {
 						id: row.carId,
 						name,
 						timeOnTrackSeconds: rowTime,
+						latestTimestamp: validTimestamp,
+						latestIndex: rowIndex,
 					});
 				}
 			}
 		}
 
 		const recentTracks = [...trackTimeMap.values()]
-			.sort((a, b) => b.timeOnTrackSeconds - a.timeOnTrackSeconds)
+			.sort((a, b) => {
+				if (b.latestTimestamp !== a.latestTimestamp) {
+					return b.latestTimestamp - a.latestTimestamp;
+				}
+				if (a.latestIndex !== b.latestIndex)
+					return a.latestIndex - b.latestIndex;
+				return b.timeOnTrackSeconds - a.timeOnTrackSeconds;
+			})
 			.slice(0, MAX_RECENT_ITEMS)
 			.map((track) => ({
-				...track,
+				id: track.id,
+				name: track.name,
+				timeOnTrackSeconds: track.timeOnTrackSeconds,
 				variant: trackVariantById.get(track.id) ?? null,
 				timeSharePercentage:
 					totalTimeOnTrackSeconds > 0
@@ -733,10 +821,19 @@ const summaryUncached = () =>
 			}));
 
 		const recentCars = [...carTimeMap.values()]
-			.sort((a, b) => b.timeOnTrackSeconds - a.timeOnTrackSeconds)
+			.sort((a, b) => {
+				if (b.latestTimestamp !== a.latestTimestamp) {
+					return b.latestTimestamp - a.latestTimestamp;
+				}
+				if (a.latestIndex !== b.latestIndex)
+					return a.latestIndex - b.latestIndex;
+				return b.timeOnTrackSeconds - a.timeOnTrackSeconds;
+			})
 			.slice(0, MAX_RECENT_ITEMS)
 			.map((car) => ({
-				...car,
+				id: car.id,
+				name: car.name,
+				timeOnTrackSeconds: car.timeOnTrackSeconds,
 				timeSharePercentage:
 					totalTimeOnTrackSeconds > 0
 						? roundPercent(
@@ -768,6 +865,16 @@ const summaryUncached = () =>
 				daySamples: Array<{ avgLapSeconds: number; laps: number }>;
 			}
 		>();
+		const comboPaceMap = new Map<
+			string,
+			{
+				track: string;
+				car: string;
+				totalTime: number;
+				laps: number;
+				daySamples: Array<{ avgLapSeconds: number; laps: number }>;
+			}
+		>();
 		for (const row of nonOvalStatistics) {
 			const time = row.timeOnTrack ?? 0;
 			const laps = row.lapsDriven ?? 0;
@@ -791,6 +898,26 @@ const summaryUncached = () =>
 					car: row.car,
 					totalLaps: laps,
 					cleanLaps: clean,
+				});
+			}
+			const comboPace = comboPaceMap.get(comboKey);
+			if (comboPace) {
+				comboPace.totalTime += time;
+				comboPace.laps += laps;
+				if (laps > 0 && time > 0) {
+					comboPace.daySamples.push({
+						avgLapSeconds: time / laps,
+						laps,
+					});
+				}
+			} else {
+				comboPaceMap.set(comboKey, {
+					track: row.track,
+					car: row.car,
+					totalTime: time,
+					laps,
+					daySamples:
+						laps > 0 && time > 0 ? [{ avgLapSeconds: time / laps, laps }] : [],
 				});
 			}
 
@@ -945,6 +1072,7 @@ const summaryUncached = () =>
 						trackId: combo.trackId,
 						carFilter: String(combo.carId),
 						drivers: "me",
+						sessionTypes: QUALI_RACE_SESSION_TYPES,
 						age: -1,
 						limit: 200,
 						round: "metric",
@@ -957,6 +1085,7 @@ const summaryUncached = () =>
 						trackId: combo.trackId,
 						carFilter,
 						teams: GARAGE61_COMPARISON_TEAM,
+						sessionTypes: QUALI_RACE_SESSION_TYPES,
 						age: -1,
 						limit: 200,
 						round: "metric",
@@ -1074,6 +1203,7 @@ const summaryUncached = () =>
 						trackId: cleanestComboCandidate.trackId,
 						carFilter: String(cleanestComboCandidate.carId),
 						drivers: "me",
+						sessionTypes: QUALI_RACE_SESSION_TYPES,
 						age: lapAverageWindowDays,
 						limit: 1000,
 						round: "metric",
@@ -1131,22 +1261,109 @@ const summaryUncached = () =>
 						}
 					: null;
 
-		const paceLadder = [...trackAggMap.values()]
+		const paceLadderSourceCombos = [...comboMap.entries()]
+			.map(([comboKey, combo]) => {
+				const comboPace = comboPaceMap.get(comboKey);
+				if (!comboPace) return null;
+				return {
+					comboKey,
+					trackId: combo.trackId,
+					carId: combo.carId,
+					track: combo.track,
+					car: combo.car,
+					totalLaps: combo.totalLaps,
+					totalTime: comboPace.totalTime,
+					laps: comboPace.laps,
+					daySamples: comboPace.daySamples,
+				};
+			})
 			.filter(
-				(track) => track.laps >= PACE_LADDER_MIN_LAPS && track.totalTime > 0,
+				(
+					combo,
+				): combo is {
+					comboKey: string;
+					trackId: number;
+					carId: number;
+					track: string;
+					car: string;
+					totalLaps: number;
+					totalTime: number;
+					laps: number;
+					daySamples: Array<{ avgLapSeconds: number; laps: number }>;
+				} =>
+					combo !== null &&
+					combo.totalLaps >= PACE_LADDER_MIN_LAPS &&
+					combo.totalTime > 0 &&
+					combo.trackId !== null &&
+					combo.carId !== null,
 			)
-			.map((track) => ({
-				track: track.track,
-				avgLapSeconds: roundTo(
-					(track.trackId !== null
-						? lapAverageByTrackId.get(track.trackId)
-						: null) ??
-						filteredWeightedAverage(track.daySamples) ??
-						track.totalTime / track.laps,
-					3,
+			.sort((a, b) => b.totalLaps - a.totalLaps)
+			.slice(0, 24);
+
+		const paceLadderFastestByCombo = new Map<string, number | null>(
+			yield* Effect.all(
+				paceLadderSourceCombos.map((combo) =>
+					laps(garage61ApiKey, {
+						trackId: combo.trackId as number,
+						carFilter: String(combo.carId as number),
+						drivers: "me",
+						sessionTypes: QUALI_RACE_SESSION_TYPES,
+						age: lapAverageWindowDays,
+						limit: 1000,
+						round: "metric",
+					}).pipe(
+						Effect.map(({ data }) => {
+							const lapTimes = getArrayCandidate(asRecord(data)?.items ?? data)
+								.map((row) => asRecord(row))
+								.filter((row): row is Record<string, unknown> => row !== null)
+								.filter((row) => {
+									const clean = getFirstValue(row, ["clean"]);
+									const incomplete = getFirstValue(row, ["incomplete"]);
+									const missing = getFirstValue(row, ["missing"]);
+									const offtrack = getFirstValue(row, ["offtrack"]);
+									return (
+										clean !== false &&
+										incomplete !== true &&
+										missing !== true &&
+										offtrack !== true
+									);
+								})
+								.map((row) =>
+									getNumberValue(getFirstValue(row, ["lapTime", "lap_time"])),
+								)
+								.filter(
+									(value): value is number => value !== null && value > 0,
+								);
+							const fastest =
+								lapTimes.length > 0 ? Math.min(...lapTimes) : null;
+							return [
+								combo.comboKey,
+								fastest !== null ? roundTo(fastest, 3) : null,
+							] as const;
+						}),
+						Effect.catchAll(() =>
+							Effect.succeed([combo.comboKey, null] as const),
+						),
+					),
 				),
-				laps: roundTo(track.laps, 0),
-			}))
+			),
+		);
+
+		const paceLadder = paceLadderSourceCombos
+			.map((combo) => {
+				const fastestLapSeconds = paceLadderFastestByCombo.get(combo.comboKey);
+				const fallbackLapSeconds = roundTo(
+					filteredWeightedAverage(combo.daySamples) ??
+						combo.totalTime / combo.laps,
+					3,
+				);
+				return {
+					track: combo.track,
+					car: combo.car,
+					avgLapSeconds: fastestLapSeconds ?? fallbackLapSeconds,
+					laps: roundTo(combo.laps, 0),
+				};
+			})
 			.sort((a, b) => a.avgLapSeconds - b.avgLapSeconds)
 			.slice(0, PACE_LADDER_MAX_ITEMS);
 
@@ -1154,6 +1371,7 @@ const summaryUncached = () =>
 			.map((track) => ({
 				track: track.track,
 				laps: roundTo(track.laps, 0),
+				cleanLaps: roundTo(track.cleanLaps, 0),
 				cleanPercentage:
 					track.laps > 0
 						? roundPercent((track.cleanLaps / track.laps) * 100)
@@ -1181,15 +1399,17 @@ const summaryUncached = () =>
 				return a.avgLapSeconds - b.avgLapSeconds;
 			})
 			.slice(0, PACE_LADDER_MAX_ITEMS);
-		const sharedInsightListLength = Math.min(
-			paceLadder.length,
-			trackConfidence.length,
-		);
-		const syncedPaceLadder = paceLadder.slice(0, sharedInsightListLength);
-		const syncedTrackConfidence = trackConfidence.slice(
-			0,
-			sharedInsightListLength,
-		);
+		const shouldSyncInsightListLengths =
+			paceLadder.length > 0 && trackConfidence.length > 0;
+		const sharedInsightListLength = shouldSyncInsightListLengths
+			? Math.min(paceLadder.length, trackConfidence.length)
+			: 0;
+		const syncedPaceLadder = shouldSyncInsightListLengths
+			? paceLadder.slice(0, sharedInsightListLength)
+			: paceLadder;
+		const syncedTrackConfidence = shouldSyncInsightListLengths
+			? trackConfidence.slice(0, sharedInsightListLength)
+			: trackConfidence;
 
 		return {
 			profile: parseProfile(meRes.data),
@@ -1221,10 +1441,17 @@ const summaryUncached = () =>
 	}).pipe(Effect.mapError((error) => new Garage61Error(error as Error)));
 
 const summary = () =>
-	getOrComputeJson({
-		key: GARAGE61_SUMMARY_CACHE_KEY,
-		ttlSeconds: GARAGE61_SUMMARY_CACHE_TTL_SECONDS,
-		compute: summaryUncached(),
+	Effect.gen(function* () {
+		const garage61ApiKey = yield* GARAGE61_API_KEY_CONFIG;
+		if (!garage61ApiKey) {
+			return emptySummary();
+		}
+
+		return yield* getOrComputeJson({
+			key: GARAGE61_SUMMARY_CACHE_KEY,
+			ttlSeconds: GARAGE61_SUMMARY_CACHE_TTL_SECONDS,
+			compute: summaryUncached(garage61ApiKey),
+		});
 	});
 
 const garage61 = {

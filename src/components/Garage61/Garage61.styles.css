@@ -136,12 +136,10 @@
 }
 
 .g61-racing-kpi-label {
-	font-size: var(--font-size-1);
-	color: var(--color-text-1);
+	margin-bottom: var(--spc-1);
 }
 
 .g61-racing-kpi-value {
-	font-family: var(--font-family-mono);
 	line-height: 1.15;
 }
 
@@ -172,32 +170,49 @@
 
 .g61-racing-ladder {
 	display: grid;
-	gap: 6px;
+	gap: 8px;
 	margin-top: var(--spc-1);
 }
 
 .g61-racing-ladder-row {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
-	align-items: baseline;
+	align-items: flex-start;
 	gap: var(--spc-2);
 	min-width: 0;
 	width: 100%;
 }
 
+.g61-racing-ladder-meta {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
 .g61-racing-ladder-track {
 	display: block;
 	min-width: 0;
+	min-inline-size: 0;
+	max-width: 100%;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	width: 100%;
 }
 
+.g61-racing-ladder-subline {
+	display: block;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 .g61-racing-ladder-time {
 	display: block;
-	font-family: var(--font-family-mono);
 	white-space: nowrap;
+	align-self: flex-start;
 	justify-self: start;
 }
 

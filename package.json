@@ -3,14 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev --port 3000",
+    "dev": "zsh -lc 'set -a; source .env; set +a; KV_BYPASS_CACHE=true KV_DISABLE_KV_LOOKUP=true vite dev --port 3000'",
+    "dev:stale": "zsh -lc 'set -a; source .env; set +a; KV_ENABLE_DEV_CACHE=true KV_BYPASS_CACHE=false KV_DISABLE_KV_LOOKUP=false KV_READ_ONLY_CACHE=true KV_CACHE_VERSION=dev-stale vite dev --port 3000'",
     "build": "vite build",
     "serve": "vite preview",
     "test": "vitest run",
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
-    "deploy": "wrangler deploy",
+    "warm-cache": "sh -c 'echo \"Warming cache...\" && curl -fsS https://kpm.sh > /dev/null && echo \"Cache warm complete.\"'",
+    "deploy": "sh -c 'CACHE_VERSION=$(date +%s); wrangler deploy --var KV_CACHE_VERSION:$CACHE_VERSION && npm run warm-cache'",
     "og": "npx vite-node --config vite.og.config.ts src/lib/open-graph/index.tsx"
   },
   "dependencies": {

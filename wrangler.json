@@ -13,7 +13,8 @@
   "kv_namespaces": [
     {
       "binding": "APP_STORE",
-      "id": "80244ef92fd3460587eca71c1c482b07"
+      "id": "80244ef92fd3460587eca71c1c482b07",
+      "remote": true
     }
   ],
   "triggers": {

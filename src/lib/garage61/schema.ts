@@ -75,12 +75,14 @@ export type Garage61Summary = {
 				} | null;
 				paceLadder: Array<{
 					track: string;
+					car: string;
 					avgLapSeconds: number;
 					laps: number;
 				}>;
 				trackConfidence: Array<{
 					track: string;
 					laps: number;
+					cleanLaps: number;
 					cleanPercentage: number | null;
 					avgLapSeconds: number | null;
 				}>;

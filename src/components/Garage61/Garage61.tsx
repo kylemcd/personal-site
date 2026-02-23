@@ -33,6 +33,26 @@ function Garage61({ overview }: Garage61Props) {
 	const hasRecent =
 		overview.recentTracks.length > 0 || overview.recentCars.length > 0;
 	if (!hasRecent && overview.totalTimeOnTrackSeconds <= 0) return null;
+	const getCleanLapRatio = (track: {
+		cleanLaps?: number | null;
+		laps: number;
+		cleanPercentage: number | null;
+	}) => {
+		const laps = Math.max(0, track.laps ?? 0);
+		const cleanFromField =
+			typeof track.cleanLaps === "number" && Number.isFinite(track.cleanLaps)
+				? track.cleanLaps
+				: null;
+		const cleanFromPercentage =
+			track.cleanPercentage !== null
+				? Math.round((track.cleanPercentage / 100) * laps)
+				: 0;
+		const clean = Math.max(
+			0,
+			Math.min(laps, cleanFromField ?? cleanFromPercentage),
+		);
+		return `${clean}/${laps}`;
+	};
 
 	return (
 		<div className="g61-racing">
@@ -47,11 +67,18 @@ function Garage61({ overview }: Garage61Props) {
 								<Text
 									as="p"
 									size="1"
+									weight="500"
 									className="g61-racing-track g61-racing-kpi-label"
 								>
 									Time on track
 								</Text>
-								<Text as="p" size="3" className="g61-racing-kpi-value">
+								<Text
+									as="p"
+									size="3"
+									weight="500"
+									family="mono"
+									className="g61-racing-kpi-value"
+								>
 									{formatDuration(overview.totalTimeOnTrackSeconds)}
 								</Text>
 								<Text
@@ -72,11 +99,18 @@ function Garage61({ overview }: Garage61Props) {
 								<Text
 									as="p"
 									size="1"
+									weight="500"
 									className="g61-racing-track g61-racing-kpi-label"
 								>
 									Clean lap percentage
 								</Text>
-								<Text as="p" size="3" className="g61-racing-kpi-value">
+								<Text
+									as="p"
+									size="3"
+									weight="500"
+									family="mono"
+									className="g61-racing-kpi-value"
+								>
 									{overview.cleanLapPercentage !== null
 										? `${overview.cleanLapPercentage}%`
 										: "n/a"}
@@ -108,11 +142,18 @@ function Garage61({ overview }: Garage61Props) {
 									<Text
 										as="p"
 										size="1"
+										weight="500"
 										className="g61-racing-track g61-racing-kpi-label"
 									>
 										Cleanest combo
 									</Text>
-									<Text as="p" size="3" className="g61-racing-kpi-value">
+									<Text
+										as="p"
+										size="3"
+										weight="500"
+										family="mono"
+										className="g61-racing-kpi-value"
+									>
 										{overview.insights.cleanestCombo.cleanPercentage}%
 									</Text>
 									<div className="g61-racing-meter">
@@ -127,7 +168,7 @@ function Garage61({ overview }: Garage61Props) {
 										<Text
 											as="p"
 											size="0"
-											color="2"
+											color="1"
 											className="g61-racing-description g61-racing-combo"
 										>
 											{overview.insights.cleanestCombo.track}
@@ -153,11 +194,18 @@ function Garage61({ overview }: Garage61Props) {
 									<Text
 										as="p"
 										size="1"
+										weight="500"
 										className="g61-racing-track g61-racing-kpi-label"
 									>
 										Me vs Friends
 									</Text>
-									<Text as="p" size="3" className="g61-racing-kpi-value">
+									<Text
+										as="p"
+										size="3"
+										weight="500"
+										family="mono"
+										className="g61-racing-kpi-value"
+									>
 										{overview.insights.secondsOffRecord.onlyMyLaps
 											? "Fastest so far"
 											: overview.insights.secondsOffRecord.isFastestInTeam
@@ -168,7 +216,7 @@ function Garage61({ overview }: Garage61Props) {
 										<Text
 											as="p"
 											size="0"
-											color="2"
+											color="1"
 											className="g61-racing-description g61-racing-combo"
 										>
 											{overview.insights.secondsOffRecord.track}
@@ -194,33 +242,47 @@ function Garage61({ overview }: Garage61Props) {
 									<Text
 										as="p"
 										size="1"
+										weight="500"
 										className="g61-racing-track g61-racing-kpi-label"
 									>
-										Pace ladder
+										Fastest laps
 									</Text>
 									<div className="g61-racing-ladder">
-										{overview.insights.paceLadder.map((item, index) => (
-											<div
-												className="g61-racing-ladder-row"
-												key={`pace-${item.track}-${index}`}
-											>
-												<Text
-													as="p"
-													size="0"
-													color="2"
-													className="g61-racing-ladder-track"
+										{overview.insights.paceLadder
+											.slice(0, 5)
+											.map((item, index) => (
+												<div
+													className="g61-racing-ladder-row"
+													key={`pace-${item.track}-${index}`}
 												>
-													{item.track}
-												</Text>
-												<Text
-													as="p"
-													size="0"
-													className="g61-racing-ladder-time"
-												>
-													{formatLapTime(item.avgLapSeconds)}
-												</Text>
-											</div>
-										))}
+													<div className="g61-racing-ladder-meta">
+														<Text
+															as="p"
+															size="0"
+															color="1"
+															className="g61-racing-ladder-track"
+														>
+															{item.track}
+														</Text>
+														<Text
+															as="p"
+															size="0"
+															color="2"
+															className="g61-racing-ladder-subline"
+														>
+															{item.car}
+														</Text>
+													</div>
+													<Text
+														as="p"
+														size="0"
+														family="mono"
+														className="g61-racing-ladder-time"
+													>
+														{formatLapTime(item.avgLapSeconds)}
+													</Text>
+												</div>
+											))}
 									</div>
 								</div>
 							</div>
@@ -234,36 +296,50 @@ function Garage61({ overview }: Garage61Props) {
 									<Text
 										as="p"
 										size="1"
+										weight="500"
 										className="g61-racing-track g61-racing-kpi-label"
 									>
 										Cleanest tracks
 									</Text>
 									<div className="g61-racing-ladder">
-										{overview.insights.trackConfidence.map((track, index) => (
-											<div
-												className="g61-racing-ladder-row"
-												key={`track-confidence-${track.track}-${index}`}
-											>
-												<Text
-													as="p"
-													size="0"
-													color="2"
-													className="g61-racing-ladder-track"
+										{overview.insights.trackConfidence
+											.slice(0, 5)
+											.map((track, index) => (
+												<div
+													className="g61-racing-ladder-row"
+													key={`track-confidence-${track.track}-${index}`}
 												>
-													{track.track}
-												</Text>
-												<Text
-													as="p"
-													size="0"
-													color="1"
-													className="g61-racing-ladder-time"
-												>
-													{track.cleanPercentage === null
-														? "n/a"
-														: `${Math.round(track.cleanPercentage)}%`}
-												</Text>
-											</div>
-										))}
+													<div className="g61-racing-ladder-meta">
+														<Text
+															as="p"
+															size="0"
+															color="1"
+															className="g61-racing-ladder-track"
+														>
+															{track.track}
+														</Text>
+														<Text
+															as="p"
+															size="0"
+															color="2"
+															className="g61-racing-ladder-subline"
+														>
+															{getCleanLapRatio(track)} laps
+														</Text>
+													</div>
+													<Text
+														as="p"
+														size="0"
+														color="1"
+														family="mono"
+														className="g61-racing-ladder-time"
+													>
+														{track.cleanPercentage === null
+															? "n/a"
+															: `${Math.round(track.cleanPercentage)}%`}
+													</Text>
+												</div>
+											))}
 									</div>
 								</div>
 							</div>

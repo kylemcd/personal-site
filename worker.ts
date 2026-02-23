@@ -6,6 +6,7 @@ import { goodreads } from "./src/lib/goodreads";
 
 type WorkerEnv = {
 	APP_STORE?: KVNamespace;
+	KV_CACHE_VERSION?: string;
 };
 
 const prewarm = Effect.all(
@@ -31,10 +32,15 @@ const prewarm = Effect.all(
 export default {
 	fetch: (request: Request, env: WorkerEnv, ctx: ExecutionContext) => {
 		(globalThis as Record<string, unknown>).APP_STORE = env.APP_STORE;
-		return server.fetch(request, { context: { env, cloudflare: { env, ctx } } });
+		(globalThis as Record<string, unknown>).KV_CACHE_VERSION =
+			env.KV_CACHE_VERSION;
+		void ctx;
+		return server.fetch(request);
 	},
 	scheduled: (_controller: ScheduledController, env: WorkerEnv, ctx: ExecutionContext) => {
 		(globalThis as Record<string, unknown>).APP_STORE = env.APP_STORE;
+		(globalThis as Record<string, unknown>).KV_CACHE_VERSION =
+			env.KV_CACHE_VERSION;
 		ctx.waitUntil(Effect.runPromise(prewarm));
 	},
 };

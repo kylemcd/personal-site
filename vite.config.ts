@@ -7,7 +7,10 @@ import { cloudflare } from '@cloudflare/vite-plugin'
 
 const config = defineConfig({
   plugins: [
-    cloudflare({ viteEnvironment: { name: 'ssr' } }),
+    cloudflare({
+      viteEnvironment: { name: 'ssr' },
+      experimental: { remoteBindings: true },
+    }),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],
