@@ -26,6 +26,8 @@ const ALBUMS_LIMIT = 20;
 const MONTHLY_TOP_LIMIT = 200;
 const RECENTLY_PLAYED_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const MIN_SESSION_SECONDS = 5 * 60;
+const SESSION_BREAK_SECONDS = 45 * 60;
+const FALLBACK_TRACK_SECONDS = 3 * 60;
 
 // Last.fm's default placeholder image (the star icon) hash
 const LASTFM_PLACEHOLDER_HASH = "2a96cbd8b46e442fc41c2b86b821562f";
@@ -265,6 +267,93 @@ const formatDuration = (totalSeconds: number): string => {
 	return `${hours} hours ${minutes} minutes`;
 };
 
+const getAverageTrackSeconds = (
+	topTracks: ReadonlyArray<
+		(typeof TopTracksResponseSchema.Type.toptracks.track)[number]
+	>,
+): number => {
+	const totals = topTracks.reduce(
+		(acc, track) => {
+			const plays = parsePlayCount(track.playcount);
+			const durationSeconds = parseDurationSeconds(track.duration);
+			if (plays <= 0 || durationSeconds <= 0) return acc;
+			return {
+				totalWeightedSeconds:
+					acc.totalWeightedSeconds + durationSeconds * plays,
+				totalPlays: acc.totalPlays + plays,
+			};
+		},
+		{ totalWeightedSeconds: 0, totalPlays: 0 },
+	);
+
+	if (totals.totalPlays <= 0) return FALLBACK_TRACK_SECONDS;
+
+	return Math.max(
+		1,
+		Math.round(totals.totalWeightedSeconds / totals.totalPlays),
+	);
+};
+
+const getMonthlySessionStats = (params: {
+	recentTracks: ReadonlyArray<typeof TrackSchema.Type>;
+	nowMs: number;
+	averageTrackSeconds: number;
+}): { averageSessionSeconds: number } => {
+	const { recentTracks, nowMs, averageTrackSeconds } = params;
+
+	const monthStartMs = new Date(nowMs);
+	monthStartMs.setUTCDate(1);
+	monthStartMs.setUTCHours(0, 0, 0, 0);
+	const monthStart = monthStartMs.getTime();
+
+	const monthTrackTimes = recentTracks
+		.map((track) => {
+			const uts = track.date?.uts;
+			if (!uts) return 0;
+			return Number.parseInt(uts, 10) * 1000;
+		})
+		.filter((ts) => ts >= monthStart && ts <= nowMs)
+		.sort((a, b) => a - b);
+
+	if (monthTrackTimes.length === 0) {
+		return { averageSessionSeconds: 0 };
+	}
+
+	const sessions: number[] = [];
+	let currentSessionCount = 1;
+
+	for (let i = 1; i < monthTrackTimes.length; i += 1) {
+		const gapSeconds = Math.floor(
+			(monthTrackTimes[i] - monthTrackTimes[i - 1]) / 1000,
+		);
+		if (gapSeconds <= SESSION_BREAK_SECONDS) {
+			currentSessionCount += 1;
+		} else {
+			sessions.push(currentSessionCount);
+			currentSessionCount = 1;
+		}
+	}
+	sessions.push(currentSessionCount);
+
+	const qualifiedSessionDurations = sessions
+		.map((sessionTrackCount) => sessionTrackCount * averageTrackSeconds)
+		.filter((sessionSeconds) => sessionSeconds >= MIN_SESSION_SECONDS);
+
+	if (qualifiedSessionDurations.length === 0) {
+		return { averageSessionSeconds: 0 };
+	}
+
+	const totalQualifiedSessionSeconds = qualifiedSessionDurations.reduce(
+		(total, sessionSeconds) => total + sessionSeconds,
+		0,
+	);
+	const averageSessionSeconds = Math.round(
+		totalQualifiedSessionSeconds / qualifiedSessionDurations.length,
+	);
+
+	return { averageSessionSeconds };
+};
+
 const getTrackKey = (trackName: string, artistName: string): string => {
 	return `${trackName.toLowerCase()}::${getPrimaryArtist(artistName).toLowerCase()}`;
 };
@@ -294,7 +383,7 @@ const buildArtworkFallbacks = (
 const buildFunFacts = (params: {
 	totalScrobbles: number;
 	totalListeningSeconds: number;
-	averagePlaySeconds: number;
+	averageSessionSeconds: number;
 	uniqueArtists: number;
 	topArtists: Array<{ share: number }>;
 	topTracks: Array<{ share: number }>;
@@ -302,7 +391,7 @@ const buildFunFacts = (params: {
 	const {
 		totalScrobbles,
 		totalListeningSeconds,
-		averagePlaySeconds,
+		averageSessionSeconds,
 		uniqueArtists,
 		topArtists,
 		topTracks,
@@ -318,9 +407,9 @@ const buildFunFacts = (params: {
 		facts.push(`Kyle logged ${totalScrobbles} plays this month.`);
 	}
 
-	if (averagePlaySeconds > 0) {
+	if (averageSessionSeconds > 0) {
 		facts.push(
-			`Average listening session time landed around ${formatDuration(averagePlaySeconds)}.`,
+			`Average listening session time landed around ${formatDuration(averageSessionSeconds)}.`,
 		);
 	}
 
@@ -475,30 +564,13 @@ const extractWrappedData = (params: {
 		})
 		.filter((album) => album.plays > 0);
 
-	const longPlayStats = topTracks.reduce(
-		(acc, track) => {
-			const plays = parsePlayCount(track.playcount);
-			const durationSeconds = parseDurationSeconds(track.duration);
-			if (
-				plays <= 0 ||
-				durationSeconds <= 0 ||
-				durationSeconds < MIN_SESSION_SECONDS
-			) {
-				return acc;
-			}
-			return {
-				totalListeningSeconds:
-					acc.totalListeningSeconds + plays * durationSeconds,
-				totalQualifiedPlays: acc.totalQualifiedPlays + plays,
-			};
-		},
-		{ totalListeningSeconds: 0, totalQualifiedPlays: 0 },
-	);
-	const totalListeningSeconds = longPlayStats.totalListeningSeconds;
-	const averagePlaySeconds =
-		totalListeningSeconds > 0 && longPlayStats.totalQualifiedPlays > 0
-			? Math.round(totalListeningSeconds / longPlayStats.totalQualifiedPlays)
-			: 0;
+	const averageTrackSeconds = getAverageTrackSeconds(topTracks);
+	const totalListeningSeconds = totalScrobbles * averageTrackSeconds;
+	const { averageSessionSeconds } = getMonthlySessionStats({
+		recentTracks,
+		nowMs,
+		averageTrackSeconds,
+	});
 
 	const topTrackKey = getTrackKey(topTrackRaw.name, topTrackRaw.artist.name);
 	const fallbackTrackArt = trackArt.get(topTrackKey);
@@ -525,7 +597,7 @@ const extractWrappedData = (params: {
 	const funFacts = buildFunFacts({
 		totalScrobbles,
 		totalListeningSeconds,
-		averagePlaySeconds,
+		averageSessionSeconds,
 		uniqueArtists,
 		topArtists,
 		topTracks: topTracksSummary,
