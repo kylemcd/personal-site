@@ -14,6 +14,8 @@ const GARAGE61_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const GARAGE61_SUMMARY_CACHE_TTL_SECONDS = 60 * 60; // 1 hour
 const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v6";
 const GARAGE61_REQUEST_TIMEOUT = "15 seconds";
+const GARAGE61_SUMMARY_TIMEOUT = "25 seconds";
+const GARAGE61_REQUEST_CONCURRENCY = 4;
 const LAST_30_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_RECENT_ITEMS = 10;
 const PACE_LADDER_MIN_LAPS = 10;
@@ -79,10 +81,13 @@ const fetchGarage61 = <A>(params: Parameters<typeof fetchFresh<A>>[0]) =>
 		return yield* request;
 	});
 
-const emptyFetchResponse = <A>(data: A) => ({
-	data,
-	headers: new Headers(),
-});
+const forEachConcurrent = <A, B, E, R>(
+	items: ReadonlyArray<A>,
+	effect: (item: A) => Effect.Effect<B, E, R>,
+): Effect.Effect<ReadonlyArray<B>, E, R> =>
+	Effect.forEach(items, effect, {
+		concurrency: GARAGE61_REQUEST_CONCURRENCY,
+	});
 
 const emptySummary = (): Garage61Summary => ({
 	profile: { id: 0, name: "Kyle" },
@@ -534,18 +539,7 @@ const summaryUncached = (garage61ApiKey: string) =>
 	Effect.gen(function* () {
 		const nowMs = Date.now();
 
-		const meRes = yield* me(garage61ApiKey).pipe(
-			Effect.catchAll(() =>
-				fetchGarage61({
-					url: `${GARAGE61_API_URL}/user/me`,
-					method: "GET",
-					headers: authHeaders(garage61ApiKey),
-				}),
-			),
-			Effect.catchAll(() =>
-				Effect.succeed(emptyFetchResponse({ id: 0, name: "Kyle" })),
-			),
-		);
+		const meRes = yield* me(garage61ApiKey);
 		const end = new Date(nowMs);
 		const last30Start = new Date(nowMs - LAST_30_DAYS_MS);
 		const lastSixMonthsStart = new Date(nowMs);
@@ -554,22 +548,14 @@ const summaryUncached = (garage61ApiKey: string) =>
 		const last30StatsRes = yield* meStatistics(garage61ApiKey, {
 			start: last30Start,
 			end,
-		}).pipe(
-			Effect.catchAll(() =>
-				Effect.succeed(emptyFetchResponse({ drivingStatistics: [] })),
-			),
-		);
+		});
 		const last30Stats = extractRecentStatistics(last30StatsRes.data);
 		const shouldFallback = last30Stats.length === 0;
 		const statisticsRes = shouldFallback
 			? yield* meStatistics(garage61ApiKey, {
 					start: lastSixMonthsStart,
 					end,
-				}).pipe(
-					Effect.catchAll(() =>
-						Effect.succeed(emptyFetchResponse({ drivingStatistics: [] })),
-					),
-				)
+				})
 			: last30StatsRes;
 
 		const allStatisticsRows = shouldFallback
@@ -581,94 +567,67 @@ const summaryUncached = (garage61ApiKey: string) =>
 		const windowLabel = shouldFallback ? "Last 6 Months" : "Last 30 Days";
 		const { trackIds, carIds } = extractUniqueIds(raceQualiStatisticsRows);
 
-		const trackLookups = yield* Effect.all(
-			trackIds.map((id) =>
-				trackById(garage61ApiKey, id).pipe(
-					Effect.map(({ data }) => ({
-						id,
-						name: extractLookupName(data, id, `Track ${id}`),
-						isOval: extractTrackIsOval(data, id),
-					})),
-					Effect.catchAll(() =>
-						Effect.succeed({
-							id,
-							name: `Track ${id}`,
-							isOval: false,
-						}),
-					),
-				),
+		const trackLookups = yield* forEachConcurrent(trackIds, (id) =>
+			trackById(garage61ApiKey, id).pipe(
+				Effect.map(({ data }) => ({
+					id,
+					name: extractLookupName(data, id, `Track ${id}`),
+					isOval: extractTrackIsOval(data, id),
+				})),
 			),
 		);
 
-		const carLookups = yield* Effect.all(
-			carIds.map((id) =>
-				carById(garage61ApiKey, id).pipe(
-					Effect.map(({ data }) => ({
-						id,
-						name: extractLookupName(data, id, `Car ${id}`),
-						categoryId: (() => {
-							const rows = getArrayCandidate(data)
-								.map((row) => asRecord(row))
-								.filter((row): row is Record<string, unknown> => row !== null);
-							const match = rows.find((row) => {
-								const carId = getIdValue(getFirstValue(row, ["id", "carId"]));
-								return carId === id;
-							});
-							if (!match) return null;
-							return getIdValue(
-								getFirstValue(match, [
-									"category",
-									"carCategory",
-									"categoryId",
-									"car_category_id",
-								]),
-							);
-						})(),
-					})),
-					Effect.catchAll(() =>
-						Effect.succeed({
-							id,
-							name: `Car ${id}`,
-							categoryId: null,
-						}),
-					),
-				),
+		const carLookups = yield* forEachConcurrent(carIds, (id) =>
+			carById(garage61ApiKey, id).pipe(
+				Effect.map(({ data }) => ({
+					id,
+					name: extractLookupName(data, id, `Car ${id}`),
+					categoryId: (() => {
+						const rows = getArrayCandidate(data)
+							.map((row) => asRecord(row))
+							.filter((row): row is Record<string, unknown> => row !== null);
+						const match = rows.find((row) => {
+							const carId = getIdValue(getFirstValue(row, ["id", "carId"]));
+							return carId === id;
+						});
+						if (!match) return null;
+						return getIdValue(
+							getFirstValue(match, [
+								"category",
+								"carCategory",
+								"categoryId",
+								"car_category_id",
+							]),
+						);
+					})(),
+				})),
 			),
 		);
 
 		const trackNameById = new Map(
 			trackLookups.map((track) => [track.id, track.name]),
 		);
-		const trackVariantLookups = yield* Effect.all(
-			trackIds.map((id) =>
-				lapsForTrack(garage61ApiKey, id).pipe(
-					Effect.map(({ data }) => {
-						const lapRows = getArrayCandidate(asRecord(data)?.items ?? data)
-							.map((row) => asRecord(row))
-							.filter((row): row is Record<string, unknown> => row !== null);
-						const trackObj = lapRows[0]
-							? asRecord(getFirstValue(lapRows[0], ["track"]))
-							: null;
-						const variant = trackObj
-							? getFirstValue(trackObj, ["variant", "layout", "configuration"])
-							: null;
-						return {
-							id,
-							variant:
-								typeof variant === "string" && variant.trim()
-									? variant.trim()
-									: null,
-							isOvalByVariant: isOvalVariant(variant),
-						};
-					}),
-					Effect.catchAll(() =>
-						Effect.succeed({
-							id,
-							variant: null as string | null,
-							isOvalByVariant: null as boolean | null,
-						}),
-					),
-				),
+		const trackVariantLookups = yield* forEachConcurrent(trackIds, (id) =>
+			lapsForTrack(garage61ApiKey, id).pipe(
+				Effect.map(({ data }) => {
+					const lapRows = getArrayCandidate(asRecord(data)?.items ?? data)
+						.map((row) => asRecord(row))
+						.filter((row): row is Record<string, unknown> => row !== null);
+					const trackObj = lapRows[0]
+						? asRecord(getFirstValue(lapRows[0], ["track"]))
+						: null;
+					const variant = trackObj
+						? getFirstValue(trackObj, ["variant", "layout", "configuration"])
+						: null;
+					return {
+						id,
+						variant:
+							typeof variant === "string" && variant.trim()
+								? variant.trim()
+								: null,
+						isOvalByVariant: isOvalVariant(variant),
+					};
+				}),
 			),
 		);
 		const trackVariantById = new Map(
@@ -973,8 +932,9 @@ const summaryUncached = (garage61ApiKey: string) =>
 			),
 		];
 		const lapAverageWindowDays = shouldFallback ? 180 : 30;
-		const lapAverages = yield* Effect.all(
-			lapAverageTrackIds.map((trackId) =>
+		const lapAverages = yield* forEachConcurrent(
+			lapAverageTrackIds,
+			(trackId) =>
 				lapsForTrackWindow(garage61ApiKey, {
 					trackId,
 					ageDays: lapAverageWindowDays,
@@ -1004,14 +964,7 @@ const summaryUncached = (garage61ApiKey: string) =>
 							avgLapSeconds: filteredAverageFromLaps(lapTimes),
 						};
 					}),
-					Effect.catchAll(() =>
-						Effect.succeed({
-							trackId,
-							avgLapSeconds: null as number | null,
-						}),
-					),
 				),
-			),
 		);
 		const lapAverageByTrackId = new Map(
 			lapAverages.map((entry) => [entry.trackId, entry.avgLapSeconds]),
@@ -1078,8 +1031,9 @@ const summaryUncached = (garage61ApiKey: string) =>
 			.sort((a, b) => b.laps - a.laps)
 			.slice(0, 10);
 
-		const comboLapComparisons = yield* Effect.all(
-			comboCandidates.map((combo) => {
+		const comboLapComparisons = yield* forEachConcurrent(
+			comboCandidates,
+			(combo) => {
 				const categoryId = carCategoryByCarId.get(combo.carId);
 				const carFilter = categoryId ? `-${categoryId}` : String(combo.carId);
 				return Effect.all({
@@ -1092,11 +1046,7 @@ const summaryUncached = (garage61ApiKey: string) =>
 						age: -1,
 						limit: 200,
 						round: "metric",
-					}).pipe(
-						Effect.catchAll(() =>
-							Effect.succeed(emptyFetchResponse({ items: [] })),
-						),
-					),
+					}),
 					teamLapsRes: laps(garage61ApiKey, {
 						trackId: combo.trackId,
 						carFilter,
@@ -1105,13 +1055,9 @@ const summaryUncached = (garage61ApiKey: string) =>
 						age: -1,
 						limit: 200,
 						round: "metric",
-					}).pipe(
-						Effect.catchAll(() =>
-							Effect.succeed(emptyFetchResponse({ items: [] })),
-						),
-					),
+					}),
 				});
-			}),
+			},
 		);
 
 		const comparisonCandidates = comboLapComparisons
@@ -1263,15 +1209,6 @@ const summaryUncached = (garage61ApiKey: string) =>
 								totalLaps,
 							};
 						}),
-						Effect.catchAll(() =>
-							Effect.succeed({
-								track: cleanestComboCandidate.track,
-								car: cleanestComboCandidate.car,
-								cleanPercentage: cleanestComboCandidate.cleanPercentage,
-								cleanLaps: cleanestComboCandidate.cleanLaps,
-								totalLaps: cleanestComboCandidate.totalLaps,
-							}),
-						),
 					)
 				: cleanestComboCandidate
 					? {
@@ -1442,7 +1379,12 @@ const summary = () =>
 		return yield* getOrComputeJson({
 			key: GARAGE61_SUMMARY_CACHE_KEY,
 			ttlSeconds: GARAGE61_SUMMARY_CACHE_TTL_SECONDS,
-			compute: summaryUncached(garage61ApiKey),
+			compute: summaryUncached(garage61ApiKey).pipe(
+				Effect.timeoutFail({
+					duration: GARAGE61_SUMMARY_TIMEOUT,
+					onTimeout: () => new Error("Garage61 summary timed out"),
+				}),
+			),
 		});
 	});
 
