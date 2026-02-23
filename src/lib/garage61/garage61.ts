@@ -12,7 +12,7 @@ class Garage61Error extends Data.TaggedError("Garage61Error")<Error> {
 const GARAGE61_API_URL = "https://garage61.net/api/v1";
 const GARAGE61_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const GARAGE61_SUMMARY_CACHE_TTL_SECONDS = 60 * 60; // 1 hour
-const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v4";
+const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v5";
 const GARAGE61_REQUEST_TIMEOUT = "15 seconds";
 const LAST_30_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_RECENT_ITEMS = 10;
@@ -1352,18 +1352,26 @@ const summaryUncached = (garage61ApiKey: string) =>
 		const paceLadder = paceLadderSourceCombos
 			.map((combo) => {
 				const fastestLapSeconds = paceLadderFastestByCombo.get(combo.comboKey);
-				const fallbackLapSeconds = roundTo(
-					filteredWeightedAverage(combo.daySamples) ??
-						combo.totalTime / combo.laps,
-					3,
-				);
+				if (fastestLapSeconds === null || fastestLapSeconds === undefined) {
+					return null;
+				}
 				return {
 					track: combo.track,
 					car: combo.car,
-					avgLapSeconds: fastestLapSeconds ?? fallbackLapSeconds,
+					avgLapSeconds: fastestLapSeconds,
 					laps: roundTo(combo.laps, 0),
 				};
 			})
+			.filter(
+				(
+					item,
+				): item is {
+					track: string;
+					car: string;
+					avgLapSeconds: number;
+					laps: number;
+				} => item !== null,
+			)
 			.sort((a, b) => a.avgLapSeconds - b.avgLapSeconds)
 			.slice(0, PACE_LADDER_MAX_ITEMS);
 
