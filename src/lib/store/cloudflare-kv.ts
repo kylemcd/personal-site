@@ -15,6 +15,11 @@ type MemoryCacheEntry = {
 	value: string;
 	expiresAt: number | null;
 };
+type CacheEnvelope<A> = {
+	__cacheEnvelope: 1;
+	value: A;
+	refreshAfter: number | null;
+};
 
 type JsonCacheOptions = {
 	key: string;
@@ -51,6 +56,7 @@ const CACHE_BINDING_NAMES = [
 
 const inMemoryStore = new Map<string, MemoryCacheEntry>();
 const DEFAULT_CACHE_VERSION = "v1";
+const CACHE_ENVELOPE_VERSION = 1;
 
 const isDevRuntime = (): boolean => import.meta.env.DEV;
 const isDevCacheEnabled = (): boolean =>
@@ -154,10 +160,10 @@ const writeToMemory = <A>(
 	value: A,
 	ttlSeconds: number | undefined,
 ): void => {
+	void ttlSeconds;
 	inMemoryStore.set(key, {
 		value: JSON.stringify(value),
-		expiresAt:
-			typeof ttlSeconds === "number" ? Date.now() + ttlSeconds * 1000 : null,
+		expiresAt: null,
 	});
 };
 
@@ -169,24 +175,86 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 	const namespace =
 		isCacheBypassed() || isKvLookupDisabled() ? null : resolveKvNamespace();
 
-	const getJson: CloudflareKvStoreService["getJson"] = <A>({ key }) =>
+	const parseEnvelope = <A>(raw: string): CacheEnvelope<A> | null => {
+		try {
+			const parsed = JSON.parse(raw) as unknown;
+			const record = asRecord(parsed);
+			if (
+				record &&
+				record.__cacheEnvelope === CACHE_ENVELOPE_VERSION &&
+				"value" in record
+			) {
+				const refreshAfterRaw = record.refreshAfter;
+				const refreshAfter =
+					typeof refreshAfterRaw === "number" &&
+					Number.isFinite(refreshAfterRaw)
+						? refreshAfterRaw
+						: null;
+				return {
+					__cacheEnvelope: CACHE_ENVELOPE_VERSION,
+					value: record.value as A,
+					refreshAfter,
+				};
+			}
+
+			// Backward-compatible support for legacy unwrapped cached values.
+			return {
+				__cacheEnvelope: CACHE_ENVELOPE_VERSION,
+				value: parsed as A,
+				refreshAfter: null,
+			};
+		} catch {
+			return null;
+		}
+	};
+
+	const readEnvelope = <A>(
+		scopedKey: string,
+	): Effect.Effect<CacheEnvelope<A> | null> =>
 		Effect.gen(function* () {
-			const scopedKey = toScopedKey(key);
 			if (namespace) {
 				const raw = yield* Effect.tryPromise({
 					try: () => namespace.get(scopedKey, "text"),
 					catch: () => null,
 				});
 				if (raw) {
-					try {
-						return JSON.parse(raw) as A;
-					} catch {
-						return getFromMemory<A>(scopedKey);
-					}
+					const parsed = parseEnvelope<A>(raw);
+					if (parsed) return parsed;
 				}
 			}
 
-			return getFromMemory<A>(scopedKey);
+			const memValue = getFromMemory<CacheEnvelope<A> | A>(scopedKey);
+			if (memValue === null) return null;
+			if (
+				typeof memValue === "object" &&
+				memValue !== null &&
+				"__cacheEnvelope" in memValue &&
+				"value" in memValue
+			) {
+				const record = memValue as CacheEnvelope<A>;
+				return {
+					__cacheEnvelope: CACHE_ENVELOPE_VERSION,
+					value: record.value,
+					refreshAfter:
+						typeof record.refreshAfter === "number" &&
+						Number.isFinite(record.refreshAfter)
+							? record.refreshAfter
+							: null,
+				};
+			}
+
+			return {
+				__cacheEnvelope: CACHE_ENVELOPE_VERSION,
+				value: memValue as A,
+				refreshAfter: null,
+			};
+		});
+
+	const getJson: CloudflareKvStoreService["getJson"] = <A>({ key }) =>
+		Effect.gen(function* () {
+			const scopedKey = toScopedKey(key);
+			const envelope = yield* readEnvelope<A>(scopedKey);
+			return envelope?.value ?? null;
 		});
 
 	const putJson: CloudflareKvStoreService["putJson"] = ({
@@ -196,15 +264,18 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 	}) =>
 		Effect.gen(function* () {
 			const scopedKey = toScopedKey(key);
-			writeToMemory(scopedKey, value, ttlSeconds);
+			const envelope: CacheEnvelope<typeof value> = {
+				__cacheEnvelope: CACHE_ENVELOPE_VERSION,
+				value,
+				refreshAfter:
+					typeof ttlSeconds === "number"
+						? Date.now() + ttlSeconds * 1000
+						: null,
+			};
+			writeToMemory(scopedKey, envelope, ttlSeconds);
 			if (!namespace || isKvWriteDisabled()) return;
 			yield* Effect.tryPromise({
-				try: () =>
-					typeof ttlSeconds === "number"
-						? namespace.put(scopedKey, JSON.stringify(value), {
-								expirationTtl: ttlSeconds,
-							})
-						: namespace.put(scopedKey, JSON.stringify(value)),
+				try: () => namespace.put(scopedKey, JSON.stringify(envelope)),
 				catch: () => null,
 			});
 		});
@@ -229,11 +300,23 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			if (isCacheBypassed()) {
 				return yield* compute;
 			}
-			const cached = yield* getJson<A>({ key });
-			if (cached !== null) return cached;
-			const value = yield* compute;
-			yield* putJson({ key, value, ttlSeconds });
-			return value;
+			const scopedKey = toScopedKey(key);
+			const cached = yield* readEnvelope<A>(scopedKey);
+			if (!cached) {
+				const value = yield* compute;
+				yield* putJson({ key, value, ttlSeconds });
+				return value;
+			}
+
+			const needsRefresh =
+				cached.refreshAfter !== null && cached.refreshAfter <= Date.now();
+			if (!needsRefresh) return cached.value;
+
+			const refreshed = yield* compute.pipe(
+				Effect.tap((value) => putJson({ key, value, ttlSeconds })),
+				Effect.catchAll(() => Effect.succeed(cached.value)),
+			);
+			return refreshed;
 		});
 
 	return {
