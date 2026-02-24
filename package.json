@@ -6,13 +6,14 @@
     "dev": "zsh -lc 'set -a; source .env; set +a; KV_BYPASS_CACHE=true KV_DISABLE_KV_LOOKUP=true vite dev --port 3000'",
     "dev:stale": "zsh -lc 'set -a; source .env; set +a; KV_ENABLE_DEV_CACHE=true KV_BYPASS_CACHE=false KV_DISABLE_KV_LOOKUP=false KV_READ_ONLY_CACHE=true KV_CACHE_VERSION=dev-stale vite dev --port 3000'",
     "build": "vite build",
+    "postbuild": "npm run warm-cache",
     "serve": "vite preview",
     "test": "vitest run",
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
-    "warm-cache": "zsh -lc 'set -e; CACHE_VERSION=${CACHE_VERSION:-$(date +%s)}; echo \"Warming cache for version ${CACHE_VERSION}...\"; for i in 1 2 3 4 5 6; do curl -fsS -H \"Cache-Control: no-cache, no-store\" \"https://kpm.sh/?warm=${CACHE_VERSION}-${i}\" > /dev/null || true; if wrangler kv key get --binding APP_STORE \"${CACHE_VERSION}:garage61:summary:v6\" > /dev/null 2>&1; then echo \"Garage61 cache warm complete.\"; exit 0; fi; sleep 5; done; echo \"Garage61 cache warm failed.\"; exit 1'",
-    "deploy": "sh -c 'CACHE_VERSION=$(date +%s); wrangler deploy --var KV_CACHE_VERSION:$CACHE_VERSION && CACHE_VERSION=$CACHE_VERSION npm run warm-cache'",
+    "warm-cache": "zsh -lc 'set -e; CACHE_VERSION=${CACHE_VERSION:-v1}; echo \"Warming cache for version ${CACHE_VERSION}...\"; for i in 1 2 3 4 5 6; do curl -fsS -H \"Cache-Control: no-cache, no-store\" \"https://kpm.sh/?warm=${CACHE_VERSION}-${i}\" > /dev/null || true; if wrangler kv key get --binding APP_STORE \"${CACHE_VERSION}:garage61:summary:v6\" > /dev/null 2>&1; then echo \"Garage61 cache warm complete.\"; exit 0; fi; sleep 5; done; echo \"Garage61 cache warm failed.\"; exit 1'",
+    "deploy": "sh -c 'CACHE_VERSION=${CACHE_VERSION:-v1}; wrangler deploy --var KV_CACHE_VERSION:$CACHE_VERSION && CACHE_VERSION=$CACHE_VERSION npm run warm-cache'",
     "og": "npx vite-node --config vite.og.config.ts src/lib/open-graph/index.tsx"
   },
   "dependencies": {
