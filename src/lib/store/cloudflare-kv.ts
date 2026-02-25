@@ -276,7 +276,13 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			if (!namespace || isKvWriteDisabled()) return;
 			yield* Effect.tryPromise({
 				try: () => namespace.put(scopedKey, JSON.stringify(envelope)),
-				catch: () => null,
+				catch: (error) => {
+					console.error("[kv] put failed", {
+						key: scopedKey,
+						error,
+					});
+					return null;
+				},
 			});
 		});
 
@@ -314,7 +320,15 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 
 			const refreshed = yield* compute.pipe(
 				Effect.tap((value) => putJson({ key, value, ttlSeconds })),
-				Effect.catchAllCause(() => Effect.succeed(cached.value)),
+				Effect.catchAllCause((cause) =>
+					Effect.sync(() => {
+						console.error("[kv] refresh failed, serving stale cache", {
+							key: scopedKey,
+							cause,
+						});
+						return cached.value;
+					}),
+				),
 			);
 			return refreshed;
 		});
