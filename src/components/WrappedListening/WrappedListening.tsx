@@ -75,7 +75,7 @@ function WrappedListening({ wrapped }: WrappedListeningProps) {
 		<div className="wrapped-listening">
 			<div className="wrapped-repeat">
 				<div className="wrapped-repeat-copy">
-					<Text as="p" size="1">
+					<Text as="p" size="1" color="1">
 						{openingSentence}
 						{topArtistSentence} {funFactsParagraph}
 					</Text>
@@ -84,7 +84,7 @@ function WrappedListening({ wrapped }: WrappedListeningProps) {
 
 			<div className="wrapped-lists">
 				<div className="wrapped-list">
-					<Text as="p" size="0" color="2">
+					<Text as="p" size="1" weight="500">
 						Top Tracks
 					</Text>
 					<div>
@@ -122,7 +122,7 @@ function WrappedListening({ wrapped }: WrappedListeningProps) {
 				</div>
 
 				<div className="wrapped-list">
-					<Text as="p" size="0" color="2">
+					<Text as="p" size="1" weight="500">
 						Top Artists
 					</Text>
 					<div>
@@ -151,7 +151,7 @@ function WrappedListening({ wrapped }: WrappedListeningProps) {
 				</div>
 
 				<div className="wrapped-list">
-					<Text as="p" size="0" color="2">
+					<Text as="p" size="1" weight="500">
 						Top Albums
 					</Text>
 					<div>

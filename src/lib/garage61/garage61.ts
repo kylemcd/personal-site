@@ -1,7 +1,7 @@
 import { Config, Data, Effect } from "effect";
 
 import { fetchFresh } from "@/lib/fetch";
-import { getOrComputeJson } from "@/lib/store";
+import { getJson, getOrComputeJson } from "@/lib/store";
 
 import type { Garage61Summary } from "./schema";
 
@@ -1385,7 +1385,13 @@ const summary = () =>
 					onTimeout: () => new Error("Garage61 summary timed out"),
 				}),
 			),
-		});
+		}).pipe(
+			Effect.catchAllCause(() =>
+				getJson<Garage61Summary>({
+					key: GARAGE61_SUMMARY_CACHE_KEY,
+				}).pipe(Effect.map((cached) => cached ?? emptySummary())),
+			),
+		);
 	});
 
 const garage61 = {

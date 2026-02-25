@@ -24,6 +24,7 @@ const LASTFM_USERNAME = "kylemcd1";
 const LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
 const ALBUMS_LIMIT = 20;
 const MONTHLY_TOP_LIMIT = 200;
+const WRAPPED_TOP_COUNT = 5;
 const RECENTLY_PLAYED_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const MIN_SESSION_SECONDS = 5 * 60;
 const SESSION_BREAK_SECONDS = 45 * 60;
@@ -511,7 +512,7 @@ const extractWrappedData = (params: {
 
 	const topArtistShare = Math.round((topArtistPlays / totalScrobbles) * 100);
 	const topArtists = topArtistsRaw
-		.slice(0, 3)
+		.slice(0, WRAPPED_TOP_COUNT)
 		.map((artist) => {
 			const plays = parsePlayCount(artist.playcount);
 			const share = Math.round((plays / totalScrobbles) * 100);
@@ -525,7 +526,7 @@ const extractWrappedData = (params: {
 		.filter((artist) => artist.plays > 0);
 
 	const topTracksSummary = topTracks
-		.slice(0, 3)
+		.slice(0, WRAPPED_TOP_COUNT)
 		.map((track) => {
 			const plays = parsePlayCount(track.playcount);
 			const share = Math.round((plays / totalScrobbles) * 100);
@@ -548,7 +549,7 @@ const extractWrappedData = (params: {
 		.filter((track) => track.plays > 0);
 
 	const topAlbumsSummary = topAlbums
-		.slice(0, 3)
+		.slice(0, WRAPPED_TOP_COUNT)
 		.map((album) => {
 			const plays = parsePlayCount(album.playcount);
 			const share = Math.round((plays / totalScrobbles) * 100);

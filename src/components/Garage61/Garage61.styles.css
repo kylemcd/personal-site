@@ -227,7 +227,7 @@
 	.g61-racing-list-block > h2,
 	.g61-racing-list-block > h3,
 	.g61-racing-list-block > .g61-racing-list {
-		padding: 0 var(--spc-4);
+		padding: 0 var(--spc-8);
 	}
 
 	.g61-racing-insights {

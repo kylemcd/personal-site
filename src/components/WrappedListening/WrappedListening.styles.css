@@ -79,6 +79,12 @@
 	text-decoration: underline;
 	text-decoration-thickness: 1px;
 	text-underline-offset: 2px;
+	text-decoration-color: var(--color-text-3);
+	transition: color 0.1s ease-out;
+}
+
+.wrapped-inline-link:hover {
+	color: var(--color-text-3);
 }
 
 @media (min-width: 900px) {

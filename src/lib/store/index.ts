@@ -1,1 +1,5 @@
-export { getOrComputeJson, withCloudflareKvStore } from "./cloudflare-kv";
+export {
+	getJson,
+	getOrComputeJson,
+	withCloudflareKvStore,
+} from "./cloudflare-kv";

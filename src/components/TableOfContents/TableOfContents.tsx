@@ -101,9 +101,78 @@ type TableOfContentsProps = {
 
 function TableOfContents({ items }: TableOfContentsProps) {
 	const [activeId, setActiveId] = React.useState<string | null>(null);
+	const [containerStyle, setContainerStyle] =
+		React.useState<React.CSSProperties>();
+	const containerRef = React.useRef<HTMLDivElement>(null);
+
+	React.useEffect(() => {
+		const container = containerRef.current;
+		if (!container) return;
+
+		const clampContainer =
+			container.closest(".page-container") ?? container.closest(".post-layout");
+		const postContainer = container.closest(".post-container");
+		if (!(clampContainer instanceof HTMLElement)) return;
+		if (!(postContainer instanceof HTMLElement)) return;
+
+		const BORDER_OFFSET = 0;
+		const TOP_ALIGNMENT_OFFSET = -1;
+		const BOTTOM_ALIGNMENT_OFFSET = 0;
+		const fixedTop =
+			container.getBoundingClientRect().top + TOP_ALIGNMENT_OFFSET;
+
+		const updatePosition = () => {
+			const tocHeight = container.getBoundingClientRect().height;
+			const layoutRect = clampContainer.getBoundingClientRect();
+			const containerRect = postContainer.getBoundingClientRect();
+			const maxBottom = layoutRect.bottom - BORDER_OFFSET;
+			const wouldOverflowBottom = fixedTop + tocHeight > maxBottom;
+
+			if (!wouldOverflowBottom) {
+				setContainerStyle({ position: "fixed", top: `${fixedTop}px` });
+				return;
+			}
+
+			const layoutBottomDoc = window.scrollY + layoutRect.bottom;
+			const containerTopDoc = window.scrollY + containerRect.top;
+			const absoluteTop = Math.max(
+				0,
+				layoutBottomDoc -
+					tocHeight -
+					BORDER_OFFSET -
+					containerTopDoc +
+					BOTTOM_ALIGNMENT_OFFSET,
+			);
+
+			setContainerStyle({ position: "absolute", top: `${absoluteTop}px` });
+		};
+
+		updatePosition();
+		window.addEventListener("scroll", updatePosition, { passive: true });
+		window.addEventListener("resize", updatePosition);
+		const handleHoverChange = () => {
+			window.requestAnimationFrame(updatePosition);
+		};
+		container.addEventListener("mouseenter", handleHoverChange);
+		container.addEventListener("mouseleave", handleHoverChange);
+		const resizeObserver = new ResizeObserver(updatePosition);
+		resizeObserver.observe(container);
+
+		return () => {
+			window.removeEventListener("scroll", updatePosition);
+			window.removeEventListener("resize", updatePosition);
+			container.removeEventListener("mouseenter", handleHoverChange);
+			container.removeEventListener("mouseleave", handleHoverChange);
+			resizeObserver.disconnect();
+		};
+	}, []);
 
 	return (
-		<div className="table-of-contents-container">
+		<div
+			ref={containerRef}
+			className="table-of-contents-container"
+			style={containerStyle}
+		>
 			<TableOfContentsContext.Provider value={{ activeId, setActiveId }}>
 				<div className="table-of-contents">
 					<ul>

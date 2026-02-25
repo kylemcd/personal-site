@@ -37,39 +37,12 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 					),
 				),
 			garage61.summary().pipe(
-				Effect.tapError((error) =>
+				Effect.tapErrorCause((cause) =>
 					Effect.sync(() => {
-						console.error("Garage61 summary failed:", error);
+						console.error("Garage61 summary failed:", cause);
 					}),
 				),
-				Effect.catchAll(() =>
-					Effect.succeed({
-						profile: { id: 0, name: "Kyle" },
-						statistics: null,
-						sessions: null,
-						derived: {
-							sessionCount: null,
-							trackCount: null,
-							fastestLaps: [],
-							recentStatistics: [],
-							overview: {
-								totalTimeOnTrackSeconds: 0,
-								totalLapsDriven: 0,
-								totalCleanLapsDriven: 0,
-								cleanLapPercentage: null,
-								windowLabel: "Last 30 Days",
-								recentTracks: [],
-								recentCars: [],
-								insights: {
-									secondsOffRecord: null,
-									cleanestCombo: null,
-									paceLadder: [],
-									trackConfidence: [],
-								},
-							},
-						},
-					}),
-				),
+				Effect.catchAllCause(() => Effect.succeed(null)),
 			),
 		]),
 	);
@@ -123,6 +96,11 @@ export const Route = createFileRoute("/")({
 
 function Home() {
 	const { listening, writing, books, racing } = Route.useLoaderData();
+	const hasRacingOverview = Boolean(
+		racing?.derived.overview.recentTracks.length ||
+			racing?.derived.overview.recentCars.length ||
+			racing?.derived.overview.totalTimeOnTrackSeconds,
+	);
 
 	return (
 		<>
@@ -148,7 +126,7 @@ function Home() {
 						{listening.nowPlaying && (
 							<div className="listening-section">
 								<div className="listening-section-header">
-									<Text as="h2" size="2">
+									<Text as="h3" size="1" weight="500">
 										Now
 									</Text>
 									<Equalizer />
@@ -157,7 +135,7 @@ function Home() {
 							</div>
 						)}
 						<div className="listening-section">
-							<Text as="h2" size="2">
+							<Text as="h3" size="1" weight="500">
 								Recently Played
 							</Text>
 							<AlbumShelf albums={listening.albums} />
@@ -183,9 +161,7 @@ function Home() {
 					</HorizontalScrollContainer>
 				</div>
 			)}
-			{(racing.derived.overview.recentTracks.length > 0 ||
-				racing.derived.overview.recentCars.length > 0 ||
-				racing.derived.overview.totalTimeOnTrackSeconds > 0) && (
+			{racing && hasRacingOverview && (
 				<div className="section-container section-container-flush-right">
 					<Garage61 overview={racing.derived.overview} />
 				</div>

@@ -67,7 +67,7 @@ function NowPlaying({ album }: NowPlayingProps) {
 		>
 			<img src={album.image} alt={album.name} className="now-playing-image" />
 			<div className="now-playing-info">
-				<Marquee text={album.trackName} size="1" color="1" />
+				<Marquee text={album.trackName} size="0" color="1" />
 				<Text as="p" size="0" color="2">
 					{album.artist}
 				</Text>
@@ -93,7 +93,7 @@ function AlbumShelf({ albums }: AlbumShelfProps) {
 				>
 					<img src={album.image} alt={album.name} className="album-image" />
 					<div className="album-info">
-						<Text as="p" size="1">
+						<Text as="p" size="0" weight="500">
 							{album.name}
 						</Text>
 						<Text as="p" size="0" color="2">

@@ -314,7 +314,7 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 
 			const refreshed = yield* compute.pipe(
 				Effect.tap((value) => putJson({ key, value, ttlSeconds })),
-				Effect.catchAll(() => Effect.succeed(cached.value)),
+				Effect.catchAllCause(() => Effect.succeed(cached.value)),
 			);
 			return refreshed;
 		});
@@ -341,4 +341,14 @@ const getOrComputeJson = <A, E, R>({
 		return yield* store.getOrComputeJson({ key, ttlSeconds, compute });
 	}).pipe(withCloudflareKvStore);
 
-export { getOrComputeJson, withCloudflareKvStore };
+const getJson = <A>({
+	key,
+	ttlSeconds,
+}: JsonCacheOptions): Effect.Effect<A | null> =>
+	Effect.gen(function* () {
+		void ttlSeconds;
+		const store = yield* CloudflareKvStore;
+		return yield* store.getJson<A>({ key });
+	}).pipe(withCloudflareKvStore);
+
+export { getJson, getOrComputeJson, withCloudflareKvStore };
