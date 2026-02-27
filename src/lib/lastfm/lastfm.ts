@@ -725,8 +725,11 @@ const recentActivity = () => {
 	);
 };
 
+const refreshMonthlyTop = () => monthlyTopData();
+
 const lastfm = {
 	recentActivity,
+	refreshMonthlyTop,
 };
 
 export { lastfm };
