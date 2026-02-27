@@ -17,6 +17,16 @@
       "remote": true
     }
   ],
+  "workflows": [
+    {
+      "binding": "STALE_MONITOR_WORKFLOW",
+      "name": "stale-data-monitor",
+      "class_name": "StaleDataMonitorWorkflow"
+    }
+  ],
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
   "observability": {
     "logs": {
       "enabled": false,
