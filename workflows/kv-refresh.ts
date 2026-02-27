@@ -111,6 +111,18 @@ const collectErrorFragments = (
 	if (typeof value.message === "string" && value.message.trim()) {
 		fragments.push(value.message.trim());
 	}
+	for (const key of [
+		"details",
+		"detail",
+		"bodySnippet",
+		"responseBody",
+		"providerBody",
+	] as const) {
+		const candidate = value[key];
+		if (typeof candidate === "string" && candidate.trim()) {
+			fragments.push(candidate.trim());
+		}
+	}
 };
 
 const toErrorSummary = (error: unknown): string => {

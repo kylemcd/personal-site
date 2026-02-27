@@ -16,6 +16,10 @@ type ShelfData = {
 
 class FetchGoodreadsError extends Data.TaggedError("FetchGoodreadsError")<{
 	readonly error: unknown;
+	readonly details?: string;
+	readonly status?: number;
+	readonly statusText?: string;
+	readonly url?: string;
 }> {
 	message = "Failed to fetch Goodreads books";
 }
@@ -41,6 +45,16 @@ type RawGoodreadsItem = {
 	isbn?: string;
 	average_rating?: string;
 	book_published?: string;
+};
+
+const errorDetails = (error: unknown): string => {
+	if (error instanceof Error && error.message.trim()) return error.message.trim();
+	if (typeof error === "string" && error.trim()) return error.trim();
+	try {
+		return JSON.stringify(error);
+	} catch {
+		return String(error);
+	}
 };
 
 const parseRssToBooks = (
@@ -159,20 +173,43 @@ const getBooks = ({
 						Accept: "application/rss+xml, application/xml, text/xml, */*",
 					},
 				}),
-			catch: (error) => new FetchGoodreadsError({ error }),
+			catch: (error) =>
+				new FetchGoodreadsError({
+					error,
+					details: errorDetails(error),
+					url,
+				}),
 		});
 
 		if (!response.ok) {
+			const rawBody = yield* Effect.tryPromise({
+				try: () => response.text(),
+				catch: () => "",
+			});
+			const bodySnippet = rawBody.trim()
+				? rawBody.trim().length > 2000
+					? `${rawBody.trim().slice(0, 2000)}...`
+					: rawBody.trim()
+				: "";
 			return yield* Effect.fail(
 				new FetchGoodreadsError({
 					error: new Error(`HTTP ${response.status}: ${response.statusText}`),
+					details: `HTTP ${response.status}: ${response.statusText}${bodySnippet ? ` | ${bodySnippet}` : ""}`,
+					status: response.status,
+					statusText: response.statusText,
+					url,
 				}),
 			);
 		}
 
 		const xml = yield* Effect.tryPromise({
 			try: () => response.text(),
-			catch: (error) => new FetchGoodreadsError({ error }),
+			catch: (error) =>
+				new FetchGoodreadsError({
+					error,
+					details: errorDetails(error),
+					url,
+				}),
 		});
 
 		const books = yield* parseRssToBooks(xml);

@@ -17,7 +17,9 @@ import {
 
 class LastFmRecentAlbumsError extends Data.TaggedError(
 	"LastFmRecentAlbumsError",
-)<Error> {
+)<{
+	readonly error: unknown;
+}> {
 	message = "Failed to fetch recent albums from Last.fm";
 }
 
@@ -685,7 +687,7 @@ const monthlyTopData = () => {
 				topArtists: topArtistsRes.data.topartists.artist,
 				topAlbums: topAlbumsRes.data.topalbums.album,
 			})),
-			Effect.mapError((e) => new LastFmRecentAlbumsError(e as Error)),
+			Effect.mapError((error) => new LastFmRecentAlbumsError({ error })),
 		),
 	});
 };
@@ -706,7 +708,7 @@ const recentActivity = () => {
 			}),
 			monthlyTopData(),
 		]).pipe(
-			Effect.mapError((e) => new LastFmRecentAlbumsError(e as Error)),
+			Effect.mapError((error) => new LastFmRecentAlbumsError({ error })),
 			Effect.flatMap(([recentTracksRes, monthlyTop]) =>
 				Effect.succeed(
 					extractListeningData(

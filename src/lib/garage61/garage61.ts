@@ -5,7 +5,9 @@ import { getJson, refreshJson } from "@/lib/store";
 
 import type { Garage61Summary } from "./schema";
 
-class Garage61Error extends Data.TaggedError("Garage61Error")<Error> {
+class Garage61Error extends Data.TaggedError("Garage61Error")<{
+	readonly error: unknown;
+}> {
 	message = "Failed to fetch data from Garage61";
 }
 
@@ -1367,7 +1369,7 @@ const summaryUncached = (garage61ApiKey: string) =>
 				},
 			},
 		} satisfies Garage61Summary;
-	}).pipe(Effect.mapError((error) => new Garage61Error(error as Error)));
+	}).pipe(Effect.mapError((error) => new Garage61Error({ error })));
 
 const summary = () =>
 	Effect.gen(function* () {
@@ -1387,7 +1389,10 @@ const refreshSummary = () =>
 			compute: summaryUncached(garage61ApiKey).pipe(
 				Effect.timeoutFail({
 					duration: GARAGE61_SUMMARY_TIMEOUT,
-					onTimeout: () => new Garage61Error(new Error("Garage61 summary timed out")),
+					onTimeout: () =>
+						new Garage61Error({
+							error: new Error("Garage61 summary timed out"),
+						}),
 				}),
 			),
 		});

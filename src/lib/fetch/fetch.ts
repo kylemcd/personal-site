@@ -12,6 +12,7 @@ export class FetchNetworkError extends Data.TaggedError("FetchNetworkError")<{
  */
 export class FetchResponseError extends Data.TaggedError("FetchResponseError")<{
 	readonly response: Response;
+	readonly bodySnippet?: string;
 }> {
 	get status() {
 		return this.response.status;
@@ -77,7 +78,16 @@ export const fetchJsonEffect = <A>(
 
 		// Step 2 – HTTP status check
 		if (!response.ok) {
-			return yield* Effect.fail(new FetchResponseError({ response }));
+			const bodySnippet = yield* Effect.tryPromise({
+				try: async () => {
+					const raw = await response.clone().text();
+					const trimmed = raw.trim();
+					if (!trimmed) return "";
+					return trimmed.length > 2000 ? `${trimmed.slice(0, 2000)}...` : trimmed;
+				},
+				catch: () => "",
+			});
+			return yield* Effect.fail(new FetchResponseError({ response, bodySnippet }));
 		}
 
 		// Step 3 – parse body as JSON
