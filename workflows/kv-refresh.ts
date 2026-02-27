@@ -1,5 +1,5 @@
 import { WorkflowEntrypoint } from "cloudflare:workers";
-import { Effect } from "effect";
+import { Cause, Effect } from "effect";
 
 import { garage61 } from "@/lib/garage61";
 import { goodreads } from "@/lib/goodreads";
@@ -42,9 +42,90 @@ type StepResult =
 	| { status: "skipped"; reason: string }
 	| { status: "failed"; error: string };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isResponseLike = (
+	value: unknown,
+): value is { status: number; statusText?: string; url?: string } => {
+	if (!isRecord(value)) return false;
+	return typeof value.status === "number";
+};
+
+const collectErrorFragments = (
+	value: unknown,
+	fragments: string[],
+	seen: WeakSet<object>,
+	depth = 0,
+): void => {
+	if (depth > 8 || value === null || value === undefined) return;
+	if (typeof value === "string") {
+		if (value.trim()) fragments.push(value.trim());
+		return;
+	}
+	if (typeof value === "number" || typeof value === "boolean") {
+		fragments.push(String(value));
+		return;
+	}
+	if (value instanceof Error) {
+		const message = value.message?.trim();
+		fragments.push(message ? `${value.name}: ${message}` : value.name);
+		const nestedCause = (value as Error & { cause?: unknown }).cause;
+		if (nestedCause !== undefined) {
+			collectErrorFragments(nestedCause, fragments, seen, depth + 1);
+		}
+		return;
+	}
+	if (!isRecord(value)) return;
+	if (seen.has(value)) return;
+	seen.add(value);
+
+	if (typeof value._tag === "string" && value._tag.trim()) {
+		fragments.push(value._tag.trim());
+	}
+	if (isResponseLike(value)) {
+		const statusText =
+			typeof value.statusText === "string" ? value.statusText.trim() : "";
+		const url = typeof value.url === "string" ? value.url.trim() : "";
+		fragments.push(
+			`HTTP ${value.status}${statusText ? ` ${statusText}` : ""}${url ? ` (${url})` : ""}`,
+		);
+	}
+
+	const nestedKeys = [
+		"error",
+		"cause",
+		"reason",
+		"response",
+		"failure",
+		"defect",
+		"left",
+		"right",
+	] as const;
+	for (const key of nestedKeys) {
+		if (key in value) {
+			collectErrorFragments(value[key], fragments, seen, depth + 1);
+		}
+	}
+
+	if (typeof value.message === "string" && value.message.trim()) {
+		fragments.push(value.message.trim());
+	}
+};
+
 const toErrorSummary = (error: unknown): string => {
-	if (error instanceof Error) return error.message;
-	if (typeof error === "string") return error;
+	const fragments: string[] = [];
+	collectErrorFragments(error, fragments, new WeakSet<object>());
+	const compact = [...new Set(fragments.filter(Boolean))].join(" | ").trim();
+	if (compact) {
+		return compact.length > 2000 ? `${compact.slice(0, 2000)}...` : compact;
+	}
+
+	if (Cause.isCause(error)) {
+		const pretty = Cause.pretty(error).trim();
+		if (pretty) return pretty.length > 2000 ? `${pretty.slice(0, 2000)}...` : pretty;
+	}
+
 	try {
 		return JSON.stringify(error);
 	} catch {
