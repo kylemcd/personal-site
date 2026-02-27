@@ -1,7 +1,7 @@
 import { Config, Data, Effect } from "effect";
 
 import { fetchFresh } from "@/lib/fetch";
-import { getJson } from "@/lib/store";
+import { getJson, refreshJson } from "@/lib/store";
 
 import type { Garage61Summary } from "./schema";
 
@@ -12,6 +12,7 @@ class Garage61Error extends Data.TaggedError("Garage61Error")<Error> {
 const GARAGE61_API_URL = "https://garage61.net/api/v1";
 const GARAGE61_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v6";
+const GARAGE61_SUMMARY_CACHE_TTL_SECONDS = 30 * 60;
 const GARAGE61_REQUEST_TIMEOUT = "15 seconds";
 const GARAGE61_SUMMARY_TIMEOUT = "25 seconds";
 const GARAGE61_REQUEST_CONCURRENCY = 4;
@@ -1377,8 +1378,24 @@ const summary = () =>
 		);
 	});
 
+const refreshSummary = () =>
+	Effect.gen(function* () {
+		const garage61ApiKey = yield* GARAGE61_API_KEY_CONFIG;
+		return yield* refreshJson<Garage61Summary, Garage61Error, never>({
+			key: GARAGE61_SUMMARY_CACHE_KEY,
+			ttlSeconds: GARAGE61_SUMMARY_CACHE_TTL_SECONDS,
+			compute: summaryUncached(garage61ApiKey).pipe(
+				Effect.timeoutFail({
+					duration: GARAGE61_SUMMARY_TIMEOUT,
+					onTimeout: () => new Garage61Error(new Error("Garage61 summary timed out")),
+				}),
+			),
+		});
+	});
+
 const garage61 = {
 	summary,
+	refreshSummary,
 };
 
 export { garage61 };

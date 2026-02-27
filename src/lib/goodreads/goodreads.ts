@@ -2,10 +2,11 @@ import { Data, Effect } from "effect";
 import { XMLParser } from "fast-xml-parser";
 
 import type { BookSchema } from "@/lib/books/schema";
-import { getJson } from "@/lib/store";
+import { getJson, refreshJson } from "@/lib/store";
 
 const GOODREADS_USER_ID = "149477581-kyle-mcdonald";
 const GOODREADS_SHELF_CACHE_KEY = "goodreads:shelf:v1";
+const GOODREADS_SHELF_CACHE_TTL_SECONDS = 30 * 60;
 
 type ShelfData = {
 	reading: ReadonlyArray<typeof BookSchema.Type>;
@@ -187,7 +188,39 @@ const shelf = () =>
 		Effect.map((cached) => cached ?? { reading: [], finished: [], next: [] }),
 	);
 
+const fetchShelfData = (): Effect.Effect<
+	ShelfData,
+	FetchGoodreadsError | ParseGoodreadsError,
+	never
+> =>
+	Effect.all({
+		reading: getBooks({
+			shelf: "currently-reading",
+			limit: 10,
+		}),
+		finished: getBooks({
+			shelf: "read",
+			limit: 20,
+			sort: "date_read",
+			order: "d",
+		}),
+		next: getBooks({
+			shelf: "to-read",
+			limit: 10,
+			sort: "date_added",
+			order: "d",
+		}),
+	});
+
+const refreshShelf = () =>
+	refreshJson<ShelfData, FetchGoodreadsError | ParseGoodreadsError, never>({
+		key: GOODREADS_SHELF_CACHE_KEY,
+		ttlSeconds: GOODREADS_SHELF_CACHE_TTL_SECONDS,
+		compute: fetchShelfData(),
+	});
+
 export const goodreads = {
 	getBooks,
 	shelf,
+	refreshShelf,
 };

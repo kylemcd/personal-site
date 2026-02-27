@@ -66,6 +66,7 @@ const getReadKeys = (cacheVersion: string | undefined, key: string): string[] =>
 
 const getAlertStateKey = (cacheVersion: string | undefined, key: string): string =>
 	`monitor:stale-alert:${(cacheVersion?.trim() || DEFAULT_CACHE_VERSION).trim()}:${key}`;
+const getLookupStatusKey = (key: string): string => `monitor:lookup-status:${key}`;
 
 const sendResendEmail = async (
 	apiKey: string,
@@ -91,6 +92,38 @@ const sendResendEmail = async (
 		throw new Error(`Resend email failed with HTTP ${response.status}`);
 	}
 };
+
+type LookupStatus = {
+	lastAttemptAt?: number | null;
+	lastSuccessAt?: number | null;
+	lastFailureAt?: number | null;
+	lastError?: string | null;
+};
+
+const parseLookupStatus = (raw: string | null): LookupStatus | null => {
+	if (!raw) return null;
+	try {
+		const parsed = JSON.parse(raw) as unknown;
+		const record = asRecord(parsed);
+		if (!record) return null;
+		return {
+			lastAttemptAt:
+				typeof record.lastAttemptAt === "number" ? record.lastAttemptAt : null,
+			lastSuccessAt:
+				typeof record.lastSuccessAt === "number" ? record.lastSuccessAt : null,
+			lastFailureAt:
+				typeof record.lastFailureAt === "number" ? record.lastFailureAt : null,
+			lastError: typeof record.lastError === "string" ? record.lastError : null,
+		};
+	} catch {
+		return null;
+	}
+};
+
+const formatTs = (value: number | null | undefined): string =>
+	typeof value === "number" && Number.isFinite(value)
+		? new Date(value).toISOString()
+		: "n/a";
 
 export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 	StaleMonitorWorkflowEnv,
@@ -127,6 +160,15 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 					resolvedKey = readKey;
 					break;
 				}
+				let lookupStatus: LookupStatus | null = null;
+				for (const statusKey of getReadKeys(
+					cacheVersion,
+					getLookupStatusKey(item.key),
+				)) {
+					const raw = await store.get(statusKey, "text");
+					lookupStatus = parseLookupStatus(raw);
+					if (lookupStatus) break;
+				}
 
 				const alertStateKey = getAlertStateKey(cacheVersion, item.key);
 				if (!envelope || envelope.refreshAfter === null) {
@@ -143,6 +185,10 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 								`Key: ${item.key}`,
 								`Resolved key: ${resolvedKey ?? "n/a"}`,
 								`Triggered at: ${new Date(nowMs).toISOString()}`,
+								`Last attempt: ${formatTs(lookupStatus?.lastAttemptAt)}`,
+								`Last success: ${formatTs(lookupStatus?.lastSuccessAt)}`,
+								`Last failure: ${formatTs(lookupStatus?.lastFailureAt)}`,
+								`Last error: ${lookupStatus?.lastError ?? "n/a"}`,
 							].join("\n"),
 						);
 						await store.put(alertStateKey, JSON.stringify({ sentAt: nowMs }));
@@ -181,6 +227,10 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 						`Stale for minutes: ${Math.floor(staleForMs / (60 * 1000))}`,
 						`Refresh after: ${new Date(envelope.refreshAfter).toISOString()}`,
 						`Triggered at: ${new Date(nowMs).toISOString()}`,
+						`Last attempt: ${formatTs(lookupStatus?.lastAttemptAt)}`,
+						`Last success: ${formatTs(lookupStatus?.lastSuccessAt)}`,
+						`Last failure: ${formatTs(lookupStatus?.lastFailureAt)}`,
+						`Last error: ${lookupStatus?.lastError ?? "n/a"}`,
 					].join("\n"),
 				);
 				await store.put(alertStateKey, JSON.stringify({ sentAt: nowMs }));

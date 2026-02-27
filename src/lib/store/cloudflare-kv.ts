@@ -32,6 +32,11 @@ type JsonGetOrComputeOptions<A, E, R> = {
 	ttlSeconds: number;
 	compute: Effect.Effect<A, E, R>;
 };
+type JsonRefreshOptions<A, E, R> = {
+	key: string;
+	ttlSeconds: number;
+	compute: Effect.Effect<A, E, R>;
+};
 
 type CloudflareKvStoreService = {
 	getJson: <A>(options: JsonCacheOptions) => Effect.Effect<A | null>;
@@ -39,6 +44,9 @@ type CloudflareKvStoreService = {
 	delete: (key: string) => Effect.Effect<void>;
 	getOrComputeJson: <A, E, R>(
 		options: JsonGetOrComputeOptions<A, E, R>,
+	) => Effect.Effect<A, E, R>;
+	refreshJson: <A, E, R>(
+		options: JsonRefreshOptions<A, E, R>,
 	) => Effect.Effect<A, E, R>;
 };
 
@@ -83,6 +91,7 @@ const getReadKeys = (key: string): ReadonlyArray<string> => {
 	const defaultScopedKey = `${DEFAULT_CACHE_VERSION}:${key}`;
 	return [...new Set([activeScopedKey, defaultScopedKey, key])];
 };
+const toLookupStatusKey = (key: string): string => `monitor:lookup-status:${key}`;
 
 const asRecord = (value: unknown): Record<string, unknown> | null => {
 	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -261,6 +270,51 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			return null;
 		});
 
+	const statusErrorSummary = (cause: unknown): string => {
+		if (cause instanceof Error) return cause.message;
+		if (typeof cause === "string") return cause;
+		try {
+			return JSON.stringify(cause);
+		} catch {
+			return String(cause);
+		}
+	};
+
+	const writeLookupStatus = (
+		key: string,
+		status: Record<string, unknown>,
+	): Effect.Effect<void> =>
+		putJson({
+			key: toLookupStatusKey(key),
+			value: status,
+		}).pipe(
+			Effect.catchAll(() => Effect.void),
+		);
+
+	const computeWithStatus = <A, E, R>(
+		key: string,
+		compute: Effect.Effect<A, E, R>,
+	): Effect.Effect<A, E, R> => {
+		const attemptAt = Date.now();
+		return compute.pipe(
+			Effect.tap(() =>
+				writeLookupStatus(key, {
+					lastAttemptAt: attemptAt,
+					lastSuccessAt: Date.now(),
+					lastFailureAt: null,
+					lastError: null,
+				}),
+			),
+			Effect.tapErrorCause((cause) =>
+				writeLookupStatus(key, {
+					lastAttemptAt: attemptAt,
+					lastFailureAt: Date.now(),
+					lastError: statusErrorSummary(cause),
+				}),
+			),
+		);
+	};
+
 	const putJson: CloudflareKvStoreService["putJson"] = ({
 		key,
 		value,
@@ -314,7 +368,7 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 				if (cached) break;
 			}
 			if (!cached) {
-				const value = yield* compute;
+				const value = yield* computeWithStatus(key, compute);
 				yield* putJson({ key, value, ttlSeconds });
 				return value;
 			}
@@ -323,7 +377,7 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 				cached.refreshAfter !== null && cached.refreshAfter <= Date.now();
 			if (!needsRefresh) return cached.value;
 
-			const refreshed = yield* compute.pipe(
+			const refreshed = yield* computeWithStatus(key, compute).pipe(
 				Effect.tap((value) => putJson({ key, value, ttlSeconds })),
 				Effect.catchAllCause((cause) =>
 					Effect.sync(() => {
@@ -338,11 +392,23 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			return refreshed;
 		});
 
+	const refreshJson: CloudflareKvStoreService["refreshJson"] = ({
+		key,
+		ttlSeconds,
+		compute,
+	}) =>
+		Effect.gen(function* () {
+			const value = yield* computeWithStatus(key, compute);
+			yield* putJson({ key, value, ttlSeconds });
+			return value;
+		});
+
 	return {
 		getJson,
 		putJson,
 		delete: del,
 		getOrComputeJson,
+		refreshJson,
 	};
 });
 
@@ -370,4 +436,14 @@ const getJson = <A>({
 		return yield* store.getJson<A>({ key });
 	}).pipe(withCloudflareKvStore);
 
-export { getJson, getOrComputeJson, withCloudflareKvStore };
+const refreshJson = <A, E, R>({
+	key,
+	ttlSeconds,
+	compute,
+}: JsonRefreshOptions<A, E, R>): Effect.Effect<A, E, R> =>
+	Effect.gen(function* () {
+		const store = yield* CloudflareKvStore;
+		return yield* store.refreshJson({ key, ttlSeconds, compute });
+	}).pipe(withCloudflareKvStore);
+
+export { getJson, getOrComputeJson, refreshJson, withCloudflareKvStore };
