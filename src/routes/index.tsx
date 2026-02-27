@@ -96,6 +96,9 @@ export const Route = createFileRoute("/")({
 
 function Home() {
 	const { listening, writing, books, racing } = Route.useLoaderData();
+	const hasBooks = Boolean(
+		(books?.reading?.length ?? 0) > 0 || (books?.finished?.length ?? 0) > 0,
+	);
 	const hasRacingOverview = Boolean(
 		racing?.derived.overview.recentTracks.length ||
 			racing?.derived.overview.recentCars.length ||
@@ -143,7 +146,7 @@ function Home() {
 					</HorizontalScrollContainer>
 				</div>
 			</div>
-			{(books?.reading || books?.finished) && (
+			{hasBooks && (
 				<div className="section-container section-container-flush-right">
 					<HorizontalScrollContainer className="bookshelf-container">
 						<div className="bookshelf-section">

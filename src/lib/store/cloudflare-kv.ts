@@ -1,4 +1,5 @@
 import { getGlobalStartContext } from "@tanstack/react-start";
+import { env as cloudflareEnv } from "cloudflare:workers";
 import { Context, Effect, Layer } from "effect";
 
 type KvNamespaceLike = {
@@ -58,19 +59,8 @@ const inMemoryStore = new Map<string, MemoryCacheEntry>();
 const DEFAULT_CACHE_VERSION = "v1";
 const CACHE_ENVELOPE_VERSION = 1;
 
-const isDevRuntime = (): boolean => import.meta.env.DEV;
-const isDevCacheEnabled = (): boolean =>
-	process.env.KV_ENABLE_DEV_CACHE?.toLowerCase() === "true";
-
-const isCacheBypassed = (): boolean =>
-	process.env.KV_BYPASS_CACHE?.toLowerCase() === "true" ||
-	(isDevRuntime() && !isDevCacheEnabled());
-const isKvLookupDisabled = (): boolean =>
-	process.env.KV_DISABLE_KV_LOOKUP?.toLowerCase() === "true" ||
-	(isDevRuntime() && !isDevCacheEnabled());
 const isKvWriteDisabled = (): boolean =>
-	process.env.KV_READ_ONLY_CACHE?.toLowerCase() === "true" ||
-	(isDevRuntime() && !isDevCacheEnabled());
+	process.env.KV_READ_ONLY_CACHE?.toLowerCase() === "true";
 
 const getCacheVersion = (): string => {
 	const globalRecord = asRecord(globalThis);
@@ -88,6 +78,11 @@ const getCacheVersion = (): string => {
 };
 
 const toScopedKey = (key: string): string => `${getCacheVersion()}:${key}`;
+const getReadKeys = (key: string): ReadonlyArray<string> => {
+	const activeScopedKey = toScopedKey(key);
+	const defaultScopedKey = `${DEFAULT_CACHE_VERSION}:${key}`;
+	return [...new Set([activeScopedKey, defaultScopedKey, key])];
+};
 
 const asRecord = (value: unknown): Record<string, unknown> | null => {
 	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -105,6 +100,14 @@ const isKvNamespaceLike = (value: unknown): value is KvNamespaceLike => {
 };
 
 const resolveKvNamespace = (): KvNamespaceLike | null => {
+	const importedEnv = asRecord(cloudflareEnv);
+	if (importedEnv) {
+		for (const name of CACHE_BINDING_NAMES) {
+			const candidate = importedEnv[name];
+			if (isKvNamespaceLike(candidate)) return candidate;
+		}
+	}
+
 	const globalRecord = asRecord(globalThis);
 	if (globalRecord) {
 		for (const name of CACHE_BINDING_NAMES) {
@@ -172,8 +175,7 @@ const deleteFromMemory = (key: string): void => {
 };
 
 const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
-	const namespace =
-		isCacheBypassed() || isKvLookupDisabled() ? null : resolveKvNamespace();
+	const namespace = resolveKvNamespace();
 
 	const parseEnvelope = <A>(raw: string): CacheEnvelope<A> | null => {
 		try {
@@ -252,9 +254,11 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 
 	const getJson: CloudflareKvStoreService["getJson"] = <A>({ key }) =>
 		Effect.gen(function* () {
-			const scopedKey = toScopedKey(key);
-			const envelope = yield* readEnvelope<A>(scopedKey);
-			return envelope?.value ?? null;
+			for (const readKey of getReadKeys(key)) {
+				const envelope = yield* readEnvelope<A>(readKey);
+				if (envelope) return envelope.value;
+			}
+			return null;
 		});
 
 	const putJson: CloudflareKvStoreService["putJson"] = ({
@@ -303,11 +307,12 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 		compute,
 	}) =>
 		Effect.gen(function* () {
-			if (isCacheBypassed()) {
-				return yield* compute;
-			}
 			const scopedKey = toScopedKey(key);
-			const cached = yield* readEnvelope<A>(scopedKey);
+			let cached: CacheEnvelope<A> | null = null;
+			for (const readKey of getReadKeys(key)) {
+				cached = yield* readEnvelope<A>(readKey);
+				if (cached) break;
+			}
 			if (!cached) {
 				const value = yield* compute;
 				yield* putJson({ key, value, ttlSeconds });

@@ -2,11 +2,10 @@ import { Data, Effect } from "effect";
 import { XMLParser } from "fast-xml-parser";
 
 import type { BookSchema } from "@/lib/books/schema";
-import { getOrComputeJson } from "@/lib/store";
+import { getJson } from "@/lib/store";
 
 const GOODREADS_USER_ID = "149477581-kyle-mcdonald";
 const GOODREADS_SHELF_CACHE_KEY = "goodreads:shelf:v1";
-const GOODREADS_SHELF_CACHE_TTL_SECONDS = 60 * 60; // 1 hour
 
 type ShelfData = {
 	reading: ReadonlyArray<typeof BookSchema.Type>;
@@ -181,27 +180,11 @@ const getBooks = ({
 	});
 };
 
-const fetchShelfData = () =>
-	Effect.gen(function* () {
-		const reading = yield* getBooks({ shelf: "currently-reading", limit: 10 });
-		const finished = yield* getBooks({
-			shelf: "read",
-			limit: 20,
-			sort: "date_read",
-			order: "d", // descending - most recently read first
-		});
-		const next = yield* getBooks({ shelf: "to-read", limit: 10 });
-
-		return { reading, finished, next };
-	});
-
 const shelf = () =>
-	getOrComputeJson<ShelfData, FetchGoodreadsError | ParseGoodreadsError, never>(
-		{
-			key: GOODREADS_SHELF_CACHE_KEY,
-			ttlSeconds: GOODREADS_SHELF_CACHE_TTL_SECONDS,
-			compute: fetchShelfData(),
-		},
+	getJson<ShelfData>({
+		key: GOODREADS_SHELF_CACHE_KEY,
+	}).pipe(
+		Effect.map((cached) => cached ?? { reading: [], finished: [], next: [] }),
 	);
 
 export const goodreads = {

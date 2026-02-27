@@ -1,6 +1,7 @@
 import { Data, Effect, pipe } from "effect";
 
 import { fetchFresh } from "@/lib/fetch";
+import { getOrComputeJson } from "@/lib/store";
 
 import {
 	type Album,
@@ -24,6 +25,8 @@ const LASTFM_USERNAME = "kylemcd1";
 const LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
 const ALBUMS_LIMIT = 20;
 const MONTHLY_TOP_LIMIT = 200;
+const LASTFM_MONTHLY_TOP_CACHE_KEY = "lastfm:monthly-top:v1";
+const LASTFM_MONTHLY_TOP_CACHE_TTL_SECONDS = 30 * 60; // 30 minutes
 const WRAPPED_TOP_COUNT = 5;
 const RECENTLY_PLAYED_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const MIN_SESSION_SECONDS = 5 * 60;
@@ -623,13 +626,15 @@ const getBaseParams = () => ({
 	format: "json",
 });
 
-const recentActivity = () => {
-	const recentTracksParams = new URLSearchParams({
-		...getBaseParams(),
-		method: "user.getrecenttracks",
-		limit: "200", // Fetch many tracks to get enough unique albums
-	});
+type CachedMonthlyTopData = {
+	topTracks: ReadonlyArray<(typeof TopTracksResponseSchema.Type.toptracks.track)[number]>;
+	topArtists: ReadonlyArray<
+		(typeof TopArtistsResponseSchema.Type.topartists.artist)[number]
+	>;
+	topAlbums: ReadonlyArray<(typeof TopAlbumsResponseSchema.Type.topalbums.album)[number]>;
+};
 
+const monthlyTopData = () => {
 	const topTracksParams = new URLSearchParams({
 		...getBaseParams(),
 		method: "user.gettoptracks",
@@ -651,13 +656,14 @@ const recentActivity = () => {
 		limit: String(MONTHLY_TOP_LIMIT),
 	});
 
-	return pipe(
-		Effect.all([
-			fetchFresh({
-				url: `${LASTFM_API_URL}?${recentTracksParams.toString()}`,
-				method: "GET",
-				schema: RecentTracksResponseSchema,
-			}),
+	return getOrComputeJson<
+		CachedMonthlyTopData,
+		LastFmRecentAlbumsError,
+		never
+	>({
+		key: LASTFM_MONTHLY_TOP_CACHE_KEY,
+		ttlSeconds: LASTFM_MONTHLY_TOP_CACHE_TTL_SECONDS,
+		compute: Effect.all([
 			fetchFresh({
 				url: `${LASTFM_API_URL}?${topTracksParams.toString()}`,
 				method: "GET",
@@ -674,21 +680,46 @@ const recentActivity = () => {
 				schema: TopAlbumsResponseSchema,
 			}),
 		]).pipe(
+			Effect.map(([topTracksRes, topArtistsRes, topAlbumsRes]) => ({
+				topTracks: topTracksRes.data.toptracks.track,
+				topArtists: topArtistsRes.data.topartists.artist,
+				topAlbums: topAlbumsRes.data.topalbums.album,
+			})),
 			Effect.mapError((e) => new LastFmRecentAlbumsError(e as Error)),
-			Effect.flatMap(
-				([recentTracksRes, topTracksRes, topArtistsRes, topAlbumsRes]) =>
-					Effect.succeed(
-						extractListeningData(
-							recentTracksRes.data.recenttracks.track,
-							extractWrappedData({
-								topTracks: topTracksRes.data.toptracks.track,
-								topArtists: topArtistsRes.data.topartists.artist,
-								topAlbums: topAlbumsRes.data.topalbums.album,
-								recentTracks: recentTracksRes.data.recenttracks.track,
-								nowMs: Date.now(),
-							}),
-						),
+		),
+	});
+};
+
+const recentActivity = () => {
+	const recentTracksParams = new URLSearchParams({
+		...getBaseParams(),
+		method: "user.getrecenttracks",
+		limit: "200", // Fetch many tracks to get enough unique albums
+	});
+
+	return pipe(
+		Effect.all([
+			fetchFresh({
+				url: `${LASTFM_API_URL}?${recentTracksParams.toString()}`,
+				method: "GET",
+				schema: RecentTracksResponseSchema,
+			}),
+			monthlyTopData(),
+		]).pipe(
+			Effect.mapError((e) => new LastFmRecentAlbumsError(e as Error)),
+			Effect.flatMap(([recentTracksRes, monthlyTop]) =>
+				Effect.succeed(
+					extractListeningData(
+						recentTracksRes.data.recenttracks.track,
+						extractWrappedData({
+							topTracks: monthlyTop.topTracks,
+							topArtists: monthlyTop.topArtists,
+							topAlbums: monthlyTop.topAlbums,
+							recentTracks: recentTracksRes.data.recenttracks.track,
+							nowMs: Date.now(),
+						}),
 					),
+				),
 			),
 		),
 	);
