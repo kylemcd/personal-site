@@ -19,6 +19,11 @@
   ],
   "workflows": [
     {
+      "binding": "KV_REFRESH_WORKFLOW",
+      "name": "kv-refresh",
+      "class_name": "KvRefreshWorkflow"
+    },
+    {
       "binding": "STALE_MONITOR_WORKFLOW",
       "name": "stale-data-monitor",
       "class_name": "StaleDataMonitorWorkflow"
@@ -29,7 +34,7 @@
   },
   "observability": {
     "logs": {
-      "enabled": false,
+      "enabled": true,
       "invocation_logs": true
     }
   }

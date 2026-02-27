@@ -1,4 +1,5 @@
 import { WorkflowEntrypoint } from "cloudflare:workers";
+import { Effect } from "effect";
 
 export type StaleMonitorParams = {
 	triggeredAt: string;
@@ -93,6 +94,36 @@ const sendResendEmail = async (
 	}
 };
 
+const kvGet = (store: KVNamespace, key: string): Effect.Effect<string | null> =>
+	Effect.tryPromise({
+		try: () => store.get(key, "text"),
+		catch: () => null,
+	});
+
+const kvPut = (store: KVNamespace, key: string, value: string): Effect.Effect<void> =>
+	Effect.tryPromise({
+		try: () => store.put(key, value),
+		catch: () => undefined,
+	});
+
+const kvDelete = (store: KVNamespace, key: string): Effect.Effect<void> =>
+	Effect.tryPromise({
+		try: () => store.delete(key),
+		catch: () => undefined,
+	});
+
+const sendResendEmailEffect = (
+	apiKey: string,
+	to: string,
+	from: string,
+	subject: string,
+	text: string,
+): Effect.Effect<void> =>
+	Effect.tryPromise({
+		try: () => sendResendEmail(apiKey, to, from, subject, text),
+		catch: (error) => error,
+	});
+
 type LookupStatus = {
 	lastAttemptAt?: number | null;
 	lastSuccessAt?: number | null;
@@ -149,41 +180,91 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 
 		for (const item of MONITORED_KEYS) {
 			await steps.do(`check-${item.key}`, async () => {
-				let envelope: CacheEnvelope | null = null;
-				let resolvedKey: string | null = null;
-				for (const readKey of getReadKeys(cacheVersion, item.key)) {
-					const raw = await store.get(readKey, "text");
-					if (!raw) continue;
-					const parsed = parseEnvelope(raw);
-					if (!parsed) continue;
-					envelope = parsed;
-					resolvedKey = readKey;
-					break;
-				}
-				let lookupStatus: LookupStatus | null = null;
-				for (const statusKey of getReadKeys(
-					cacheVersion,
-					getLookupStatusKey(item.key),
-				)) {
-					const raw = await store.get(statusKey, "text");
-					lookupStatus = parseLookupStatus(raw);
-					if (lookupStatus) break;
-				}
+				await Effect.runPromise(
+					Effect.gen(function* () {
+						let envelope: CacheEnvelope | null = null;
+						let resolvedKey: string | null = null;
+						for (const readKey of getReadKeys(cacheVersion, item.key)) {
+							const raw = yield* kvGet(store, readKey);
+							if (!raw) continue;
+							const parsed = parseEnvelope(raw);
+							if (!parsed) continue;
+							envelope = parsed;
+							resolvedKey = readKey;
+							break;
+						}
+						let lookupStatus: LookupStatus | null = null;
+						for (const statusKey of getReadKeys(
+							cacheVersion,
+							getLookupStatusKey(item.key),
+						)) {
+							const raw = yield* kvGet(store, statusKey);
+							lookupStatus = parseLookupStatus(raw);
+							if (lookupStatus) break;
+						}
 
-				const alertStateKey = getAlertStateKey(cacheVersion, item.key);
-				if (!envelope || envelope.refreshAfter === null) {
-					const existingAlert = await store.get(alertStateKey, "text");
-					if (!existingAlert && canSendEmail) {
-						await sendResendEmail(
+						const alertStateKey = getAlertStateKey(cacheVersion, item.key);
+						if (!envelope || envelope.refreshAfter === null) {
+							const existingAlert = yield* kvGet(store, alertStateKey);
+							if (!existingAlert && canSendEmail) {
+								yield* sendResendEmailEffect(
+									resendApiKey,
+									emailTo,
+									emailFrom,
+									`[stale-data] Missing refreshAfter for ${item.label}`,
+									[
+										"A monitored KV key is missing refresh metadata.",
+										`Label: ${item.label}`,
+										`Key: ${item.key}`,
+										`Resolved key: ${resolvedKey ?? "n/a"}`,
+										`Triggered at: ${new Date(nowMs).toISOString()}`,
+										`Last attempt: ${formatTs(lookupStatus?.lastAttemptAt)}`,
+										`Last success: ${formatTs(lookupStatus?.lastSuccessAt)}`,
+										`Last failure: ${formatTs(lookupStatus?.lastFailureAt)}`,
+										`Last error: ${lookupStatus?.lastError ?? "n/a"}`,
+									].join("\n"),
+								);
+								yield* kvPut(
+									store,
+									alertStateKey,
+									JSON.stringify({ sentAt: nowMs }),
+								);
+							}
+							return;
+						}
+
+						const staleForMs = nowMs - envelope.refreshAfter;
+						if (staleForMs < STALE_THRESHOLD_MS) {
+							yield* kvDelete(store, alertStateKey);
+							return;
+						}
+
+						const existingAlert = yield* kvGet(store, alertStateKey);
+						if (existingAlert) return;
+						if (!canSendEmail) {
+							yield* Effect.sync(() => {
+								console.warn("[monitor] stale data detected but email not configured", {
+									key: item.key,
+									label: item.label,
+									staleForMs,
+								});
+							});
+							return;
+						}
+
+						yield* sendResendEmailEffect(
 							resendApiKey,
 							emailTo,
 							emailFrom,
-							`[stale-data] Missing refreshAfter for ${item.label}`,
+							`[stale-data] ${item.label} is stale`,
 							[
-								"A monitored KV key is missing refresh metadata.",
+								"A monitored KV key is stale beyond the threshold.",
 								`Label: ${item.label}`,
 								`Key: ${item.key}`,
 								`Resolved key: ${resolvedKey ?? "n/a"}`,
+								`Threshold minutes: ${STALE_THRESHOLD_MS / (60 * 1000)}`,
+								`Stale for minutes: ${Math.floor(staleForMs / (60 * 1000))}`,
+								`Refresh after: ${new Date(envelope.refreshAfter).toISOString()}`,
 								`Triggered at: ${new Date(nowMs).toISOString()}`,
 								`Last attempt: ${formatTs(lookupStatus?.lastAttemptAt)}`,
 								`Last success: ${formatTs(lookupStatus?.lastSuccessAt)}`,
@@ -191,49 +272,9 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 								`Last error: ${lookupStatus?.lastError ?? "n/a"}`,
 							].join("\n"),
 						);
-						await store.put(alertStateKey, JSON.stringify({ sentAt: nowMs }));
-					}
-					return;
-				}
-
-				const staleForMs = nowMs - envelope.refreshAfter;
-				if (staleForMs < STALE_THRESHOLD_MS) {
-					await store.delete(alertStateKey);
-					return;
-				}
-
-				const existingAlert = await store.get(alertStateKey, "text");
-				if (existingAlert) return;
-				if (!canSendEmail) {
-					console.warn("[monitor] stale data detected but email not configured", {
-						key: item.key,
-						label: item.label,
-						staleForMs,
-					});
-					return;
-				}
-
-				await sendResendEmail(
-					resendApiKey,
-					emailTo,
-					emailFrom,
-					`[stale-data] ${item.label} is stale`,
-					[
-						"A monitored KV key is stale beyond the threshold.",
-						`Label: ${item.label}`,
-						`Key: ${item.key}`,
-						`Resolved key: ${resolvedKey ?? "n/a"}`,
-						`Threshold minutes: ${STALE_THRESHOLD_MS / (60 * 1000)}`,
-						`Stale for minutes: ${Math.floor(staleForMs / (60 * 1000))}`,
-						`Refresh after: ${new Date(envelope.refreshAfter).toISOString()}`,
-						`Triggered at: ${new Date(nowMs).toISOString()}`,
-						`Last attempt: ${formatTs(lookupStatus?.lastAttemptAt)}`,
-						`Last success: ${formatTs(lookupStatus?.lastSuccessAt)}`,
-						`Last failure: ${formatTs(lookupStatus?.lastFailureAt)}`,
-						`Last error: ${lookupStatus?.lastError ?? "n/a"}`,
-					].join("\n"),
+						yield* kvPut(store, alertStateKey, JSON.stringify({ sentAt: nowMs }));
+					}),
 				);
-				await store.put(alertStateKey, JSON.stringify({ sentAt: nowMs }));
 			});
 		}
 	}
