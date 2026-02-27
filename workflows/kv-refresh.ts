@@ -7,6 +7,7 @@ import { lastfm } from "@/lib/lastfm";
 
 export type KvRefreshParams = {
 	triggeredAt: string;
+	source?: "garage61" | "goodreads" | "lastfm";
 };
 
 export type KvRefreshWorkflowEnv = {
@@ -197,68 +198,74 @@ export class KvRefreshWorkflow extends WorkflowEntrypoint<
 	KvRefreshParams
 > {
 	async run(event: Readonly<{ payload: Readonly<KvRefreshParams> }>, step: unknown) {
-		void event;
+		const source = event.payload.source;
 		applyRuntimeEnv(this.env);
 		const steps = step as {
 			do: <T>(name: string, callback: () => Promise<T>) => Promise<T>;
 		};
 
-		await steps.do("refresh-garage61", async () => {
-			if (!isConfigured(this.env.GARAGE61_API_KEY)) {
-				emitNonFatalError(
-					"[refresh] GARAGE61_API_KEY missing; skipping Garage61 refresh",
+		if (!source || source === "garage61") {
+			await steps.do("refresh-garage61", async () => {
+				if (!isConfigured(this.env.GARAGE61_API_KEY)) {
+					emitNonFatalError(
+						"[refresh] GARAGE61_API_KEY missing; skipping Garage61 refresh",
+					);
+					return {
+						status: "skipped",
+						reason: "GARAGE61_API_KEY missing",
+					} satisfies StepResult;
+				}
+				return await runEffect(
+					"garage61",
+					garage61.refreshSummary(),
+					(summary) => ({
+						cacheKey: "garage61:summary:v6",
+						sessionCount: summary.derived.sessionCount,
+						trackCount: summary.derived.trackCount,
+						recentTracks: summary.derived.overview.recentTracks.length,
+						recentCars: summary.derived.overview.recentCars.length,
+					}),
 				);
-				return {
-					status: "skipped",
-					reason: "GARAGE61_API_KEY missing",
-				} satisfies StepResult;
-			}
-			return await runEffect(
-				"garage61",
-				garage61.refreshSummary(),
-				(summary) => ({
-					cacheKey: "garage61:summary:v6",
-					sessionCount: summary.derived.sessionCount,
-					trackCount: summary.derived.trackCount,
-					recentTracks: summary.derived.overview.recentTracks.length,
-					recentCars: summary.derived.overview.recentCars.length,
-				}),
-			);
-		});
+			});
+		}
 
-		await steps.do("refresh-goodreads", async () => {
-			return await runEffect(
-				"goodreads",
-				goodreads.refreshShelf(),
-				(shelf) => ({
-					cacheKey: "goodreads:shelf:v1",
-					reading: shelf.reading.length,
-					finished: shelf.finished.length,
-					next: shelf.next.length,
-				}),
-			);
-		});
-
-		await steps.do("refresh-lastfm", async () => {
-			if (!isConfigured(this.env.LASTFM_API_KEY)) {
-				emitNonFatalError(
-					"[refresh] LASTFM_API_KEY missing; skipping Last.fm refresh",
+		if (!source || source === "goodreads") {
+			await steps.do("refresh-goodreads", async () => {
+				return await runEffect(
+					"goodreads",
+					goodreads.refreshShelf(),
+					(shelf) => ({
+						cacheKey: "goodreads:shelf:v1",
+						reading: shelf.reading.length,
+						finished: shelf.finished.length,
+						next: shelf.next.length,
+					}),
 				);
-				return {
-					status: "skipped",
-					reason: "LASTFM_API_KEY missing",
-				} satisfies StepResult;
-			}
-			return await runEffect(
-				"lastfm",
-				lastfm.refreshMonthlyTop(),
-				(data) => ({
-					cacheKey: "lastfm:monthly-top:v1",
-					topTracks: data.topTracks.length,
-					topArtists: data.topArtists.length,
-					topAlbums: data.topAlbums.length,
-				}),
-			);
-		});
+			});
+		}
+
+		if (!source || source === "lastfm") {
+			await steps.do("refresh-lastfm", async () => {
+				if (!isConfigured(this.env.LASTFM_API_KEY)) {
+					emitNonFatalError(
+						"[refresh] LASTFM_API_KEY missing; skipping Last.fm refresh",
+					);
+					return {
+						status: "skipped",
+						reason: "LASTFM_API_KEY missing",
+					} satisfies StepResult;
+				}
+				return await runEffect(
+					"lastfm",
+					lastfm.refreshMonthlyTop(),
+					(data) => ({
+						cacheKey: "lastfm:monthly-top:v1",
+						topTracks: data.topTracks.length,
+						topArtists: data.topArtists.length,
+						topAlbums: data.topAlbums.length,
+					}),
+				);
+			});
+		}
 	}
 }

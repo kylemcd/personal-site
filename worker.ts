@@ -50,13 +50,16 @@ export default {
 		if (!env.KV_REFRESH_WORKFLOW) {
 			console.error("[refresh] KV_REFRESH_WORKFLOW binding missing");
 		} else {
-			const id = `kv-refresh-${Date.now()}`;
-			ctx.waitUntil(
-				env.KV_REFRESH_WORKFLOW.create({
-					id,
-					params: { triggeredAt: new Date().toISOString() },
-				}),
-			);
+			const triggeredAt = new Date().toISOString();
+			for (const source of ["garage61", "goodreads", "lastfm"] as const) {
+				const id = `kv-refresh-${source}-${Date.now()}`;
+				ctx.waitUntil(
+					env.KV_REFRESH_WORKFLOW.create({
+						id,
+						params: { triggeredAt, source },
+					}),
+				);
+			}
 		}
 
 		if (minute !== 0) return;
