@@ -270,9 +270,89 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			return null;
 		});
 
+	const isRecord = (value: unknown): value is Record<string, unknown> =>
+		typeof value === "object" && value !== null && !Array.isArray(value);
+
+	const isResponseLike = (
+		value: unknown,
+	): value is { status: number; statusText?: string; url?: string } => {
+		if (!isRecord(value)) return false;
+		return typeof value.status === "number";
+	};
+
+	const collectErrorFragments = (
+		value: unknown,
+		fragments: string[],
+		seen: WeakSet<object>,
+		depth = 0,
+	): void => {
+		if (depth > 6 || value === null || value === undefined) return;
+		if (typeof value === "string") {
+			if (value.trim()) fragments.push(value.trim());
+			return;
+		}
+		if (typeof value === "number" || typeof value === "boolean") {
+			fragments.push(String(value));
+			return;
+		}
+		if (value instanceof Error) {
+			const message = value.message?.trim();
+			if (message) {
+				fragments.push(`${value.name}: ${message}`);
+			} else {
+				fragments.push(value.name);
+			}
+			const nestedCause = (value as Error & { cause?: unknown }).cause;
+			if (nestedCause !== undefined) {
+				collectErrorFragments(nestedCause, fragments, seen, depth + 1);
+			}
+			return;
+		}
+		if (!isRecord(value)) return;
+		if (seen.has(value)) return;
+		seen.add(value);
+
+		if (typeof value._tag === "string" && value._tag.trim()) {
+			fragments.push(value._tag.trim());
+		}
+
+		if (isResponseLike(value)) {
+			const statusText =
+				typeof value.statusText === "string" ? value.statusText.trim() : "";
+			const url = typeof value.url === "string" ? value.url.trim() : "";
+			fragments.push(
+				`HTTP ${value.status}${statusText ? ` ${statusText}` : ""}${url ? ` (${url})` : ""}`,
+			);
+		}
+
+		const nestedKeys = [
+			"error",
+			"cause",
+			"reason",
+			"response",
+			"left",
+			"right",
+			"failure",
+			"defect",
+		] as const;
+		for (const key of nestedKeys) {
+			if (key in value) {
+				collectErrorFragments(value[key], fragments, seen, depth + 1);
+			}
+		}
+
+		if (typeof value.message === "string" && value.message.trim()) {
+			fragments.push(value.message.trim());
+		}
+	};
+
 	const statusErrorSummary = (cause: unknown): string => {
-		if (cause instanceof Error) return cause.message;
-		if (typeof cause === "string") return cause;
+		const fragments: string[] = [];
+		collectErrorFragments(cause, fragments, new WeakSet<object>());
+		const summary = [...new Set(fragments.filter(Boolean))].join(" | ").trim();
+		if (summary) {
+			return summary.length > 2000 ? `${summary.slice(0, 2000)}...` : summary;
+		}
 		try {
 			return JSON.stringify(cause);
 		} catch {
