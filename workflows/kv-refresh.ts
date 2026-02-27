@@ -37,15 +37,42 @@ const emitNonFatalError = (message: string) => {
 const isConfigured = (value: string | undefined): boolean =>
 	typeof value === "string" && value.trim().length > 0;
 
-const runEffect = async (label: string, effect: Effect.Effect<unknown>) => {
-	await Effect.runPromise(
+type StepResult =
+	| { status: "success"; details: Record<string, unknown>; payload: unknown }
+	| { status: "skipped"; reason: string }
+	| { status: "failed"; error: string };
+
+const toErrorSummary = (error: unknown): string => {
+	if (error instanceof Error) return error.message;
+	if (typeof error === "string") return error;
+	try {
+		return JSON.stringify(error);
+	} catch {
+		return String(error);
+	}
+};
+
+const runEffect = async <A>(
+	label: string,
+	effect: Effect.Effect<A>,
+	summarize: (value: A) => Record<string, unknown>,
+): Promise<StepResult> => {
+	return await Effect.runPromise(
 		effect.pipe(
+			Effect.map((value) => ({
+				status: "success" as const,
+				details: summarize(value),
+				payload: value,
+			})),
 			Effect.catchAllCause((cause) =>
 				Effect.sync(() => {
 					console.error(`[refresh] ${label} failed`, cause);
+					return {
+						status: "failed" as const,
+						error: toErrorSummary(cause),
+					};
 				}),
 			),
-			Effect.asVoid,
 		),
 	);
 };
@@ -66,13 +93,35 @@ export class KvRefreshWorkflow extends WorkflowEntrypoint<
 				emitNonFatalError(
 					"[refresh] GARAGE61_API_KEY missing; skipping Garage61 refresh",
 				);
-				return;
+				return {
+					status: "skipped",
+					reason: "GARAGE61_API_KEY missing",
+				} satisfies StepResult;
 			}
-			await runEffect("garage61", garage61.refreshSummary());
+			return await runEffect(
+				"garage61",
+				garage61.refreshSummary(),
+				(summary) => ({
+					cacheKey: "garage61:summary:v6",
+					sessionCount: summary.derived.sessionCount,
+					trackCount: summary.derived.trackCount,
+					recentTracks: summary.derived.overview.recentTracks.length,
+					recentCars: summary.derived.overview.recentCars.length,
+				}),
+			);
 		});
 
 		await steps.do("refresh-goodreads", async () => {
-			await runEffect("goodreads", goodreads.refreshShelf());
+			return await runEffect(
+				"goodreads",
+				goodreads.refreshShelf(),
+				(shelf) => ({
+					cacheKey: "goodreads:shelf:v1",
+					reading: shelf.reading.length,
+					finished: shelf.finished.length,
+					next: shelf.next.length,
+				}),
+			);
 		});
 
 		await steps.do("refresh-lastfm", async () => {
@@ -80,9 +129,21 @@ export class KvRefreshWorkflow extends WorkflowEntrypoint<
 				emitNonFatalError(
 					"[refresh] LASTFM_API_KEY missing; skipping Last.fm refresh",
 				);
-				return;
+				return {
+					status: "skipped",
+					reason: "LASTFM_API_KEY missing",
+				} satisfies StepResult;
 			}
-			await runEffect("lastfm", lastfm.refreshMonthlyTop());
+			return await runEffect(
+				"lastfm",
+				lastfm.refreshMonthlyTop(),
+				(data) => ({
+					cacheKey: "lastfm:monthly-top:v1",
+					topTracks: data.topTracks.length,
+					topArtists: data.topArtists.length,
+					topAlbums: data.topAlbums.length,
+				}),
+			);
 		});
 	}
 }
