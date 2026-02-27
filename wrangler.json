@@ -24,11 +24,6 @@
       "class_name": "RefreshGarage61Workflow"
     },
     {
-      "binding": "GARAGE61_ALWAYS_FAIL_WORKFLOW",
-      "name": "refresh-garage61-always-fail",
-      "class_name": "RefreshGarage61AlwaysFailWorkflow"
-    },
-    {
       "binding": "GOODREADS_REFRESH_WORKFLOW",
       "name": "refresh-goodreads",
       "class_name": "RefreshGoodreadsWorkflow"

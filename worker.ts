@@ -4,7 +4,6 @@ import type {
 	RefreshGarage61WorkflowEnv,
 } from "./workflows/refresh-garage61";
 import { RefreshGarage61Workflow } from "./workflows/refresh-garage61";
-import { RefreshGarage61AlwaysFailWorkflow } from "./workflows/refresh-garage61-always-fail";
 import type {
 	RefreshWorkflowParams as GoodreadsRefreshParams,
 	RefreshGoodreadsWorkflowEnv,
@@ -52,7 +51,6 @@ type WorkerEnv = StaleMonitorWorkflowEnv &
 
 export {
 	RefreshGarage61Workflow,
-	RefreshGarage61AlwaysFailWorkflow,
 	RefreshGoodreadsWorkflow,
 	RefreshLastFmWorkflow,
 	StaleDataMonitorWorkflow,
