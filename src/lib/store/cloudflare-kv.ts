@@ -70,17 +70,22 @@ const CACHE_ENVELOPE_VERSION = 1;
 const isKvWriteDisabled = (): boolean =>
 	process.env.KV_READ_ONLY_CACHE?.toLowerCase() === "true";
 
+const normalizeCacheVersion = (value: unknown): string | null => {
+	if (typeof value !== "string") return null;
+	const trimmed = value.trim();
+	if (!trimmed) return null;
+	const lowered = trimmed.toLowerCase();
+	if (lowered === "undefined" || lowered === "null") return null;
+	return trimmed;
+};
+
 const getCacheVersion = (): string => {
 	const globalRecord = asRecord(globalThis);
-	const fromGlobal = globalRecord?.KV_CACHE_VERSION;
-	if (typeof fromGlobal === "string" && fromGlobal.trim()) {
-		return fromGlobal.trim();
-	}
+	const fromGlobal = normalizeCacheVersion(globalRecord?.KV_CACHE_VERSION);
+	if (fromGlobal) return fromGlobal;
 
-	const fromEnv = process.env.KV_CACHE_VERSION;
-	if (typeof fromEnv === "string" && fromEnv.trim()) {
-		return fromEnv.trim();
-	}
+	const fromEnv = normalizeCacheVersion(process.env.KV_CACHE_VERSION);
+	if (fromEnv) return fromEnv;
 
 	return DEFAULT_CACHE_VERSION;
 };

@@ -37,6 +37,14 @@ const asRecord = (value: unknown): Record<string, unknown> | null => {
 	return value as Record<string, unknown>;
 };
 
+const normalizeCacheVersion = (value: string | undefined): string =>
+	typeof value === "string" &&
+	value.trim() &&
+	value.trim().toLowerCase() !== "undefined" &&
+	value.trim().toLowerCase() !== "null"
+		? value.trim()
+		: DEFAULT_CACHE_VERSION;
+
 const parseEnvelope = (raw: string): CacheEnvelope | null => {
 	try {
 		const parsed = JSON.parse(raw) as unknown;
@@ -60,13 +68,13 @@ const parseEnvelope = (raw: string): CacheEnvelope | null => {
 };
 
 const getReadKeys = (cacheVersion: string | undefined, key: string): string[] => {
-	const scoped = `${(cacheVersion?.trim() || DEFAULT_CACHE_VERSION).trim()}:${key}`;
+	const scoped = `${normalizeCacheVersion(cacheVersion)}:${key}`;
 	const defaultScoped = `${DEFAULT_CACHE_VERSION}:${key}`;
 	return [...new Set([scoped, defaultScoped, key])];
 };
 
 const getAlertStateKey = (cacheVersion: string | undefined, key: string): string =>
-	`monitor:stale-alert:${(cacheVersion?.trim() || DEFAULT_CACHE_VERSION).trim()}:${key}`;
+	`monitor:stale-alert:${normalizeCacheVersion(cacheVersion)}:${key}`;
 const getLookupStatusKey = (key: string): string => `monitor:lookup-status:${key}`;
 
 const sendResendEmail = async (
