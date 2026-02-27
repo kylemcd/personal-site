@@ -295,6 +295,17 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			fragments.push(String(value));
 			return;
 		}
+		const nestedKeys = [
+			"error",
+			"cause",
+			"reason",
+			"response",
+			"left",
+			"right",
+			"failure",
+			"defect",
+		] as const;
+
 		if (value instanceof Error) {
 			const message = value.message?.trim();
 			if (message) {
@@ -305,6 +316,27 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			const nestedCause = (value as Error & { cause?: unknown }).cause;
 			if (nestedCause !== undefined) {
 				collectErrorFragments(nestedCause, fragments, seen, depth + 1);
+			}
+			if (isRecord(value)) {
+				if (seen.has(value)) return;
+				seen.add(value);
+				for (const key of nestedKeys) {
+					if (key in value) {
+						collectErrorFragments(value[key], fragments, seen, depth + 1);
+					}
+				}
+				for (const key of [
+					"details",
+					"detail",
+					"bodySnippet",
+					"responseBody",
+					"providerBody",
+				] as const) {
+					const candidate = value[key];
+					if (typeof candidate === "string" && candidate.trim()) {
+						fragments.push(candidate.trim());
+					}
+				}
 			}
 			return;
 		}
@@ -325,16 +357,6 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			);
 		}
 
-		const nestedKeys = [
-			"error",
-			"cause",
-			"reason",
-			"response",
-			"left",
-			"right",
-			"failure",
-			"defect",
-		] as const;
 		for (const key of nestedKeys) {
 			if (key in value) {
 				collectErrorFragments(value[key], fragments, seen, depth + 1);

@@ -67,12 +67,44 @@ const collectErrorFragments = (
 		fragments.push(String(value));
 		return;
 	}
+	const nestedKeys = [
+		"error",
+		"cause",
+		"reason",
+		"response",
+		"failure",
+		"defect",
+		"left",
+		"right",
+	] as const;
+
 	if (value instanceof Error) {
 		const message = value.message?.trim();
 		fragments.push(message ? `${value.name}: ${message}` : value.name);
 		const nestedCause = (value as Error & { cause?: unknown }).cause;
 		if (nestedCause !== undefined) {
 			collectErrorFragments(nestedCause, fragments, seen, depth + 1);
+		}
+		if (isRecord(value)) {
+			if (seen.has(value)) return;
+			seen.add(value);
+			for (const key of nestedKeys) {
+				if (key in value) {
+					collectErrorFragments(value[key], fragments, seen, depth + 1);
+				}
+			}
+			for (const key of [
+				"details",
+				"detail",
+				"bodySnippet",
+				"responseBody",
+				"providerBody",
+			] as const) {
+				const candidate = value[key];
+				if (typeof candidate === "string" && candidate.trim()) {
+					fragments.push(candidate.trim());
+				}
+			}
 		}
 		return;
 	}
@@ -92,16 +124,6 @@ const collectErrorFragments = (
 		);
 	}
 
-	const nestedKeys = [
-		"error",
-		"cause",
-		"reason",
-		"response",
-		"failure",
-		"defect",
-		"left",
-		"right",
-	] as const;
 	for (const key of nestedKeys) {
 		if (key in value) {
 			collectErrorFragments(value[key], fragments, seen, depth + 1);
