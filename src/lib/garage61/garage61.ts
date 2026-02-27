@@ -190,23 +190,6 @@ const laps = (
 	});
 };
 
-const lapsForTrack = (apiKey: string, trackId: number) =>
-	fetchGarage61({
-		url: `${GARAGE61_API_URL}/laps?drivers=me&tracks=${trackId}&sessionTypes=${QUALI_RACE_SESSION_TYPES_PARAM}&age=-1&group=none&lapTypes=1&round=metric&limit=20`,
-		method: "GET",
-		headers: authHeaders(apiKey),
-	});
-
-const lapsForTrackWindow = (
-	apiKey: string,
-	params: { trackId: number; ageDays: number },
-) =>
-	fetchGarage61({
-		url: `${GARAGE61_API_URL}/laps?drivers=me&tracks=${params.trackId}&sessionTypes=${QUALI_RACE_SESSION_TYPES_PARAM}&age=${params.ageDays}&group=none&lapTypes=1&round=metric&limit=1000`,
-		method: "GET",
-		headers: authHeaders(apiKey),
-	});
-
 const getArrayCandidate = (value: unknown): ReadonlyArray<unknown> => {
 	if (Array.isArray(value)) return value;
 	if (!value || typeof value !== "object") return [];
@@ -454,14 +437,6 @@ const extractTrackIsOval = (data: unknown, targetId: number): boolean => {
 	return tokens.some((value) => value.includes("oval"));
 };
 
-const isOvalVariant = (value: unknown): boolean | null => {
-	if (typeof value !== "string" || !value.trim()) return null;
-	const normalized = value.toLowerCase();
-	if (normalized.includes("oval")) return true;
-	if (normalized.includes("road")) return false;
-	return null;
-};
-
 const normalizeName = (value: string): string =>
 	value.trim().toLowerCase().replace(/\s+/g, " ");
 
@@ -512,29 +487,6 @@ const filteredWeightedAverage = (
 	const totalLaps = safe.reduce((sum, s) => sum + s.laps, 0);
 	if (totalLaps <= 0) return null;
 	return safe.reduce((sum, s) => sum + s.avgLapSeconds * s.laps, 0) / totalLaps;
-};
-
-const filteredAverageFromLaps = (
-	lapTimes: ReadonlyArray<number>,
-): number | null => {
-	if (lapTimes.length === 0) return null;
-	if (lapTimes.length < 8) {
-		return lapTimes.reduce((sum, value) => sum + value, 0) / lapTimes.length;
-	}
-
-	const center = median(lapTimes);
-	const deviations = lapTimes.map((v) => Math.abs(v - center));
-	const mad = median(deviations);
-	if (mad <= 0) {
-		return lapTimes.reduce((sum, value) => sum + value, 0) / lapTimes.length;
-	}
-
-	const filtered = lapTimes.filter((value) => {
-		const mz = (0.6745 * Math.abs(value - center)) / mad;
-		return mz <= 3.5;
-	});
-	const safe = filtered.length >= 5 ? filtered : lapTimes;
-	return safe.reduce((sum, value) => sum + value, 0) / safe.length;
 };
 
 const summaryUncached = (garage61ApiKey: string) =>
@@ -609,40 +561,8 @@ const summaryUncached = (garage61ApiKey: string) =>
 		const trackNameById = new Map(
 			trackLookups.map((track) => [track.id, track.name]),
 		);
-		const trackVariantLookups = yield* forEachConcurrent(trackIds, (id) =>
-			lapsForTrack(garage61ApiKey, id).pipe(
-				Effect.map(({ data }) => {
-					const lapRows = getArrayCandidate(asRecord(data)?.items ?? data)
-						.map((row) => asRecord(row))
-						.filter((row): row is Record<string, unknown> => row !== null);
-					const trackObj = lapRows[0]
-						? asRecord(getFirstValue(lapRows[0], ["track"]))
-						: null;
-					const variant = trackObj
-						? getFirstValue(trackObj, ["variant", "layout", "configuration"])
-						: null;
-					return {
-						id,
-						variant:
-							typeof variant === "string" && variant.trim()
-								? variant.trim()
-								: null,
-						isOvalByVariant: isOvalVariant(variant),
-					};
-				}),
-			),
-		);
-		const trackVariantById = new Map(
-			trackVariantLookups.map((track) => [track.id, track.variant]),
-		);
-		const trackVariantIsOvalById = new Map(
-			trackVariantLookups.map((track) => [track.id, track.isOvalByVariant]),
-		);
 		const trackIsOvalById = new Map(
-			trackLookups.map((track) => [
-				track.id,
-				trackVariantIsOvalById.get(track.id) ?? track.isOval,
-			]),
+			trackLookups.map((track) => [track.id, track.isOval]),
 		);
 		const carNameById = new Map(carLookups.map((car) => [car.id, car.name]));
 		const carCategoryByCarId = new Map(
@@ -772,7 +692,7 @@ const summaryUncached = (garage61ApiKey: string) =>
 				id: track.id,
 				name: track.name,
 				timeOnTrackSeconds: track.timeOnTrackSeconds,
-				variant: trackVariantById.get(track.id) ?? null,
+				variant: null,
 				timeSharePercentage:
 					totalTimeOnTrackSeconds > 0
 						? roundPercent(
@@ -926,51 +846,7 @@ const summaryUncached = (garage61ApiKey: string) =>
 			}
 		}
 
-		const lapAverageTrackIds = [
-			...new Set(
-				[...trackAggMap.values()]
-					.map((track) => track.trackId)
-					.filter((id): id is number => id !== null),
-			),
-		];
 		const lapAverageWindowDays = shouldFallback ? 180 : 30;
-		const lapAverages = yield* forEachConcurrent(
-			lapAverageTrackIds,
-			(trackId) =>
-				lapsForTrackWindow(garage61ApiKey, {
-					trackId,
-					ageDays: lapAverageWindowDays,
-				}).pipe(
-					Effect.map(({ data }) => {
-						const lapTimes = getArrayCandidate(asRecord(data)?.items ?? data)
-							.map((row) => asRecord(row))
-							.filter((row): row is Record<string, unknown> => row !== null)
-							.filter((row) => {
-								const clean = getFirstValue(row, ["clean"]);
-								const incomplete = getFirstValue(row, ["incomplete"]);
-								const missing = getFirstValue(row, ["missing"]);
-								const offtrack = getFirstValue(row, ["offtrack"]);
-								return (
-									clean !== false &&
-									incomplete !== true &&
-									missing !== true &&
-									offtrack !== true
-								);
-							})
-							.map((row) =>
-								getNumberValue(getFirstValue(row, ["lapTime", "lap_time"])),
-							)
-							.filter((value): value is number => value !== null && value > 0);
-						return {
-							trackId,
-							avgLapSeconds: filteredAverageFromLaps(lapTimes),
-						};
-					}),
-				),
-		);
-		const lapAverageByTrackId = new Map(
-			lapAverages.map((entry) => [entry.trackId, entry.avgLapSeconds]),
-		);
 
 		let secondsOffRecord: Garage61Summary["derived"]["overview"]["insights"]["secondsOffRecord"] =
 			null;
@@ -1310,10 +1186,7 @@ const summaryUncached = (garage61ApiKey: string) =>
 				avgLapSeconds:
 					track.laps > 0
 						? roundTo(
-								(track.trackId !== null
-									? lapAverageByTrackId.get(track.trackId)
-									: null) ??
-									filteredWeightedAverage(track.daySamples) ??
+								filteredWeightedAverage(track.daySamples) ??
 									track.totalTime / track.laps,
 								3,
 							)
