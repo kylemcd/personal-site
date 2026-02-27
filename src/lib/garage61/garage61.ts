@@ -437,16 +437,6 @@ const extractTrackIsOval = (data: unknown, targetId: number): boolean => {
 	return tokens.some((value) => value.includes("oval"));
 };
 
-const isLikelyOvalTrackName = (value: string | null | undefined): boolean => {
-	if (!value || !value.trim()) return false;
-	const normalized = value.toLowerCase();
-	if (normalized.includes("road")) return false;
-	if (normalized.includes("oval")) return true;
-	if (normalized.includes("superspeedway")) return true;
-	if (normalized.includes("speedway")) return true;
-	return false;
-};
-
 const normalizeName = (value: string): string =>
 	value.trim().toLowerCase().replace(/\s+/g, " ");
 
@@ -589,16 +579,8 @@ const summaryUncached = (garage61ApiKey: string) =>
 				row.carId !== null ? (carNameById.get(row.carId) ?? row.car) : row.car,
 		}));
 		const nonOvalStatistics = enrichedRecentStatistics.filter(
-			(row) => {
-				const isOvalById =
-					row.trackId !== null && trackIsOvalById.get(row.trackId) === true;
-				const resolvedTrackName =
-					row.trackId !== null
-						? (trackNameById.get(row.trackId) ?? row.track)
-						: row.track;
-				const isOvalByName = isLikelyOvalTrackName(resolvedTrackName);
-				return !isOvalById && !isOvalByName;
-			},
+			(row) =>
+				row.trackId === null || trackIsOvalById.get(row.trackId) !== true,
 		);
 
 		const totalTimeOnTrackSeconds = nonOvalStatistics.reduce(
@@ -910,10 +892,7 @@ const summaryUncached = (garage61ApiKey: string) =>
 						(row) =>
 							row.trackId !== null &&
 							row.carId !== null &&
-							trackIsOvalById.get(row.trackId) !== true &&
-							!isLikelyOvalTrackName(
-								trackNameById.get(row.trackId) ?? row.track,
-							),
+							trackIsOvalById.get(row.trackId) !== true,
 					)
 					.map((row) => [
 						`${row.trackId}-${row.carId}`,
