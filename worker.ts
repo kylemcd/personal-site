@@ -1,9 +1,19 @@
 import server from "@tanstack/react-start/server-entry";
 import type {
-	KvRefreshParams,
-	KvRefreshWorkflowEnv,
-} from "./workflows/kv-refresh";
-import { KvRefreshWorkflow } from "./workflows/kv-refresh";
+	RefreshWorkflowParams as Garage61RefreshParams,
+	RefreshGarage61WorkflowEnv,
+} from "./workflows/refresh-garage61";
+import { RefreshGarage61Workflow } from "./workflows/refresh-garage61";
+import type {
+	RefreshWorkflowParams as GoodreadsRefreshParams,
+	RefreshGoodreadsWorkflowEnv,
+} from "./workflows/refresh-goodreads";
+import { RefreshGoodreadsWorkflow } from "./workflows/refresh-goodreads";
+import type {
+	RefreshWorkflowParams as LastFmRefreshParams,
+	RefreshLastFmWorkflowEnv,
+} from "./workflows/refresh-lastfm";
+import { RefreshLastFmWorkflow } from "./workflows/refresh-lastfm";
 import type {
 	StaleMonitorParams,
 	StaleMonitorWorkflowEnv,
@@ -11,18 +21,40 @@ import type {
 import { StaleDataMonitorWorkflow } from "./workflows/stale-data-monitor";
 
 type WorkerEnv = StaleMonitorWorkflowEnv &
-	KvRefreshWorkflowEnv & {
+	RefreshGarage61WorkflowEnv &
+	RefreshGoodreadsWorkflowEnv &
+	RefreshLastFmWorkflowEnv & {
 	GARAGE61_API_KEY?: string;
 	LASTFM_API_KEY?: string;
-	KV_REFRESH_WORKFLOW?: {
-		create: (options?: { id?: string; params?: KvRefreshParams }) => Promise<unknown>;
+	GARAGE61_REFRESH_WORKFLOW?: {
+		create: (options?: {
+			id?: string;
+			params?: Garage61RefreshParams;
+		}) => Promise<unknown>;
+	};
+	GOODREADS_REFRESH_WORKFLOW?: {
+		create: (options?: {
+			id?: string;
+			params?: GoodreadsRefreshParams;
+		}) => Promise<unknown>;
+	};
+	LASTFM_REFRESH_WORKFLOW?: {
+		create: (options?: {
+			id?: string;
+			params?: LastFmRefreshParams;
+		}) => Promise<unknown>;
 	};
 	STALE_MONITOR_WORKFLOW?: {
 		create: (options?: { id?: string; params?: StaleMonitorParams }) => Promise<unknown>;
 	};
 };
 
-export { KvRefreshWorkflow, StaleDataMonitorWorkflow };
+export {
+	RefreshGarage61Workflow,
+	RefreshGoodreadsWorkflow,
+	RefreshLastFmWorkflow,
+	StaleDataMonitorWorkflow,
+};
 
 const applyRuntimeEnv = (env: WorkerEnv) => {
 	process.env.GARAGE61_API_KEY = env.GARAGE61_API_KEY ?? process.env.GARAGE61_API_KEY;
@@ -47,19 +79,36 @@ export default {
 		const scheduledAt = new Date(controller.scheduledTime);
 		const minute = scheduledAt.getUTCMinutes();
 
-		if (!env.KV_REFRESH_WORKFLOW) {
-			console.error("[refresh] KV_REFRESH_WORKFLOW binding missing");
+		const triggeredAt = new Date().toISOString();
+		if (!env.GARAGE61_REFRESH_WORKFLOW) {
+			console.error("[refresh] GARAGE61_REFRESH_WORKFLOW binding missing");
 		} else {
-			const triggeredAt = new Date().toISOString();
-			for (const source of ["garage61", "goodreads", "lastfm"] as const) {
-				const id = `kv-refresh-${source}-${Date.now()}`;
-				ctx.waitUntil(
-					env.KV_REFRESH_WORKFLOW.create({
-						id,
-						params: { triggeredAt, source },
-					}),
-				);
-			}
+			ctx.waitUntil(
+				env.GARAGE61_REFRESH_WORKFLOW.create({
+					id: `refresh-garage61-${Date.now()}`,
+					params: { triggeredAt },
+				}),
+			);
+		}
+		if (!env.GOODREADS_REFRESH_WORKFLOW) {
+			console.error("[refresh] GOODREADS_REFRESH_WORKFLOW binding missing");
+		} else {
+			ctx.waitUntil(
+				env.GOODREADS_REFRESH_WORKFLOW.create({
+					id: `refresh-goodreads-${Date.now()}`,
+					params: { triggeredAt },
+				}),
+			);
+		}
+		if (!env.LASTFM_REFRESH_WORKFLOW) {
+			console.error("[refresh] LASTFM_REFRESH_WORKFLOW binding missing");
+		} else {
+			ctx.waitUntil(
+				env.LASTFM_REFRESH_WORKFLOW.create({
+					id: `refresh-lastfm-${Date.now()}`,
+					params: { triggeredAt },
+				}),
+			);
 		}
 
 		if (minute !== 0) return;

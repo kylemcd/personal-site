@@ -19,9 +19,19 @@
   ],
   "workflows": [
     {
-      "binding": "KV_REFRESH_WORKFLOW",
-      "name": "kv-refresh",
-      "class_name": "KvRefreshWorkflow"
+      "binding": "GARAGE61_REFRESH_WORKFLOW",
+      "name": "refresh-garage61",
+      "class_name": "RefreshGarage61Workflow"
+    },
+    {
+      "binding": "GOODREADS_REFRESH_WORKFLOW",
+      "name": "refresh-goodreads",
+      "class_name": "RefreshGoodreadsWorkflow"
+    },
+    {
+      "binding": "LASTFM_REFRESH_WORKFLOW",
+      "name": "refresh-lastfm",
+      "class_name": "RefreshLastFmWorkflow"
     },
     {
       "binding": "STALE_MONITOR_WORKFLOW",
@@ -31,6 +41,10 @@
   ],
   "triggers": {
     "crons": ["0,30 * * * *"]
+  },
+  "limits": {
+    "cpu_ms": 300000,
+    "subrequests": 50000
   },
   "observability": {
     "logs": {

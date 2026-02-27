@@ -203,8 +203,20 @@ export class KvRefreshWorkflow extends WorkflowEntrypoint<
 		const steps = step as {
 			do: <T>(name: string, callback: () => Promise<T>) => Promise<T>;
 		};
+		const validSources = new Set(["garage61", "goodreads", "lastfm"]);
+		if (!source || !validSources.has(source)) {
+			await steps.do("refresh-invalid-source", async () => {
+				const message = `[refresh] invalid or missing source: ${String(source)}`;
+				emitNonFatalError(message);
+				return {
+					status: "failed",
+					error: message,
+				} satisfies StepResult;
+			});
+			return;
+		}
 
-		if (!source || source === "garage61") {
+		if (source === "garage61") {
 			await steps.do("refresh-garage61", async () => {
 				if (!isConfigured(this.env.GARAGE61_API_KEY)) {
 					emitNonFatalError(
@@ -229,7 +241,7 @@ export class KvRefreshWorkflow extends WorkflowEntrypoint<
 			});
 		}
 
-		if (!source || source === "goodreads") {
+		if (source === "goodreads") {
 			await steps.do("refresh-goodreads", async () => {
 				return await runEffect(
 					"goodreads",
@@ -244,7 +256,7 @@ export class KvRefreshWorkflow extends WorkflowEntrypoint<
 			});
 		}
 
-		if (!source || source === "lastfm") {
+		if (source === "lastfm") {
 			await steps.do("refresh-lastfm", async () => {
 				if (!isConfigured(this.env.LASTFM_API_KEY)) {
 					emitNonFatalError(
