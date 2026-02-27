@@ -1,5 +1,5 @@
 import { WorkflowEntrypoint } from "cloudflare:workers";
-import { Cause, Effect } from "effect";
+import { Effect } from "effect";
 
 import { lastfm } from "@/lib/lastfm";
 
@@ -37,14 +37,28 @@ const isConfigured = (value: string | undefined): boolean =>
 	typeof value === "string" && value.trim().length > 0;
 
 const toErrorSummary = (error: unknown): string => {
-	if (Cause.isCause(error)) {
-		const pretty = Cause.pretty(error).trim();
-		if (pretty) return pretty;
-	}
-	if (error instanceof Error) return `${error.name}: ${error.message}`;
-	if (typeof error === "string") return error;
+	const seen = new WeakSet<object>();
 	try {
-		return JSON.stringify(error);
+		return JSON.stringify(error, (_key, value) => {
+			if (value instanceof Error) {
+				const serialized: Record<string, unknown> = {
+					name: value.name,
+					message: value.message,
+					stack: value.stack,
+				};
+				for (const prop of Object.getOwnPropertyNames(value)) {
+					if (!(prop in serialized)) {
+						serialized[prop] = (value as Record<string, unknown>)[prop];
+					}
+				}
+				return serialized;
+			}
+			if (typeof value === "object" && value !== null) {
+				if (seen.has(value)) return "[Circular]";
+				seen.add(value);
+			}
+			return value;
+		});
 	} catch {
 		return String(error);
 	}
