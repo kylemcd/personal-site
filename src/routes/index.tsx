@@ -24,9 +24,7 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 			lastfm
 				.recentActivity()
 				.pipe(
-					Effect.catchAll(() =>
-						Effect.succeed({ nowPlaying: null, albums: [], wrapped: null }),
-					),
+					Effect.catchAll(() => Effect.succeed(null)),
 				),
 			markdown.all().pipe(Effect.catchAll(() => Effect.succeed([]))),
 			goodreads
@@ -96,6 +94,10 @@ export const Route = createFileRoute("/")({
 
 function Home() {
 	const { listening, writing, books, racing } = Route.useLoaderData();
+	const hasListeningContent = Boolean(
+		listening &&
+			(listening.nowPlaying || listening.wrapped || listening.albums.length > 0),
+	);
 	const hasBooks = Boolean(
 		(books?.reading?.length ?? 0) > 0 || (books?.finished?.length ?? 0) > 0,
 	);
@@ -120,32 +122,34 @@ function Home() {
 				</Text>
 				<Experience />
 			</div>
-			<div className="section-container section-container-flush-right">
-				<div className="listening-stack">
-					{listening.wrapped && (
-						<WrappedListening wrapped={listening.wrapped} />
-					)}
-					<HorizontalScrollContainer className="listening-container">
-						{listening.nowPlaying && (
-							<div className="listening-section">
-								<div className="listening-section-header">
-									<Text as="h3" size="1" weight="500">
-										Now
-									</Text>
-									<Equalizer />
-								</div>
-								<NowPlaying album={listening.nowPlaying} />
-							</div>
+			{hasListeningContent && listening && (
+				<div className="section-container section-container-flush-right">
+					<div className="listening-stack">
+						{listening.wrapped && (
+							<WrappedListening wrapped={listening.wrapped} />
 						)}
-						<div className="listening-section">
-							<Text as="h3" size="1" weight="500">
-								Recently Played
-							</Text>
-							<AlbumShelf albums={listening.albums} />
-						</div>
-					</HorizontalScrollContainer>
+						<HorizontalScrollContainer className="listening-container">
+							{listening.nowPlaying && (
+								<div className="listening-section">
+									<div className="listening-section-header">
+										<Text as="h3" size="1" weight="500">
+											Now
+										</Text>
+										<Equalizer />
+									</div>
+									<NowPlaying album={listening.nowPlaying} />
+								</div>
+							)}
+							<div className="listening-section">
+								<Text as="h3" size="1" weight="500">
+									Recently Played
+								</Text>
+								<AlbumShelf albums={listening.albums} />
+							</div>
+						</HorizontalScrollContainer>
+					</div>
 				</div>
-			</div>
+			)}
 			{hasBooks && (
 				<div className="section-container section-container-flush-right">
 					<HorizontalScrollContainer className="bookshelf-container">
