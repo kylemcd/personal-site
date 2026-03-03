@@ -6,6 +6,8 @@ import "./Garage61.styles.css";
 
 type Garage61Props = {
 	overview: Garage61Summary["derived"]["overview"];
+	titleHref?: string;
+	recentLayout?: "scroll" | "stack";
 };
 
 const formatDuration = (seconds: number) => {
@@ -29,7 +31,11 @@ const clampPercent = (value: number | null) => {
 	return Math.max(0, Math.min(100, value));
 };
 
-function Garage61({ overview }: Garage61Props) {
+function Garage61({
+	overview,
+	titleHref,
+	recentLayout = "scroll",
+}: Garage61Props) {
 	const hasRecent =
 		overview.recentTracks.length > 0 || overview.recentCars.length > 0;
 	if (!hasRecent && overview.totalTimeOnTrackSeconds <= 0) return null;
@@ -58,7 +64,17 @@ function Garage61({ overview }: Garage61Props) {
 		<div className="g61-racing">
 			<div className="g61-racing-list-block">
 				<Text as="h2" size="2" className="g61-racing-header">
-					Racing
+					{titleHref ? (
+						<a className="section-heading-link" href={titleHref}>
+							<span className="section-heading-label">Racing</span>
+							<i
+								className="hn hn-angle-right section-heading-icon"
+								aria-hidden="true"
+							/>
+						</a>
+					) : (
+						"Racing"
+					)}
 				</Text>
 				<div className="g61-racing-list g61-racing-insights">
 					<div className="g61-racing-row">
@@ -353,66 +369,126 @@ function Garage61({ overview }: Garage61Props) {
 					<Text as="h3" size="1">
 						Recent Tracks
 					</Text>
-					<HorizontalScrollContainer className="g61-racing-scroller">
-						{overview.recentTracks.map((track) => (
-							<div
-								className="g61-racing-row g61-racing-square-card"
-								key={`track-${track.id}`}
-							>
-								<div className="g61-racing-row-content">
-									<div className="g61-racing-meta">
-										<Text as="p" size="1" className="g61-racing-track">
-											{track.name}
-										</Text>
-										{track.variant && (
-											<Text
-												as="p"
-												size="0"
-												color="2"
-												className="g61-racing-variant"
-											>
-												{track.variant}
+					{recentLayout === "stack" ? (
+						<div className="g61-racing-recent-grid">
+							{overview.recentTracks.map((track) => (
+								<div
+									className="g61-racing-row g61-racing-square-card"
+									key={`track-${track.id}`}
+								>
+									<div className="g61-racing-row-content">
+										<div className="g61-racing-meta">
+											<Text as="p" size="1" className="g61-racing-track">
+												{track.name}
 											</Text>
-										)}
-										<Text as="p" size="0" color="2" className="g61-racing-car">
-											{formatDuration(track.timeOnTrackSeconds)}
-											{track.timeSharePercentage !== null
-												? ` (${track.timeSharePercentage}% of time)`
-												: ""}
-										</Text>
+											{track.variant && (
+												<Text
+													as="p"
+													size="0"
+													color="2"
+													className="g61-racing-variant"
+												>
+													{track.variant}
+												</Text>
+											)}
+											<Text as="p" size="0" color="2" className="g61-racing-car">
+												{formatDuration(track.timeOnTrackSeconds)}
+												{track.timeSharePercentage !== null
+													? ` (${track.timeSharePercentage}% of time)`
+													: ""}
+											</Text>
+										</div>
 									</div>
 								</div>
-							</div>
-						))}
-					</HorizontalScrollContainer>
+							))}
+						</div>
+					) : (
+						<HorizontalScrollContainer className="g61-racing-scroller">
+							{overview.recentTracks.map((track) => (
+								<div
+									className="g61-racing-row g61-racing-square-card"
+									key={`track-${track.id}`}
+								>
+									<div className="g61-racing-row-content">
+										<div className="g61-racing-meta">
+											<Text as="p" size="1" className="g61-racing-track">
+												{track.name}
+											</Text>
+											{track.variant && (
+												<Text
+													as="p"
+													size="0"
+													color="2"
+													className="g61-racing-variant"
+												>
+													{track.variant}
+												</Text>
+											)}
+											<Text as="p" size="0" color="2" className="g61-racing-car">
+												{formatDuration(track.timeOnTrackSeconds)}
+												{track.timeSharePercentage !== null
+													? ` (${track.timeSharePercentage}% of time)`
+													: ""}
+											</Text>
+										</div>
+									</div>
+								</div>
+							))}
+						</HorizontalScrollContainer>
+					)}
 				</div>
 
 				<div className="g61-racing-list-block">
 					<Text as="h3" size="1">
 						Recent Cars
 					</Text>
-					<HorizontalScrollContainer className="g61-racing-scroller">
-						{overview.recentCars.map((car) => (
-							<div
-								className="g61-racing-row g61-racing-square-card"
-								key={`car-${car.id}`}
-							>
-								<div className="g61-racing-row-content">
-									<div className="g61-racing-meta">
-										<Text as="p" size="1" className="g61-racing-track">
-											{car.name}
-										</Text>
-										<Text as="p" size="0" color="2" className="g61-racing-car">
-											{formatDuration(car.timeOnTrackSeconds)}
-											{car.timeSharePercentage !== null
-												? ` (${car.timeSharePercentage}% of time)`
-												: ""}
-										</Text>
+					{recentLayout === "stack" ? (
+						<div className="g61-racing-recent-grid">
+							{overview.recentCars.map((car) => (
+								<div
+									className="g61-racing-row g61-racing-square-card"
+									key={`car-${car.id}`}
+								>
+									<div className="g61-racing-row-content">
+										<div className="g61-racing-meta">
+											<Text as="p" size="1" className="g61-racing-track">
+												{car.name}
+											</Text>
+											<Text as="p" size="0" color="2" className="g61-racing-car">
+												{formatDuration(car.timeOnTrackSeconds)}
+												{car.timeSharePercentage !== null
+													? ` (${car.timeSharePercentage}% of time)`
+													: ""}
+											</Text>
+										</div>
 									</div>
 								</div>
-							</div>
-						))}
-					</HorizontalScrollContainer>
+							))}
+						</div>
+					) : (
+						<HorizontalScrollContainer className="g61-racing-scroller">
+							{overview.recentCars.map((car) => (
+								<div
+									className="g61-racing-row g61-racing-square-card"
+									key={`car-${car.id}`}
+								>
+									<div className="g61-racing-row-content">
+										<div className="g61-racing-meta">
+											<Text as="p" size="1" className="g61-racing-track">
+												{car.name}
+											</Text>
+											<Text as="p" size="0" color="2" className="g61-racing-car">
+												{formatDuration(car.timeOnTrackSeconds)}
+												{car.timeSharePercentage !== null
+													? ` (${car.timeSharePercentage}% of time)`
+													: ""}
+											</Text>
+										</div>
+									</div>
+								</div>
+							))}
+						</HorizontalScrollContainer>
+					)}
 				</div>
 			</div>
 		</div>

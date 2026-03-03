@@ -45,10 +45,21 @@
 	min-width: 0;
 }
 
+.g61-racing-recent-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--spc-2);
+}
+
 .g61-racing-list-block > h2,
 .g61-racing-list-block > h3,
-.g61-racing-list-block > .g61-racing-list {
+.g61-racing-list-block > .g61-racing-list,
+.g61-racing-list-block > .g61-racing-recent-grid {
 	padding: 0 var(--spc-8);
+}
+
+.g61-racing-recent-grid .g61-racing-square-card {
+	flex: initial;
 }
 
 .g61-racing-insights {
@@ -248,5 +259,17 @@
 
 	.g61-racing-square-card {
 		flex-basis: 180px;
+	}
+}
+
+@media (min-width: 768px) {
+	.g61-racing-recent-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 1024px) {
+	.g61-racing-recent-grid {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
 	}
 }

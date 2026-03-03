@@ -29,12 +29,32 @@
 	width: 100%;
 }
 
+.album-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--spc-4);
+}
+
 .album {
 	display: flex;
 	flex-direction: column;
-	flex: 0 0 auto;
 	gap: var(--spc-2);
 	width: 175px;
+	min-width: 0;
+}
+
+.album-shelf .album {
+	flex: 0 0 auto;
+}
+
+.album-grid .album {
+	width: 100%;
+}
+
+.album-grid .album-image {
+	width: 100%;
+	height: auto;
+	aspect-ratio: 1 / 1;
 }
 
 .album-image {
@@ -52,6 +72,12 @@
 
 .album:hover .album-image {
 	transform: scale(0.98);
+}
+
+@media (min-width: 768px) {
+	.album-grid {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
 }
 
 /* Now Playing */

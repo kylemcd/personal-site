@@ -112,7 +112,13 @@ function Home() {
 			<HomeHero />
 			<div className="section-container">
 				<Text as="h2" size="2">
-					Writing
+					<a className="section-heading-link" href="/posts">
+						<span className="section-heading-label">Writing</span>
+						<i
+							className="hn hn-angle-right section-heading-icon"
+							aria-hidden="true"
+						/>
+					</a>
 				</Text>
 				<WritingList writing={writing} />
 			</div>
@@ -124,6 +130,15 @@ function Home() {
 			</div>
 			{hasListeningContent && listening && (
 				<div className="section-container section-container-flush-right">
+					<Text as="h2" size="2" className="section-title-padded section-title-tight">
+						<a className="section-heading-link" href="/listening">
+							<span className="section-heading-label">Listening</span>
+							<i
+								className="hn hn-angle-right section-heading-icon"
+								aria-hidden="true"
+							/>
+						</a>
+					</Text>
 					<div className="listening-stack">
 						{listening.wrapped && (
 							<WrappedListening wrapped={listening.wrapped} />
@@ -155,7 +170,13 @@ function Home() {
 					<HorizontalScrollContainer className="bookshelf-container">
 						<div className="bookshelf-section">
 							<Text as="h2" size="2">
-								Reading
+								<a className="section-heading-link" href="/reading">
+									<span className="section-heading-label">Reading</span>
+									<i
+										className="hn hn-angle-right section-heading-icon"
+										aria-hidden="true"
+									/>
+								</a>
 							</Text>
 							<Bookshelf books={books.reading} />
 						</div>
@@ -170,7 +191,7 @@ function Home() {
 			)}
 			{racing && hasRacingOverview && (
 				<div className="section-container section-container-flush-right">
-					<Garage61 overview={racing.derived.overview} />
+					<Garage61 overview={racing.derived.overview} titleHref="/racing" />
 				</div>
 			)}
 		</>

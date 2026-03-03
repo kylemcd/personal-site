@@ -78,32 +78,48 @@ function NowPlaying({ album }: NowPlayingProps) {
 
 type AlbumShelfProps = {
 	albums: ReadonlyArray<Album>;
+	variant?: "scroll" | "grid";
 };
 
-function AlbumShelf({ albums }: AlbumShelfProps) {
+type AlbumCardProps = {
+	album: Album;
+};
+
+function AlbumCard({ album }: AlbumCardProps) {
+	return (
+		<a
+			className="album"
+			href={album.url}
+			target="_blank"
+			rel="noopener noreferrer"
+		>
+			<img src={album.image} alt={album.name} className="album-image" />
+			<div className="album-info">
+				<Text as="p" size="0" weight="500">
+					{album.name}
+				</Text>
+				<Text as="p" size="0" color="2">
+					{album.artist}
+				</Text>
+			</div>
+		</a>
+	);
+}
+
+function AlbumShelf({ albums, variant = "scroll" }: AlbumShelfProps) {
+	const content = albums.map((album) => (
+		<AlbumCard album={album} key={album.mbid} />
+	));
+
+	if (variant === "grid") {
+		return <div className="album-grid">{content}</div>;
+	}
+
 	return (
 		<HorizontalScrollContainer className="album-shelf">
-			{albums.map((album) => (
-				<a
-					className="album"
-					key={album.mbid}
-					href={album.url}
-					target="_blank"
-					rel="noopener noreferrer"
-				>
-					<img src={album.image} alt={album.name} className="album-image" />
-					<div className="album-info">
-						<Text as="p" size="0" weight="500">
-							{album.name}
-						</Text>
-						<Text as="p" size="0" color="2">
-							{album.artist}
-						</Text>
-					</div>
-				</a>
-			))}
+			{content}
 		</HorizontalScrollContainer>
 	);
 }
 
-export { AlbumShelf, Equalizer, NowPlaying };
+export { AlbumCard, AlbumShelf, Equalizer, NowPlaying };

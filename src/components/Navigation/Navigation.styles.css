@@ -9,10 +9,16 @@
 
 .navigation-logo {
 	padding: var(--spc-8);
+	color: var(--color-text-1);
+	text-decoration: none;
+	transition: color 0.15s ease;
 }
 
-.navigation a:hover {
+.navigation-logo:hover {
+	color: var(--color-text-2);
 	text-decoration: underline;
+	text-decoration-color: var(--color-text-2);
+	text-underline-offset: 3px;
 }
 
 .navigation-menu-container {

@@ -10,7 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReadingIndexRouteImport } from './routes/reading.index'
+import { Route as RacingIndexRouteImport } from './routes/racing.index'
 import { Route as PostsIndexRouteImport } from './routes/posts.index'
+import { Route as ListeningIndexRouteImport } from './routes/listening.index'
 import { Route as PostsSlugRouteImport } from './routes/posts.$slug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -18,9 +21,24 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReadingIndexRoute = ReadingIndexRouteImport.update({
+  id: '/reading/',
+  path: '/reading/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RacingIndexRoute = RacingIndexRouteImport.update({
+  id: '/racing/',
+  path: '/racing/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PostsIndexRoute = PostsIndexRouteImport.update({
   id: '/posts/',
   path: '/posts/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListeningIndexRoute = ListeningIndexRouteImport.update({
+  id: '/listening/',
+  path: '/listening/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PostsSlugRoute = PostsSlugRouteImport.update({
@@ -32,31 +50,56 @@ const PostsSlugRoute = PostsSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/posts/$slug': typeof PostsSlugRoute
+  '/listening': typeof ListeningIndexRoute
   '/posts': typeof PostsIndexRoute
+  '/racing': typeof RacingIndexRoute
+  '/reading': typeof ReadingIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/posts/$slug': typeof PostsSlugRoute
+  '/listening': typeof ListeningIndexRoute
   '/posts': typeof PostsIndexRoute
+  '/racing': typeof RacingIndexRoute
+  '/reading': typeof ReadingIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/posts/$slug': typeof PostsSlugRoute
+  '/listening/': typeof ListeningIndexRoute
   '/posts/': typeof PostsIndexRoute
+  '/racing/': typeof RacingIndexRoute
+  '/reading/': typeof ReadingIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/posts/$slug' | '/posts'
+  fullPaths:
+    | '/'
+    | '/posts/$slug'
+    | '/listening'
+    | '/posts'
+    | '/racing'
+    | '/reading'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/posts/$slug' | '/posts'
-  id: '__root__' | '/' | '/posts/$slug' | '/posts/'
+  to: '/' | '/posts/$slug' | '/listening' | '/posts' | '/racing' | '/reading'
+  id:
+    | '__root__'
+    | '/'
+    | '/posts/$slug'
+    | '/listening/'
+    | '/posts/'
+    | '/racing/'
+    | '/reading/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PostsSlugRoute: typeof PostsSlugRoute
+  ListeningIndexRoute: typeof ListeningIndexRoute
   PostsIndexRoute: typeof PostsIndexRoute
+  RacingIndexRoute: typeof RacingIndexRoute
+  ReadingIndexRoute: typeof ReadingIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -68,11 +111,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reading/': {
+      id: '/reading/'
+      path: '/reading'
+      fullPath: '/reading'
+      preLoaderRoute: typeof ReadingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/racing/': {
+      id: '/racing/'
+      path: '/racing'
+      fullPath: '/racing'
+      preLoaderRoute: typeof RacingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/posts/': {
       id: '/posts/'
       path: '/posts'
       fullPath: '/posts'
       preLoaderRoute: typeof PostsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/listening/': {
+      id: '/listening/'
+      path: '/listening'
+      fullPath: '/listening'
+      preLoaderRoute: typeof ListeningIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posts/$slug': {
@@ -88,7 +152,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PostsSlugRoute: PostsSlugRoute,
+  ListeningIndexRoute: ListeningIndexRoute,
   PostsIndexRoute: PostsIndexRoute,
+  RacingIndexRoute: RacingIndexRoute,
+  ReadingIndexRoute: ReadingIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

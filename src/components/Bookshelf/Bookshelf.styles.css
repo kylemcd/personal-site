@@ -18,6 +18,12 @@
 	gap: var(--spc-4);
 }
 
+.bookshelf[data-variant="grid"] {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	width: 100%;
+}
+
 .book:hover {
 	transform: scale(0.98);
 }
@@ -32,6 +38,10 @@
 	border-radius: 0 6px 6px 0;
 	overflow: hidden;
 	flex: 0 0 auto;
+}
+
+.bookshelf[data-variant="grid"] .book {
+	width: 100%;
 }
 
 .bookshelf .book .link {
@@ -88,4 +98,10 @@
 
 .text-cover p {
 	line-height: 1.2;
+}
+
+@media (min-width: 768px) {
+	.bookshelf[data-variant="grid"] {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
 }

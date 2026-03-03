@@ -1,0 +1,1 @@
+export { enrichWrappedWithSpotifyArtistImages } from "./spotify";

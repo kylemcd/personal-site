@@ -129,6 +129,7 @@ export type WrappedData = {
 		plays: number;
 		share: number;
 		url: string;
+		image: string | null;
 	}>;
 	topTracks: Array<{
 		name: string;
@@ -137,6 +138,7 @@ export type WrappedData = {
 		plays: number;
 		share: number;
 		url: string;
+		image: string | null;
 	}>;
 	topAlbums: Array<{
 		name: string;
@@ -145,6 +147,7 @@ export type WrappedData = {
 		plays: number;
 		share: number;
 		url: string;
+		image: string | null;
 	}>;
 	funFacts: string[];
 };

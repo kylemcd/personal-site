@@ -1,6 +1,7 @@
 import { Data, Effect, pipe } from "effect";
 
 import { fetchFresh } from "@/lib/fetch";
+import { enrichWrappedWithSpotifyArtistImages } from "@/lib/spotify";
 import { getOrComputeJson } from "@/lib/store";
 
 import {
@@ -29,7 +30,7 @@ const ALBUMS_LIMIT = 20;
 const MONTHLY_TOP_LIMIT = 200;
 const LASTFM_MONTHLY_TOP_CACHE_KEY = "lastfm:monthly-top:v1";
 const LASTFM_MONTHLY_TOP_CACHE_TTL_SECONDS = 30 * 60; // 30 minutes
-const WRAPPED_TOP_COUNT = 5;
+const WRAPPED_TOP_COUNT = 10;
 const RECENTLY_PLAYED_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const MIN_SESSION_SECONDS = 5 * 60;
 const SESSION_BREAK_SECONDS = 45 * 60;
@@ -181,6 +182,25 @@ const getPrimaryArtist = (artistName: string): string => {
 const getAlbumKey = (albumName: string, artistName: string): string => {
 	const primaryArtist = getPrimaryArtist(artistName);
 	return `${albumName.toLowerCase()}::${primaryArtist.toLowerCase()}`;
+};
+
+const getTrackKey = (trackName: string, artistName: string): string => {
+	return `${trackName.toLowerCase()}::${getPrimaryArtist(artistName).toLowerCase()}`;
+};
+
+const buildRecentTrackArtMap = (
+	tracks: ReadonlyArray<typeof TrackSchema.Type>,
+): Map<string, string> => {
+	const artByTrack = new Map<string, string>();
+	for (const track of tracks) {
+		const image = getAlbumImage(track.image);
+		if (isPlaceholderImage(image)) continue;
+		const trackKey = getTrackKey(track.name, track.artist["#text"]);
+		if (!artByTrack.has(trackKey)) {
+			artByTrack.set(trackKey, image);
+		}
+	}
+	return artByTrack;
 };
 
 /**
@@ -360,32 +380,6 @@ const getMonthlySessionStats = (params: {
 	return { averageSessionSeconds };
 };
 
-const getTrackKey = (trackName: string, artistName: string): string => {
-	return `${trackName.toLowerCase()}::${getPrimaryArtist(artistName).toLowerCase()}`;
-};
-
-const buildArtworkFallbacks = (
-	recentTracks: ReadonlyArray<typeof TrackSchema.Type>,
-): {
-	trackArt: Map<string, { url: string }>;
-} => {
-	const trackArt = new Map<string, { url: string }>();
-
-	for (const track of recentTracks) {
-		const image = getAlbumImage(track.image);
-		if (isPlaceholderImage(image)) continue;
-
-		const trackKey = getTrackKey(track.name, track.artist["#text"]);
-		if (!trackArt.has(trackKey)) {
-			trackArt.set(trackKey, {
-				url: getTrackUrl(track.artist["#text"], track.name),
-			});
-		}
-	}
-
-	return { trackArt };
-};
-
 const buildFunFacts = (params: {
 	totalScrobbles: number;
 	totalListeningSeconds: number;
@@ -500,7 +494,7 @@ const extractWrappedData = (params: {
 	} = params;
 
 	if (topTracks.length === 0 || topArtistsRaw.length === 0) return null;
-	const { trackArt } = buildArtworkFallbacks(recentTracks);
+	const recentTrackArt = buildRecentTrackArtMap(recentTracks);
 
 	const topTrackRaw = topTracks[0];
 	const topArtistRaw = topArtistsRaw[0];
@@ -526,6 +520,7 @@ const extractWrappedData = (params: {
 				plays,
 				share,
 				url: artist.url,
+				image: null,
 			};
 		})
 		.filter((artist) => artist.plays > 0);
@@ -536,7 +531,8 @@ const extractWrappedData = (params: {
 			const plays = parsePlayCount(track.playcount);
 			const share = Math.round((plays / totalScrobbles) * 100);
 			const artist = getPrimaryArtist(track.artist.name);
-			const fallbackTrackArt = trackArt.get(
+			const image = getPrimaryImage(track.image);
+			const fallbackImage = recentTrackArt.get(
 				getTrackKey(track.name, track.artist.name),
 			);
 			return {
@@ -545,10 +541,13 @@ const extractWrappedData = (params: {
 				artistUrl: getArtistUrl(track.artist.name),
 				plays,
 				share,
-				url:
-					track.url ||
-					fallbackTrackArt?.url ||
-					getTrackUrl(track.artist.name, track.name),
+				url: track.url || getTrackUrl(track.artist.name, track.name),
+				image:
+					!isPlaceholderImage(image)
+						? image
+						: fallbackImage && !isPlaceholderImage(fallbackImage)
+							? fallbackImage
+							: null,
 			};
 		})
 		.filter((track) => track.plays > 0);
@@ -559,6 +558,7 @@ const extractWrappedData = (params: {
 			const plays = parsePlayCount(album.playcount);
 			const share = Math.round((plays / totalScrobbles) * 100);
 			const artist = getPrimaryArtist(album.artist.name);
+			const image = getPrimaryImage(album.image);
 			return {
 				name: album.name,
 				artist,
@@ -566,6 +566,7 @@ const extractWrappedData = (params: {
 				plays,
 				share,
 				url: album.url || getAlbumUrl(album.artist.name, album.name),
+				image: isPlaceholderImage(image) ? null : image,
 			};
 		})
 		.filter((album) => album.plays > 0);
@@ -578,17 +579,12 @@ const extractWrappedData = (params: {
 		averageTrackSeconds,
 	});
 
-	const topTrackKey = getTrackKey(topTrackRaw.name, topTrackRaw.artist.name);
-	const fallbackTrackArt = trackArt.get(topTrackKey);
 	const topTrack = {
 		name: topTrackRaw.name,
 		artist: getPrimaryArtist(topTrackRaw.artist.name),
 		artistUrl: getArtistUrl(topTrackRaw.artist.name),
 		plays: topTrackPlays,
-		url:
-			topTrackRaw.url ||
-			fallbackTrackArt?.url ||
-			getTrackUrl(topTrackRaw.artist.name, topTrackRaw.name),
+		url: topTrackRaw.url || getTrackUrl(topTrackRaw.artist.name, topTrackRaw.name),
 	};
 	const topArtist = {
 		name: getPrimaryArtist(topArtistRaw.name),
@@ -709,20 +705,24 @@ const recentActivity = () => {
 			monthlyTopData(),
 		]).pipe(
 			Effect.mapError((error) => new LastFmRecentAlbumsError({ error })),
-			Effect.flatMap(([recentTracksRes, monthlyTop]) =>
-				Effect.succeed(
-					extractListeningData(
-						recentTracksRes.data.recenttracks.track,
-						extractWrappedData({
-							topTracks: monthlyTop.topTracks,
-							topArtists: monthlyTop.topArtists,
-							topAlbums: monthlyTop.topAlbums,
-							recentTracks: recentTracksRes.data.recenttracks.track,
-							nowMs: Date.now(),
-						}),
-					),
-				),
-			),
+			Effect.flatMap(([recentTracksRes, monthlyTop]) => {
+				const listening = extractListeningData(
+					recentTracksRes.data.recenttracks.track,
+					extractWrappedData({
+						topTracks: monthlyTop.topTracks,
+						topArtists: monthlyTop.topArtists,
+						topAlbums: monthlyTop.topAlbums,
+						recentTracks: recentTracksRes.data.recenttracks.track,
+						nowMs: Date.now(),
+					}),
+				);
+
+				if (!listening.wrapped) return Effect.succeed(listening);
+
+				return enrichWrappedWithSpotifyArtistImages(listening.wrapped).pipe(
+					Effect.map((wrapped) => ({ ...listening, wrapped })),
+				);
+			}),
 		),
 	);
 };
