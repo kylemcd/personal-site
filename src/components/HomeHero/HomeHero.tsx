@@ -39,7 +39,7 @@ function HomeHero() {
 			</div>
 			<div className="home-hero-text-container">
 				<Text as="p" size="1">
-					Hey, I'm Kyle and I like building things. Whether it’s front-end
+					Hey, I'm Kyle and I like building things. Whether it’s frontend
 					interfaces, developer tools, or the perfect iRacing setup. I spend
 					most of my time working with React, making software feel fast and
 					seamless, and obsessing over the little details that make a great user
