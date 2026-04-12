@@ -48,7 +48,8 @@ type RawGoodreadsItem = {
 };
 
 const errorDetails = (error: unknown): string => {
-	if (error instanceof Error && error.message.trim()) return error.message.trim();
+	if (error instanceof Error && error.message.trim())
+		return error.message.trim();
 	if (typeof error === "string" && error.trim()) return error.trim();
 	try {
 		return JSON.stringify(error);
@@ -184,8 +185,13 @@ const getBooks = ({
 		if (!response.ok) {
 			const rawBody = yield* Effect.tryPromise({
 				try: () => response.text(),
-				catch: () => "",
-			});
+				catch: (error) =>
+					new FetchGoodreadsError({
+						error,
+						details: errorDetails(error),
+						url,
+					}),
+			}).pipe(Effect.catchAll(() => Effect.succeed("")));
 			const bodySnippet = rawBody.trim()
 				? rawBody.trim().length > 2000
 					? `${rawBody.trim().slice(0, 2000)}...`

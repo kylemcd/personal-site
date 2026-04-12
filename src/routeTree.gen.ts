@@ -50,10 +50,10 @@ const PostsSlugRoute = PostsSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/posts/$slug': typeof PostsSlugRoute
-  '/listening': typeof ListeningIndexRoute
-  '/posts': typeof PostsIndexRoute
-  '/racing': typeof RacingIndexRoute
-  '/reading': typeof ReadingIndexRoute
+  '/listening/': typeof ListeningIndexRoute
+  '/posts/': typeof PostsIndexRoute
+  '/racing/': typeof RacingIndexRoute
+  '/reading/': typeof ReadingIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -77,10 +77,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/posts/$slug'
-    | '/listening'
-    | '/posts'
-    | '/racing'
-    | '/reading'
+    | '/listening/'
+    | '/posts/'
+    | '/racing/'
+    | '/reading/'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/posts/$slug' | '/listening' | '/posts' | '/racing' | '/reading'
   id:
@@ -114,28 +114,28 @@ declare module '@tanstack/react-router' {
     '/reading/': {
       id: '/reading/'
       path: '/reading'
-      fullPath: '/reading'
+      fullPath: '/reading/'
       preLoaderRoute: typeof ReadingIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/racing/': {
       id: '/racing/'
       path: '/racing'
-      fullPath: '/racing'
+      fullPath: '/racing/'
       preLoaderRoute: typeof RacingIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posts/': {
       id: '/posts/'
       path: '/posts'
-      fullPath: '/posts'
+      fullPath: '/posts/'
       preLoaderRoute: typeof PostsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/listening/': {
       id: '/listening/'
       path: '/listening'
-      fullPath: '/listening'
+      fullPath: '/listening/'
       preLoaderRoute: typeof ListeningIndexRouteImport
       parentRoute: typeof rootRouteImport
     }

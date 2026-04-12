@@ -24,7 +24,6 @@ const PACE_LADDER_MIN_LAPS = 10;
 const PACE_LADDER_MAX_ITEMS = 12;
 const GARAGE61_COMPARISON_TEAM = "team-gotouchgrass";
 const QUALI_RACE_SESSION_TYPES = [2, 3] as const;
-const QUALI_RACE_SESSION_TYPES_PARAM = QUALI_RACE_SESSION_TYPES.join(",");
 const GARAGE61_API_KEY_CONFIG = Config.string("GARAGE61_API_KEY").pipe(
 	Config.withDefault(""),
 );
@@ -938,44 +937,45 @@ const summaryUncached = (garage61ApiKey: string) =>
 			},
 		);
 
-		const comparisonCandidates = comboLapComparisons
-			.map(({ combo, myLapsRes, teamLapsRes }) => {
-				const myLapRows = extractLapRows(myLapsRes.data);
-				const teamLapRows = extractLapRows(teamLapsRes.data);
-				const myBestLap = myLapRows[0]?.lapTime ?? null;
-				if (myBestLap === null) return null;
+		type ComboComparisonCandidate = {
+			combo: {
+				trackId: number;
+				carId: number;
+				track: string;
+				car: string;
+				laps: number;
+			};
+			myBestLap: number;
+			teammateBestLap: number | null;
+		};
 
-				const myDriverKeys = new Set(
-					myLapRows
-						.map((row) => row.driverKey)
-						.filter((key): key is string => key !== null),
-				);
-				const teammateRows = teamLapRows.filter(
-					(row) => row.driverKey !== null && !myDriverKeys.has(row.driverKey),
-				);
-				const teammateBestLap = teammateRows[0]?.lapTime ?? null;
-
-				return {
+		const comparisonCandidates: ComboComparisonCandidate[] = comboLapComparisons
+			.map(
+				({
 					combo,
-					myBestLap,
-					teammateBestLap,
-				};
-			})
-			.filter(
-				(
-					value,
-				): value is {
-					combo: {
-						trackId: number;
-						carId: number;
-						track: string;
-						car: string;
-						laps: number;
-					};
-					myBestLap: number;
-					teammateBestLap: number | null;
-				} => value !== null,
-			);
+					myLapsRes,
+					teamLapsRes,
+				}): ComboComparisonCandidate | null => {
+					const myLapRows = extractLapRows(myLapsRes.data);
+					const teamLapRows = extractLapRows(teamLapsRes.data);
+					const myBestLap = myLapRows[0]?.lapTime ?? null;
+					if (myBestLap === null) return null;
+
+					const myDriverKeys = new Set(
+						myLapRows
+							.map((row) => row.driverKey)
+							.filter((key): key is string => key !== null),
+					);
+					const teammateRows = teamLapRows.filter(
+						(row) => row.driverKey !== null && !myDriverKeys.has(row.driverKey),
+					);
+					const teammateBestLap: number | null =
+						teammateRows[0]?.lapTime ?? null;
+
+					return { combo, myBestLap, teammateBestLap };
+				},
+			)
+			.filter((value): value is ComboComparisonCandidate => value !== null);
 		const fastestLapByComboKey = new Map<string, number>(
 			comparisonCandidates.map((candidate) => [
 				`${candidate.combo.trackId}-${candidate.combo.carId}`,
@@ -984,37 +984,47 @@ const summaryUncached = (garage61ApiKey: string) =>
 		);
 
 		const comparable = comparisonCandidates
-			.filter((candidate) => candidate.teammateBestLap !== null)
+			.filter(
+				(
+					candidate,
+				): candidate is (typeof comparisonCandidates)[number] & {
+					teammateBestLap: number;
+				} => candidate.teammateBestLap !== null,
+			)
 			.sort((a, b) => a.myBestLap - b.myBestLap);
 
 		if (comparable.length > 0) {
 			const pick = comparable[0];
-			const teammateBest = pick.teammateBestLap as number;
-			const isFastestInTeam = pick.myBestLap <= teammateBest + 0.0005;
-			secondsOffRecord = {
-				track: pick.combo.track,
-				car: pick.combo.car,
-				bestLapSeconds: roundTo(pick.myBestLap, 3),
-				recordLapSeconds: roundTo(Math.min(pick.myBestLap, teammateBest), 3),
-				secondsOffRecord: isFastestInTeam
-					? 0
-					: roundTo(pick.myBestLap - teammateBest, 3),
-				isFastestInTeam,
-				onlyMyLaps: false,
-			};
+			if (pick) {
+				const teammateBest = pick.teammateBestLap;
+				const isFastestInTeam = pick.myBestLap <= teammateBest + 0.0005;
+				secondsOffRecord = {
+					track: pick.combo.track,
+					car: pick.combo.car,
+					bestLapSeconds: roundTo(pick.myBestLap, 3),
+					recordLapSeconds: roundTo(Math.min(pick.myBestLap, teammateBest), 3),
+					secondsOffRecord: isFastestInTeam
+						? 0
+						: roundTo(pick.myBestLap - teammateBest, 3),
+					isFastestInTeam,
+					onlyMyLaps: false,
+				};
+			}
 		} else if (comparisonCandidates.length > 0) {
 			const pick = comparisonCandidates.sort(
 				(a, b) => a.myBestLap - b.myBestLap,
 			)[0];
-			secondsOffRecord = {
-				track: pick.combo.track,
-				car: pick.combo.car,
-				bestLapSeconds: roundTo(pick.myBestLap, 3),
-				recordLapSeconds: roundTo(pick.myBestLap, 3),
-				secondsOffRecord: 0,
-				isFastestInTeam: true,
-				onlyMyLaps: true,
-			};
+			if (pick) {
+				secondsOffRecord = {
+					track: pick.combo.track,
+					car: pick.combo.car,
+					bestLapSeconds: roundTo(pick.myBestLap, 3),
+					recordLapSeconds: roundTo(pick.myBestLap, 3),
+					secondsOffRecord: 0,
+					isFastestInTeam: true,
+					onlyMyLaps: true,
+				};
+			}
 		}
 
 		let cleanestComboCandidate:
@@ -1217,7 +1227,7 @@ const summaryUncached = (garage61ApiKey: string) =>
 
 		return {
 			profile: parseProfile(meRes.data),
-			statistics: statisticsRes.data,
+			statistics: statisticsRes.data as Garage61Summary["statistics"],
 			sessions: null,
 			derived: {
 				sessionCount:
@@ -1248,9 +1258,7 @@ const summary = () =>
 	Effect.gen(function* () {
 		return yield* getJson<Garage61Summary>({
 			key: GARAGE61_SUMMARY_CACHE_KEY,
-		}).pipe(
-			Effect.map((cached) => cached ?? emptySummary()),
-		);
+		}).pipe(Effect.map((cached) => cached ?? emptySummary()));
 	});
 
 const refreshSummary = () =>

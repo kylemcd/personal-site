@@ -35,13 +35,13 @@ export class RefreshGoodreadsWorkflow extends WorkflowEntrypoint<
 	) {
 		void event;
 		applyRuntimeEnv(this.env);
-		const steps = step as WorkflowStepRunner;
+			const steps = step as WorkflowStepRunner;
 
-		await steps.do("refresh-goodreads", async () => {
-			return await Effect.runPromise(
-				goodreads.refreshShelf().pipe(
-					Effect.map((shelf) => ({
-						status: "success" as const,
+			await steps.do("refresh-goodreads", async () => {
+				try {
+					const shelf = await Effect.runPromise(goodreads.refreshShelf());
+					return {
+						status: "success",
 						details: {
 							cacheKey: "goodreads:shelf:v1",
 							reading: shelf.reading.length,
@@ -49,17 +49,13 @@ export class RefreshGoodreadsWorkflow extends WorkflowEntrypoint<
 							next: shelf.next.length,
 						},
 						payload: shelf,
-					})),
-					Effect.catchAllCause((cause) =>
-						Effect.sync(() => {
-							throwWorkflowError(
-								`[refresh] goodreads failed: ${toErrorSummary(cause)}`,
-								cause,
-							);
-						}),
-					),
-				),
-			) satisfies StepResult;
-		});
+					} satisfies StepResult;
+				} catch (cause) {
+					throwWorkflowError(
+						`[refresh] goodreads failed: ${toErrorSummary(cause)}`,
+						cause,
+					);
+				}
+			});
+		}
 	}
-}

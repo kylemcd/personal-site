@@ -41,11 +41,13 @@ export const toErrorSummary = (error: unknown): string => {
 					message: value.message,
 					stack: value.stack,
 				};
-				for (const prop of Object.getOwnPropertyNames(value)) {
-					if (!(prop in serialized)) {
-						serialized[prop] = (value as Record<string, unknown>)[prop];
+					for (const prop of Object.getOwnPropertyNames(value)) {
+						if (!(prop in serialized)) {
+							serialized[prop] = (value as unknown as Record<string, unknown>)[
+								prop
+							];
+						}
 					}
-				}
 				return serialized;
 			}
 			if (typeof value === "object" && value !== null) {

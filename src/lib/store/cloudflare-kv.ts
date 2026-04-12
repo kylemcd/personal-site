@@ -1,5 +1,5 @@
-import { getGlobalStartContext } from "@tanstack/react-start";
 import { env as cloudflareEnv } from "cloudflare:workers";
+import { getGlobalStartContext } from "@tanstack/react-start";
 import { Context, Effect, Layer } from "effect";
 
 type KvNamespaceLike = {
@@ -96,7 +96,8 @@ const getReadKeys = (key: string): ReadonlyArray<string> => {
 	const defaultScopedKey = `${DEFAULT_CACHE_VERSION}:${key}`;
 	return [...new Set([activeScopedKey, defaultScopedKey, key])];
 };
-const toLookupStatusKey = (key: string): string => `monitor:lookup-status:${key}`;
+const toLookupStatusKey = (key: string): string =>
+	`monitor:lookup-status:${key}`;
 
 const asRecord = (value: unknown): Record<string, unknown> | null => {
 	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -231,8 +232,8 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			if (namespace) {
 				const raw = yield* Effect.tryPromise({
 					try: () => namespace.get(scopedKey, "text"),
-					catch: () => null,
-				});
+					catch: (error) => new Error(String(error)),
+				}).pipe(Effect.catchAll(() => Effect.succeed(null)));
 				if (raw) {
 					const parsed = parseEnvelope<A>(raw);
 					if (parsed) return parsed;
@@ -266,7 +267,7 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			};
 		});
 
-	const getJson: CloudflareKvStoreService["getJson"] = <A>({ key }) =>
+	const getJson = <A>({ key }: JsonCacheOptions): Effect.Effect<A | null> =>
 		Effect.gen(function* () {
 			for (const readKey of getReadKeys(key)) {
 				const envelope = yield* readEnvelope<A>(readKey);
@@ -279,9 +280,12 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 		typeof value === "object" && value !== null && !Array.isArray(value);
 
 	const isResponseLike = (
-		value: unknown,
-	): value is { status: number; statusText?: string; url?: string } => {
-		if (!isRecord(value)) return false;
+		value: Record<string, unknown>,
+	): value is Record<string, unknown> & {
+		status: number;
+		statusText?: string;
+		url?: string;
+	} => {
 		return typeof value.status === "number";
 	};
 
@@ -300,7 +304,7 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			fragments.push(String(value));
 			return;
 		}
-		const nestedKeys = [
+		const nestedKeys: ReadonlyArray<string> = [
 			"error",
 			"cause",
 			"reason",
@@ -368,8 +372,9 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			}
 		}
 
-		if (typeof value.message === "string" && value.message.trim()) {
-			fragments.push(value.message.trim());
+		const message = value.message;
+		if (typeof message === "string" && message.trim()) {
+			fragments.push(message.trim());
 		}
 		for (const key of [
 			"details",
@@ -406,9 +411,7 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 		putJson({
 			key: toLookupStatusKey(key),
 			value: status,
-		}).pipe(
-			Effect.catchAll(() => Effect.void),
-		);
+		}).pipe(Effect.catchAll(() => Effect.void));
 
 	const computeWithStatus = <A, E, R>(
 		key: string,
@@ -434,11 +437,11 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 		);
 	};
 
-	const putJson: CloudflareKvStoreService["putJson"] = ({
+	const putJson = <A>({
 		key,
 		value,
 		ttlSeconds,
-	}) =>
+	}: JsonCacheOptions & { value: A }): Effect.Effect<void> =>
 		Effect.gen(function* () {
 			const scopedKey = toScopedKey(key);
 			const envelope: CacheEnvelope<typeof value> = {
@@ -458,27 +461,27 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 						key: scopedKey,
 						error,
 					});
-					return null;
+					return new Error(String(error));
 				},
-			});
+			}).pipe(Effect.catchAll(() => Effect.void));
 		});
 
-	const del: CloudflareKvStoreService["delete"] = (key) =>
+	const del = (key: string): Effect.Effect<void> =>
 		Effect.gen(function* () {
 			const scopedKey = toScopedKey(key);
 			deleteFromMemory(scopedKey);
 			if (!namespace || isKvWriteDisabled()) return;
 			yield* Effect.tryPromise({
 				try: () => namespace.delete(scopedKey),
-				catch: () => null,
-			});
+				catch: (error) => new Error(String(error)),
+			}).pipe(Effect.catchAll(() => Effect.void));
 		});
 
-	const getOrComputeJson: CloudflareKvStoreService["getOrComputeJson"] = ({
+	const getOrComputeJson = <A, E, R>({
 		key,
 		ttlSeconds,
 		compute,
-	}) =>
+	}: JsonGetOrComputeOptions<A, E, R>): Effect.Effect<A, E, R> =>
 		Effect.gen(function* () {
 			const scopedKey = toScopedKey(key);
 			let cached: CacheEnvelope<A> | null = null;
@@ -511,11 +514,11 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			return refreshed;
 		});
 
-	const refreshJson: CloudflareKvStoreService["refreshJson"] = ({
+	const refreshJson = <A, E, R>({
 		key,
 		ttlSeconds,
 		compute,
-	}) =>
+	}: JsonRefreshOptions<A, E, R>): Effect.Effect<A, E, R> =>
 		Effect.gen(function* () {
 			const value = yield* computeWithStatus(key, compute);
 			yield* putJson({ key, value, ttlSeconds });
@@ -528,12 +531,13 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 		delete: del,
 		getOrComputeJson,
 		refreshJson,
-	};
+	} satisfies CloudflareKvStoreService;
 });
 
 const withCloudflareKvStore = <A, E, R>(
 	effect: Effect.Effect<A, E, R | CloudflareKvStore>,
-): Effect.Effect<A, E, R> => effect.pipe(Effect.provide(CloudflareKvStoreLive));
+): Effect.Effect<A, E, R> =>
+	effect.pipe(Effect.provide(CloudflareKvStoreLive)) as Effect.Effect<A, E, R>;
 
 const getOrComputeJson = <A, E, R>({
 	key,
@@ -543,7 +547,7 @@ const getOrComputeJson = <A, E, R>({
 	Effect.gen(function* () {
 		const store = yield* CloudflareKvStore;
 		return yield* store.getOrComputeJson({ key, ttlSeconds, compute });
-	}).pipe(withCloudflareKvStore);
+	}).pipe(Effect.provide(CloudflareKvStoreLive));
 
 const getJson = <A>({
 	key,
@@ -553,7 +557,7 @@ const getJson = <A>({
 		void ttlSeconds;
 		const store = yield* CloudflareKvStore;
 		return yield* store.getJson<A>({ key });
-	}).pipe(withCloudflareKvStore);
+	}).pipe(Effect.provide(CloudflareKvStoreLive));
 
 const refreshJson = <A, E, R>({
 	key,
@@ -563,6 +567,6 @@ const refreshJson = <A, E, R>({
 	Effect.gen(function* () {
 		const store = yield* CloudflareKvStore;
 		return yield* store.refreshJson({ key, ttlSeconds, compute });
-	}).pipe(withCloudflareKvStore);
+	}).pipe(Effect.provide(CloudflareKvStoreLive));
 
 export { getJson, getOrComputeJson, refreshJson, withCloudflareKvStore };

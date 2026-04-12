@@ -83,11 +83,15 @@ export const fetchJsonEffect = <A>(
 					const raw = await response.clone().text();
 					const trimmed = raw.trim();
 					if (!trimmed) return "";
-					return trimmed.length > 2000 ? `${trimmed.slice(0, 2000)}...` : trimmed;
+					return trimmed.length > 2000
+						? `${trimmed.slice(0, 2000)}...`
+						: trimmed;
 				},
-				catch: () => "",
-			});
-			return yield* Effect.fail(new FetchResponseError({ response, bodySnippet }));
+				catch: (error) => new JsonParseError({ error }),
+			}).pipe(Effect.catchAll(() => Effect.succeed("")));
+			return yield* Effect.fail(
+				new FetchResponseError({ response, bodySnippet }),
+			);
 		}
 
 		// Step 3 – parse body as JSON
@@ -99,7 +103,7 @@ export const fetchJsonEffect = <A>(
 		// Step 4 – validate via Schema (optional)
 		const data = schema
 			? yield* Effect.try({
-					try: () => (Schema.decodeUnknownSync as any)(schema)(raw) as A,
+					try: () => Schema.decodeUnknownSync(schema)(raw),
 					catch: (error) => new SchemaParseError({ error }),
 				})
 			: (raw as A);
@@ -128,8 +132,7 @@ const withCache = <A>(
 	const { url, schema, ...init } = params;
 	return fetchJsonEffect<A>(url, {
 		...init,
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-		cache: cache as any,
+		cache,
 		schema,
 	});
 };

@@ -1,24 +1,27 @@
-import { defineConfig } from 'vite'
-import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-import viteReact from '@vitejs/plugin-react'
-import viteTsConfigPaths from 'vite-tsconfig-paths'
-import tailwindcss from '@tailwindcss/vite'
-import { cloudflare } from '@cloudflare/vite-plugin'
+import { defineConfig } from "vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import viteReact from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
 
-const config = defineConfig({
-  plugins: [
-    cloudflare({
-      viteEnvironment: { name: 'ssr' },
-      experimental: { remoteBindings: true },
-    }),
-    // this is the plugin that enables path aliases
-    viteTsConfigPaths({
-      projects: ['./tsconfig.json'],
-    }),
-    tailwindcss(),
-    tanstackStart(),
-    viteReact(),
-  ],
-})
+const config = defineConfig(() => {
+	const isTest = process.env.VITEST === "true";
 
-export default config
+	return {
+		resolve: {
+			tsconfigPaths: true,
+		},
+		plugins: [
+			!isTest &&
+				cloudflare({
+					viteEnvironment: { name: "ssr" },
+					remoteBindings: true,
+				}),
+			tailwindcss(),
+			tanstackStart(),
+			viteReact(),
+		].filter(Boolean),
+	};
+});
+
+export default config;

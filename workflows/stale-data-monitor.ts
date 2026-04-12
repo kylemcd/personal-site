@@ -105,20 +105,20 @@ const sendResendEmail = async (
 const kvGet = (store: KVNamespace, key: string): Effect.Effect<string | null> =>
 	Effect.tryPromise({
 		try: () => store.get(key, "text"),
-		catch: () => null,
-	});
+		catch: (error) => new Error(String(error)),
+	}).pipe(Effect.catchAll(() => Effect.succeed(null)));
 
 const kvPut = (store: KVNamespace, key: string, value: string): Effect.Effect<void> =>
 	Effect.tryPromise({
 		try: () => store.put(key, value),
-		catch: () => undefined,
-	});
+		catch: (error) => new Error(String(error)),
+	}).pipe(Effect.catchAll(() => Effect.void));
 
 const kvDelete = (store: KVNamespace, key: string): Effect.Effect<void> =>
 	Effect.tryPromise({
 		try: () => store.delete(key),
-		catch: () => undefined,
-	});
+		catch: (error) => new Error(String(error)),
+	}).pipe(Effect.catchAll(() => Effect.void));
 
 const sendResendEmailEffect = (
 	apiKey: string,
@@ -129,8 +129,18 @@ const sendResendEmailEffect = (
 ): Effect.Effect<void> =>
 	Effect.tryPromise({
 		try: () => sendResendEmail(apiKey, to, from, subject, text),
-		catch: (error) => error,
-	});
+		catch: (error) => new Error(String(error)),
+	}).pipe(
+		Effect.tapError((error) =>
+			Effect.sync(() => {
+				console.error("[monitor] failed to send email alert", {
+					subject,
+					error,
+				});
+			}),
+		),
+		Effect.catchAll(() => Effect.void),
+	);
 
 type LookupStatus = {
 	lastAttemptAt?: number | null;

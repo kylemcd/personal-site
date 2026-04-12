@@ -82,16 +82,25 @@ const fetchJsonWithTimeoutEffect = <T>(
 	init?: RequestInit,
 ): Effect.Effect<
 	T,
-	SpotifyRequestError | SpotifyTimeoutError | SpotifyHttpError | SpotifyParseError,
+	| SpotifyRequestError
+	| SpotifyTimeoutError
+	| SpotifyHttpError
+	| SpotifyParseError,
 	never
 > =>
 	Effect.tryPromise({
 		try: async () => {
 			const controller = new AbortController();
-			const timeoutId = setTimeout(() => controller.abort(), SPOTIFY_TIMEOUT_MS);
+			const timeoutId = setTimeout(
+				() => controller.abort(),
+				SPOTIFY_TIMEOUT_MS,
+			);
 
 			try {
-				const response = await fetch(url, { ...init, signal: controller.signal });
+				const response = await fetch(url, {
+					...init,
+					signal: controller.signal,
+				});
 				if (!response.ok) {
 					throw new SpotifyHttpError({
 						url,
@@ -120,10 +129,21 @@ const fetchJsonWithTimeoutEffect = <T>(
 		catch: (error) => toSpotifyError(url, error),
 	});
 
-const getSpotifyAccessToken = (): Effect.Effect<string | null, never, never> => {
+const getSpotifyAccessToken = (): Effect.Effect<
+	string | null,
+	never,
+	never
+> => {
 	if (!hasSpotifyCredentials()) return Effect.succeed(null);
 
-	return getOrComputeJson<string, SpotifyRequestError | SpotifyTimeoutError | SpotifyHttpError | SpotifyParseError, never>({
+	return getOrComputeJson<
+		string | null,
+		| SpotifyRequestError
+		| SpotifyTimeoutError
+		| SpotifyHttpError
+		| SpotifyParseError,
+		never
+	>({
 		key: SPOTIFY_TOKEN_CACHE_KEY,
 		ttlSeconds: SPOTIFY_TOKEN_TTL_SECONDS,
 		compute: Effect.gen(function* () {
@@ -191,7 +211,8 @@ const emptyArtistImages = (wrapped: WrappedData): Array<string | null> =>
 const resolveWrappedArtistImagesFromSpotify = (
 	wrapped: WrappedData,
 ): Effect.Effect<Array<string | null>, never, never> => {
-	if (!hasSpotifyCredentials()) return Effect.succeed(emptyArtistImages(wrapped));
+	if (!hasSpotifyCredentials())
+		return Effect.succeed(emptyArtistImages(wrapped));
 
 	return getOrComputeJson<Array<string | null>, never, never>({
 		key: getArtistImageCacheKey(wrapped),
@@ -201,9 +222,7 @@ const resolveWrappedArtistImagesFromSpotify = (
 			(artist) => getSpotifyArtistImage(artist.name),
 			{ concurrency: SPOTIFY_CONCURRENCY },
 		),
-	}).pipe(
-		Effect.catchAll(() => Effect.succeed(emptyArtistImages(wrapped))),
-	);
+	}).pipe(Effect.catchAll(() => Effect.succeed(emptyArtistImages(wrapped))));
 };
 
 const enrichWrappedWithSpotifyArtistImages = (

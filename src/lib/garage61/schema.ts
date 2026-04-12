@@ -1,5 +1,8 @@
 import { Schema } from "effect";
 
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | { [key: string]: JsonValue } | JsonValue[];
+
 export const Garage61MeSchema = Schema.Struct({
 	id: Schema.Number,
 	name: Schema.String,
@@ -12,8 +15,8 @@ export type Garage61Summary = {
 		name: string;
 		image?: string;
 	};
-	statistics: unknown;
-	sessions: unknown;
+	statistics: JsonValue;
+	sessions: JsonValue;
 	derived: {
 		sessionCount: number | null;
 		trackCount: number | null;
