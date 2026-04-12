@@ -3,6 +3,7 @@ share: "true"
 ps-path: building-a-self-healing-homelab
 title: Building a self healing homelab
 date: 2026-04-12
+substack-link: https://kpmsh.substack.com/p/building-a-self-healing-homelab
 ---
 I got tired of finding out my homelab was broken only when I tried to use it.
 
