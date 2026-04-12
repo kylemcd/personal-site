@@ -48,8 +48,8 @@
   },
   "observability": {
     "logs": {
-      "enabled": true,
-      "invocation_logs": true
+      "enabled": false,
+      "invocation_logs": false
     }
   }
 }
