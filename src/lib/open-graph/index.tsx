@@ -151,7 +151,7 @@ const constructImage = async ({
 };
 
 async function generateImage() {
-	const response = Effect.runSyncExit(markdown.all());
+	const response = Effect.runSyncExit(markdown.all({ includeFuture: true }));
 
 	if (Exit.isFailure(response)) {
 		throw response;

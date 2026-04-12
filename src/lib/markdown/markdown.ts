@@ -319,7 +319,13 @@ const fromPath = <F extends Frontmatter = {}>({
 	);
 };
 
-const all = (): Effect.Effect<
+type AllParams = {
+	includeFuture?: boolean;
+};
+
+const all = ({
+	includeFuture = false,
+}: AllParams = {}): Effect.Effect<
 	{ title: string; slug: string; date: string; "substack-link"?: string }[],
 	InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
@@ -362,6 +368,7 @@ const all = (): Effect.Effect<
 					return posts
 						.filter((p) => String(p.draft) !== "true")
 						.filter((p) => {
+							if (includeFuture) return true;
 							const timestamp = toComparableTimestamp(p.date);
 							return Number.isNaN(timestamp) || timestamp <= now;
 						})
