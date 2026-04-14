@@ -2,7 +2,7 @@
 share: "true"
 ps-path: split-keyboard
 title: I bought a split keyboard for wrist pain and it changed how I work
-date: 2026-04-15
+date: 2026-04-14
 ---
 I did not switch to a split keyboard and immediately love it.
 
