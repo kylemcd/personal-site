@@ -202,11 +202,7 @@
 }
 
 .uses-table-row-linkable:hover td {
-	background-color: color-mix(
-		in srgb,
-		var(--color-bg-1) 88%,
-		var(--color-bg-2) 12%
-	);
+	background-color: var(--color-bg-2);
 }
 
 .uses-table-row-linkable:focus-visible td {
