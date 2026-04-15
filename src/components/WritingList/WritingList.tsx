@@ -1,4 +1,5 @@
 import { Text } from "@/components/Text";
+import { formatDateInCentral } from "@/lib/dates";
 
 import "./WritingList.styles.css";
 
@@ -19,11 +20,7 @@ function WritingList({ writing }: WritingListProps) {
 						{post.title}
 					</Text>
 					<Text size="0" color="2" className="writing-item-date">
-						{new Date(post.date).toLocaleDateString("en-US", {
-							year: "numeric",
-							month: "long",
-							day: "numeric",
-						})}
+						{formatDateInCentral(post.date)}
 					</Text>
 				</a>
 			))}

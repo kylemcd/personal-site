@@ -4,6 +4,7 @@ import markdocPkg from "@markdoc/markdoc";
 import { Data, Effect, pipe } from "effect";
 import yaml from "js-yaml";
 
+import { toComparableTimestampInCentral } from "@/lib/dates";
 import { nodes } from "./nodes";
 
 const POSTS = import.meta.glob(`../../../posts/*.md`, {
@@ -14,109 +15,6 @@ const POSTS = import.meta.glob(`../../../posts/*.md`, {
 
 // We need to import like this to avoid weird server / client boundary cjs issues.
 const { transform, parse, renderers } = markdocPkg;
-const CENTRAL_TIME_ZONE = "America/Chicago";
-const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-const NAIVE_DATE_TIME_PATTERN =
-	/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?$/;
-
-type DateTimeParts = {
-	year: number;
-	month: number;
-	day: number;
-	hour: number;
-	minute: number;
-	second: number;
-};
-
-const asNumber = (value: string): number => Number.parseInt(value, 10);
-
-const timeZoneFormatter = new Intl.DateTimeFormat("en-US", {
-	timeZone: CENTRAL_TIME_ZONE,
-	year: "numeric",
-	month: "2-digit",
-	day: "2-digit",
-	hour: "2-digit",
-	minute: "2-digit",
-	second: "2-digit",
-	hourCycle: "h23",
-});
-
-const getTimeZoneOffsetMs = (timestamp: number): number => {
-	const parts = timeZoneFormatter.formatToParts(new Date(timestamp));
-	const values = parts.reduce(
-		(acc, part) => {
-			if (part.type === "year") acc.year = asNumber(part.value);
-			if (part.type === "month") acc.month = asNumber(part.value);
-			if (part.type === "day") acc.day = asNumber(part.value);
-			if (part.type === "hour") acc.hour = asNumber(part.value);
-			if (part.type === "minute") acc.minute = asNumber(part.value);
-			if (part.type === "second") acc.second = asNumber(part.value);
-			return acc;
-		},
-		{
-			year: 0,
-			month: 0,
-			day: 0,
-			hour: 0,
-			minute: 0,
-			second: 0,
-		},
-	);
-	const asUtcTimestamp = Date.UTC(
-		values.year,
-		values.month - 1,
-		values.day,
-		values.hour,
-		values.minute,
-		values.second,
-	);
-	return asUtcTimestamp - timestamp;
-};
-
-const toCentralTimestamp = ({
-	year,
-	month,
-	day,
-	hour,
-	minute,
-	second,
-}: DateTimeParts): number => {
-	const utcGuess = Date.UTC(year, month - 1, day, hour, minute, second);
-	const firstOffset = getTimeZoneOffsetMs(utcGuess);
-	const corrected = utcGuess - firstOffset;
-	const secondOffset = getTimeZoneOffsetMs(corrected);
-	return utcGuess - secondOffset;
-};
-
-const toComparableTimestamp = (date: string): number => {
-	const dateOnly = DATE_ONLY_PATTERN.exec(date);
-	if (dateOnly) {
-		const [, year, month, day] = dateOnly;
-		return toCentralTimestamp({
-			year: asNumber(year),
-			month: asNumber(month),
-			day: asNumber(day),
-			hour: 0,
-			minute: 0,
-			second: 0,
-		});
-	}
-
-	const naiveDateTime = NAIVE_DATE_TIME_PATTERN.exec(date);
-	if (naiveDateTime) {
-		const [, year, month, day, hour, minute, second = "0"] = naiveDateTime;
-		return toCentralTimestamp({
-			year: asNumber(year),
-			month: asNumber(month),
-			day: asNumber(day),
-			hour: asNumber(hour),
-			minute: asNumber(minute),
-			second: asNumber(second),
-		});
-	}
-
-	return new Date(date).getTime();
-};
 
 class InvalidMarkdownError extends Data.TaggedError(
 	"InvalidMarkdownError",
@@ -191,7 +89,18 @@ const toFrontmatter = <F extends Frontmatter = {}>({
 				try: () => {
 					const parsedMarkdown = parse(validatedMarkdown);
 					const rawFrontMatter = parsedMarkdown.attributes?.frontmatter;
-					const frontMatter = yaml.load(rawFrontMatter);
+					const loadedFrontmatter = yaml.load(rawFrontMatter);
+					const frontMatter =
+						loadedFrontmatter &&
+						typeof loadedFrontmatter === "object" &&
+						!Array.isArray(loadedFrontmatter)
+							? Object.fromEntries(
+									Object.entries(loadedFrontmatter).map(([key, value]) => [
+										key,
+										value instanceof Date ? value.toISOString() : value,
+									]),
+								)
+							: loadedFrontmatter;
 					return frontMatter as F;
 				},
 				catch: () => new ParseMarkdownError(),
@@ -369,12 +278,13 @@ const all = ({
 						.filter((p) => String(p.draft) !== "true")
 						.filter((p) => {
 							if (includeFuture) return true;
-							const timestamp = toComparableTimestamp(p.date);
+							const timestamp = toComparableTimestampInCentral(p.date);
 							return Number.isNaN(timestamp) || timestamp <= now;
 						})
 						.sort(
 							(a, b) =>
-								toComparableTimestamp(b.date) - toComparableTimestamp(a.date),
+								toComparableTimestampInCentral(b.date) -
+								toComparableTimestampInCentral(a.date),
 						)
 						.map(({ title, slug, date }) => ({ title, slug, date }));
 				}),

@@ -6,6 +6,7 @@ import React from "react";
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { TableOfContents } from "@/components/TableOfContents";
 import { Text } from "@/components/Text";
+import { formatDateInCentral } from "@/lib/dates";
 import { markdown } from "@/lib/markdown";
 import "@/styles/prism.css";
 import "@/styles/routes/posts.css";
@@ -123,11 +124,7 @@ function RouteComponent() {
 				</div>
 				<div className="post-details">
 					<Text as="span" size="1" color="2">
-						{new Date(frontmatter.date).toLocaleDateString("en-US", {
-							year: "numeric",
-							month: "long",
-							day: "numeric",
-						})}
+						{formatDateInCentral(frontmatter.date)}
 					</Text>
 					<Text as="span" size="1" color="2">
 						{readingTime} min read
