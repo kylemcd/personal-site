@@ -19,6 +19,7 @@ export const Route = createFileRoute("/uses/")({
   errorComponent: ErrorComponent,
   head: () => ({
     meta: [
+      { title: "Uses - Kyle McDonald" },
       { property: "og:title", content: "Uses - Kyle McDonald" },
       {
         property: "og:description",
