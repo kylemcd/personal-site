@@ -15,6 +15,7 @@
     "og": "npx vite-node --config vite.og.config.ts src/lib/open-graph/index.tsx"
   },
   "dependencies": {
+    "@base-ui/react": "^1.4.0",
     "@hackernoon/pixel-icon-library": "^1.0.6",
     "@markdoc/markdoc": "^0.5.7",
     "@resvg/resvg-js": "^2.6.2",
@@ -31,6 +32,7 @@
     "fast-xml-parser": "^5.5.11",
     "js-yaml": "^4.1.1",
     "lucide-react": "^1.8.0",
+    "match-sorter": "^8.3.0",
     "mermaid": "^11.14.0",
     "prismjs": "^1.30.0",
     "react": "^19.2.5",

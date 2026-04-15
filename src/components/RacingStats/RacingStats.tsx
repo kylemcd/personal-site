@@ -1,5 +1,5 @@
 import { Text } from "@/components/Text";
-import { IRacingCar, RaceSchema } from "@/lib/iracing/schema";
+import type { IRacingCar, RaceSchema } from "@/lib/iracing/schema";
 
 import "./RacingStats.styles.css";
 

@@ -1,5 +1,5 @@
 import { Text } from "@/components/Text/Text";
-import { BookSchema } from "@/lib/books/schema";
+import type { BookSchema } from "@/lib/books/schema";
 
 import "./Bookshelf.styles.css";
 

@@ -8,10 +8,10 @@ import {
 	type Album,
 	type ListeningData,
 	type NowPlayingAlbum,
+	RecentTracksResponseSchema,
 	TopAlbumsResponseSchema,
 	TopArtistsResponseSchema,
 	TopTracksResponseSchema,
-	RecentTracksResponseSchema,
 	type TrackSchema,
 	type WrappedData,
 } from "./schema";
@@ -542,12 +542,11 @@ const extractWrappedData = (params: {
 				plays,
 				share,
 				url: track.url || getTrackUrl(track.artist.name, track.name),
-				image:
-					!isPlaceholderImage(image)
-						? image
-						: fallbackImage && !isPlaceholderImage(fallbackImage)
-							? fallbackImage
-							: null,
+				image: !isPlaceholderImage(image)
+					? image
+					: fallbackImage && !isPlaceholderImage(fallbackImage)
+						? fallbackImage
+						: null,
 			};
 		})
 		.filter((track) => track.plays > 0);
@@ -584,7 +583,8 @@ const extractWrappedData = (params: {
 		artist: getPrimaryArtist(topTrackRaw.artist.name),
 		artistUrl: getArtistUrl(topTrackRaw.artist.name),
 		plays: topTrackPlays,
-		url: topTrackRaw.url || getTrackUrl(topTrackRaw.artist.name, topTrackRaw.name),
+		url:
+			topTrackRaw.url || getTrackUrl(topTrackRaw.artist.name, topTrackRaw.name),
 	};
 	const topArtist = {
 		name: getPrimaryArtist(topArtistRaw.name),
@@ -625,11 +625,15 @@ const getBaseParams = () => ({
 });
 
 type CachedMonthlyTopData = {
-	topTracks: ReadonlyArray<(typeof TopTracksResponseSchema.Type.toptracks.track)[number]>;
+	topTracks: ReadonlyArray<
+		(typeof TopTracksResponseSchema.Type.toptracks.track)[number]
+	>;
 	topArtists: ReadonlyArray<
 		(typeof TopArtistsResponseSchema.Type.topartists.artist)[number]
 	>;
-	topAlbums: ReadonlyArray<(typeof TopAlbumsResponseSchema.Type.topalbums.album)[number]>;
+	topAlbums: ReadonlyArray<
+		(typeof TopAlbumsResponseSchema.Type.topalbums.album)[number]
+	>;
 };
 
 const monthlyTopData = () => {
@@ -654,38 +658,36 @@ const monthlyTopData = () => {
 		limit: String(MONTHLY_TOP_LIMIT),
 	});
 
-	return getOrComputeJson<
-		CachedMonthlyTopData,
-		LastFmRecentAlbumsError,
-		never
-	>({
-		key: LASTFM_MONTHLY_TOP_CACHE_KEY,
-		ttlSeconds: LASTFM_MONTHLY_TOP_CACHE_TTL_SECONDS,
-		compute: Effect.all([
-			fetchFresh({
-				url: `${LASTFM_API_URL}?${topTracksParams.toString()}`,
-				method: "GET",
-				schema: TopTracksResponseSchema,
-			}),
-			fetchFresh({
-				url: `${LASTFM_API_URL}?${topArtistsParams.toString()}`,
-				method: "GET",
-				schema: TopArtistsResponseSchema,
-			}),
-			fetchFresh({
-				url: `${LASTFM_API_URL}?${topAlbumsParams.toString()}`,
-				method: "GET",
-				schema: TopAlbumsResponseSchema,
-			}),
-		]).pipe(
-			Effect.map(([topTracksRes, topArtistsRes, topAlbumsRes]) => ({
-				topTracks: topTracksRes.data.toptracks.track,
-				topArtists: topArtistsRes.data.topartists.artist,
-				topAlbums: topAlbumsRes.data.topalbums.album,
-			})),
-			Effect.mapError((error) => new LastFmRecentAlbumsError({ error })),
-		),
-	});
+	return getOrComputeJson<CachedMonthlyTopData, LastFmRecentAlbumsError, never>(
+		{
+			key: LASTFM_MONTHLY_TOP_CACHE_KEY,
+			ttlSeconds: LASTFM_MONTHLY_TOP_CACHE_TTL_SECONDS,
+			compute: Effect.all([
+				fetchFresh({
+					url: `${LASTFM_API_URL}?${topTracksParams.toString()}`,
+					method: "GET",
+					schema: TopTracksResponseSchema,
+				}),
+				fetchFresh({
+					url: `${LASTFM_API_URL}?${topArtistsParams.toString()}`,
+					method: "GET",
+					schema: TopArtistsResponseSchema,
+				}),
+				fetchFresh({
+					url: `${LASTFM_API_URL}?${topAlbumsParams.toString()}`,
+					method: "GET",
+					schema: TopAlbumsResponseSchema,
+				}),
+			]).pipe(
+				Effect.map(([topTracksRes, topArtistsRes, topAlbumsRes]) => ({
+					topTracks: topTracksRes.data.toptracks.track,
+					topArtists: topArtistsRes.data.topartists.artist,
+					topAlbums: topAlbumsRes.data.topalbums.album,
+				})),
+				Effect.mapError((error) => new LastFmRecentAlbumsError({ error })),
+			),
+		},
+	);
 };
 
 const recentActivity = () => {

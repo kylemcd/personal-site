@@ -21,11 +21,7 @@ import "@/styles/routes/home.css";
 const getData = createServerFn({ method: "GET" }).handler(async () => {
 	const result = await Effect.runPromise(
 		Effect.all([
-			lastfm
-				.recentActivity()
-				.pipe(
-					Effect.catchAll(() => Effect.succeed(null)),
-				),
+			lastfm.recentActivity().pipe(Effect.catchAll(() => Effect.succeed(null))),
 			markdown.all().pipe(Effect.catchAll(() => Effect.succeed([]))),
 			goodreads
 				.shelf()
@@ -96,7 +92,9 @@ function Home() {
 	const { listening, writing, books, racing } = Route.useLoaderData();
 	const hasListeningContent = Boolean(
 		listening &&
-			(listening.nowPlaying || listening.wrapped || listening.albums.length > 0),
+			(listening.nowPlaying ||
+				listening.wrapped ||
+				listening.albums.length > 0),
 	);
 	const hasBooks = Boolean(
 		(books?.reading?.length ?? 0) > 0 || (books?.finished?.length ?? 0) > 0,
@@ -130,7 +128,11 @@ function Home() {
 			</div>
 			{hasListeningContent && listening && (
 				<div className="section-container section-container-flush-right">
-					<Text as="h2" size="2" className="section-title-padded section-title-tight">
+					<Text
+						as="h2"
+						size="2"
+						className="section-title-padded section-title-tight"
+					>
 						<a className="section-heading-link" href="/listening">
 							<span className="section-heading-label">Listening</span>
 							<i

@@ -1,82 +1,175 @@
-import { useState } from "react";
+import { useLocation } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
 import { Text } from "@/components/Text";
 
 import "./Navigation.styles.css";
 
+const PAGE_LINKS = [
+	{ href: "/", label: "Home" },
+	{ href: "/posts", label: "Writing" },
+	{ href: "/listening", label: "Listening" },
+	{ href: "/reading", label: "Reading" },
+	{ href: "/racing", label: "Racing" },
+	{ href: "/uses", label: "Uses" },
+] as const;
+
+const SOCIAL_LINKS = [
+	{
+		href: "https://github.com/kylemcd",
+		label: "GitHub",
+		iconClassName: "hn hn-github",
+	},
+	{
+		href: "https://x.com/kpmdev",
+		label: "X",
+		iconClassName: "hn hn-x",
+	},
+	{
+		href: "https://www.linkedin.com/in/kylemcd1/",
+		label: "LinkedIn",
+		iconClassName: "hn hn-linkedin",
+	},
+] as const;
+
 function Navigation() {
 	const [open, setOpen] = useState(false);
+	const location = useLocation();
 
 	const onThemeChange = (theme: "light" | "dark") => {
 		document.documentElement.setAttribute("data-appearance", theme);
 		document.cookie = `theme=${theme}; path=/`;
 	};
 
-	return (
-		<div className="navigation">
-			<Text as="a" size="2" href="/" className="navigation-logo">
-				Kyle McDonald
-			</Text>
-			<div className="navigation-menu-container" data-open={open}>
-				<button
-					type="button"
-					className="navigation-menu-button"
-					onClick={() => setOpen(!open)}
-				>
-					<i className="hn hn-angle-left" />
-				</button>
-				<div className="navigation-menu">
-					{/* <div className="navigation-social-links"> */}
-					<a
-						href="https://github.com/kylemcd"
-						className="navigation-social-link"
-						aria-label="GitHub"
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						<i className="hn hn-github" />
-					</a>
-					<a
-						href="https://x.com/kpmdev"
-						className="navigation-social-link"
-						aria-label="X"
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						<i className="hn hn-x" />
-					</a>
-					<a
-						href="https://www.linkedin.com/in/kylemcd1/"
-						className="navigation-social-link"
-						aria-label="LinkedIn"
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						<i className="hn hn-linkedin" />
-					</a>
-					{/* </div> */}
+	const closeMenu = () => setOpen(false);
 
-					<div className="navigation-menu-theme-switcher">
+	const isActiveLink = (href: string): boolean => {
+		const pathname = location.pathname;
+		if (href === "/") {
+			return pathname === "/";
+		}
+
+		return pathname === href || pathname.startsWith(`${href}/`);
+	};
+
+	useEffect(() => {
+		if (!open) {
+			return undefined;
+		}
+
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") {
+				setOpen(false);
+			}
+		};
+
+		const previousOverflow = document.body.style.overflow;
+		document.body.style.overflow = "hidden";
+		document.addEventListener("keydown", onKeyDown);
+
+		return () => {
+			document.body.style.overflow = previousOverflow;
+			document.removeEventListener("keydown", onKeyDown);
+		};
+	}, [open]);
+
+	return (
+		<>
+			<nav className="navigation" aria-label="Primary">
+				<Text as="a" size="2" href="/" className="navigation-logo">
+					Kyle McDonald
+				</Text>
+				<div className="navigation-menu-container" data-open={open}>
+					<button
+						type="button"
+						className="navigation-menu-button"
+						onClick={() => setOpen((value) => !value)}
+						aria-expanded={open}
+						aria-controls="site-navigation-overlay"
+						aria-label={open ? "Close menu" : "Open menu"}
+						data-open={open}
+					>
+						<span className="navigation-sr-only">
+							{open ? "Close menu" : "Open menu"}
+						</span>
+						<i className="hn hn-angle-left" aria-hidden="true" />
+					</button>
+					<div
+						className="navigation-theme-switcher navigation-top-theme-switcher"
+						role="group"
+						aria-label="Theme"
+					>
 						<button
 							type="button"
-							className="navigation-menu-theme-switcher-button"
+							className="navigation-theme-switcher-button"
 							onClick={() => onThemeChange("light")}
 							data-theme="light"
+							aria-label="Switch to light theme"
 						>
-							<i className="hn hn-sun" />
+							<span className="navigation-sr-only">Light</span>
+							<i className="hn hn-sun" aria-hidden="true" />
 						</button>
 						<button
 							type="button"
-							className="navigation-menu-theme-switcher-button"
+							className="navigation-theme-switcher-button"
 							onClick={() => onThemeChange("dark")}
 							data-theme="dark"
+							aria-label="Switch to dark theme"
 						>
-							<i className="hn hn-moon" />
+							<span className="navigation-sr-only">Dark</span>
+							<i className="hn hn-moon" aria-hidden="true" />
 						</button>
 					</div>
 				</div>
+			</nav>
+
+			<div
+				id="site-navigation-overlay"
+				className="navigation-overlay"
+				data-open={open}
+				onClick={(event) => {
+					if (event.target === event.currentTarget) {
+						closeMenu();
+					}
+				}}
+			>
+				<div className="navigation-overlay-frame">
+					<div className="navigation-overlay-panel">
+						<div className="navigation-overlay-content">
+							<div className="navigation-overlay-main">
+								<div className="navigation-page-links" role="list">
+									{PAGE_LINKS.map((link) => (
+										<a
+											key={link.href}
+											href={link.href}
+											className="navigation-page-link"
+											data-active={isActiveLink(link.href)}
+											onClick={closeMenu}
+										>
+											{link.label}
+										</a>
+									))}
+								</div>
+								<div className="navigation-social-links">
+									{SOCIAL_LINKS.map((link) => (
+										<a
+											key={link.href}
+											href={link.href}
+											className="navigation-social-link"
+											aria-label={link.label}
+											target="_blank"
+											rel="noopener noreferrer"
+										>
+											<i className={link.iconClassName} aria-hidden="true" />
+										</a>
+									))}
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
 			</div>
-		</div>
+		</>
 	);
 }
 

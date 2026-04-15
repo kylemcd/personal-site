@@ -1,7 +1,6 @@
 import { Effect } from "effect";
-
-import { getOrComputeJson } from "@/lib/store";
 import type { WrappedData } from "@/lib/lastfm/schema";
+import { getOrComputeJson } from "@/lib/store";
 
 const MUSIC_BRAINZ_API_URL = "https://musicbrainz.org/ws/2";
 const COVER_ART_ARCHIVE_API_URL = "https://coverartarchive.org";
@@ -36,7 +35,8 @@ const hasMusicBrainzCredentials = (): boolean =>
 	);
 
 const buildMusicBrainzUserAgent = (): string => {
-	const clientId = process.env.MUSIC_BRAINZ_CLIENT_ID ?? "kylemcd-personal-site";
+	const clientId =
+		process.env.MUSIC_BRAINZ_CLIENT_ID ?? "kylemcd-personal-site";
 	return `${clientId}/1.0.0 (https://kylemcd.com)`;
 };
 
@@ -57,7 +57,10 @@ const getArtistKey = (artistName: string): string => artistName.toLowerCase();
 
 const fetchJsonWithTimeout = async <T>(url: string): Promise<T | null> => {
 	const controller = new AbortController();
-	const timeoutId = setTimeout(() => controller.abort(), MUSIC_BRAINZ_TIMEOUT_MS);
+	const timeoutId = setTimeout(
+		() => controller.abort(),
+		MUSIC_BRAINZ_TIMEOUT_MS,
+	);
 	try {
 		const response = await fetch(url, {
 			headers: {
@@ -75,13 +78,17 @@ const fetchJsonWithTimeout = async <T>(url: string): Promise<T | null> => {
 	}
 };
 
-const fetchJsonFromUrl = <T>(url: string): Effect.Effect<T | null, never, never> =>
+const fetchJsonFromUrl = <T>(
+	url: string,
+): Effect.Effect<T | null, never, never> =>
 	Effect.tryPromise({
 		try: () => fetchJsonWithTimeout<T>(url),
 		catch: () => null,
 	}).pipe(Effect.catchAll(() => Effect.succeed(null)));
 
-const pickCoverArtUrl = (data: CoverArtArchiveResponse | null): string | null => {
+const pickCoverArtUrl = (
+	data: CoverArtArchiveResponse | null,
+): string | null => {
 	const firstImage = data?.images?.[0];
 	if (!firstImage) return null;
 	return (

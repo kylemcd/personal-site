@@ -4,7 +4,7 @@ import { fetchFresh } from "@/lib/fetch";
 
 import {
 	IRacingAuthSchema,
-	IRacingCar,
+	type IRacingCar,
 	IRacingCarsSchema,
 	IRacingRecentRacesSchema,
 	LinkLookupSchema,

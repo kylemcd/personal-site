@@ -391,7 +391,12 @@ function Garage61({
 													{track.variant}
 												</Text>
 											)}
-											<Text as="p" size="0" color="2" className="g61-racing-car">
+											<Text
+												as="p"
+												size="0"
+												color="2"
+												className="g61-racing-car"
+											>
 												{formatDuration(track.timeOnTrackSeconds)}
 												{track.timeSharePercentage !== null
 													? ` (${track.timeSharePercentage}% of time)`
@@ -424,7 +429,12 @@ function Garage61({
 													{track.variant}
 												</Text>
 											)}
-											<Text as="p" size="0" color="2" className="g61-racing-car">
+											<Text
+												as="p"
+												size="0"
+												color="2"
+												className="g61-racing-car"
+											>
 												{formatDuration(track.timeOnTrackSeconds)}
 												{track.timeSharePercentage !== null
 													? ` (${track.timeSharePercentage}% of time)`
@@ -454,7 +464,12 @@ function Garage61({
 											<Text as="p" size="1" className="g61-racing-track">
 												{car.name}
 											</Text>
-											<Text as="p" size="0" color="2" className="g61-racing-car">
+											<Text
+												as="p"
+												size="0"
+												color="2"
+												className="g61-racing-car"
+											>
 												{formatDuration(car.timeOnTrackSeconds)}
 												{car.timeSharePercentage !== null
 													? ` (${car.timeSharePercentage}% of time)`
@@ -477,7 +492,12 @@ function Garage61({
 											<Text as="p" size="1" className="g61-racing-track">
 												{car.name}
 											</Text>
-											<Text as="p" size="0" color="2" className="g61-racing-car">
+											<Text
+												as="p"
+												size="0"
+												color="2"
+												className="g61-racing-car"
+											>
 												{formatDuration(car.timeOnTrackSeconds)}
 												{car.timeSharePercentage !== null
 													? ` (${car.timeSharePercentage}% of time)`

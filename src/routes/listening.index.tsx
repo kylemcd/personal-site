@@ -12,9 +12,7 @@ import "@/styles/routes/listening.css";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
 	const listening = await Effect.runPromise(
-		lastfm
-			.recentActivity()
-			.pipe(Effect.catchAll(() => Effect.succeed(null))),
+		lastfm.recentActivity().pipe(Effect.catchAll(() => Effect.succeed(null))),
 	);
 
 	return { listening };
@@ -33,7 +31,9 @@ function ListeningRoute() {
 	const { listening } = Route.useLoaderData();
 	const hasListeningContent = Boolean(
 		listening &&
-			(listening.nowPlaying || listening.wrapped || listening.albums.length > 0),
+			(listening.nowPlaying ||
+				listening.wrapped ||
+				listening.albums.length > 0),
 	);
 
 	if (!hasListeningContent || !listening) {
