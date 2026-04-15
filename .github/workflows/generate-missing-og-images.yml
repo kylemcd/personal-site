@@ -1,0 +1,123 @@
+name: Generate Missing OG Images
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  generate-missing-og-images:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect missing OG images
+        id: detect_missing
+        shell: bash
+        run: |
+          shopt -s nullglob
+
+          before_sha="${{ github.event.before }}"
+          after_sha="${{ github.sha }}"
+
+          changed_posts=()
+          if [[ -n "$before_sha" && "$before_sha" != "0000000000000000000000000000000000000000" ]]; then
+            while IFS= read -r post; do
+              changed_posts+=("$post")
+            done < <(git diff --name-only "$before_sha" "$after_sha" -- "posts/*.md")
+          else
+            while IFS= read -r post; do
+              changed_posts+=("$post")
+            done < <(git diff-tree --no-commit-id --name-only -r "$after_sha" -- "posts/*.md")
+          fi
+
+          if (( ${#changed_posts[@]} == 0 )); then
+            echo "missing=false" >> "$GITHUB_OUTPUT"
+            echo "No changed posts in this push."
+            exit 0
+          fi
+
+          missing=false
+          missing_slugs=()
+          missing_files=()
+
+          for post in "${changed_posts[@]}"; do
+            [[ -f "$post" ]] || continue
+
+            slug="$(basename "$post" .md)"
+            image="public/open-graph/${slug}.png"
+
+            if [[ ! -f "$image" ]]; then
+              missing=true
+              missing_slugs+=("$slug")
+              missing_files+=("$image")
+            fi
+          done
+
+          if [[ "$missing" == "true" ]]; then
+            echo "missing=true" >> "$GITHUB_OUTPUT"
+            echo "missing_slugs=$(IFS=,; echo "${missing_slugs[*]}")" >> "$GITHUB_OUTPUT"
+            echo "missing_files=$(IFS=,; echo "${missing_files[*]}")" >> "$GITHUB_OUTPUT"
+            echo "Missing OG images: ${missing_slugs[*]}"
+          else
+            echo "missing=false" >> "$GITHUB_OUTPUT"
+            echo "No missing OG images found for changed posts."
+          fi
+
+      - name: Setup Node.js
+        if: steps.detect_missing.outputs.missing == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.detect_missing.outputs.missing == 'true'
+        run: npm ci
+
+      - name: Generate OG images
+        if: steps.detect_missing.outputs.missing == 'true'
+        run: npm run og
+
+      - name: Commit generated images
+        if: steps.detect_missing.outputs.missing == 'true'
+        shell: bash
+        run: |
+          IFS=',' read -r -a files <<< "${{ steps.detect_missing.outputs.missing_files }}"
+          staged_any=false
+
+          for file in "${files[@]}"; do
+            [[ -n "$file" ]] || continue
+
+            if [[ ! -f "$file" ]]; then
+              echo "Expected generated file missing: $file"
+              exit 1
+            fi
+
+            git add "$file"
+            staged_any=true
+          done
+
+          if [[ "$staged_any" != "true" ]]; then
+            echo "No files to commit."
+            exit 0
+          fi
+
+          if git diff --cached --quiet; then
+            echo "No staged changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git commit -m "chore: generate missing OG images"
+          git push
