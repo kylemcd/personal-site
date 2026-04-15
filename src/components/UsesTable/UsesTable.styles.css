@@ -284,12 +284,26 @@
 	.uses-controls-right {
 		width: 100%;
 		margin-left: 0;
+		flex-wrap: wrap;
 	}
 
 	.uses-search {
 		width: auto;
 		flex: 1 1 220px;
-		min-width: 100%;
+		min-width: 0;
+	}
+
+	.uses-tag-filter {
+		width: 100%;
+	}
+
+	.uses-tags-trigger {
+		width: 100%;
+		min-width: 0;
+	}
+
+	.uses-tags-popup {
+		min-width: 0;
 	}
 
 	.uses-table th,
