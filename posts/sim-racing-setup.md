@@ -3,6 +3,7 @@ share: "true"
 ps-path: sim-racing-setup
 title: My sim racing setup and how I actually use it
 date: 2026-04-17
+substack-link: https://kpmsh.substack.com/p/my-sim-racing-setup-and-how-i-actually
 ---
 Most sim rig posts are basically parts lists. They show the cockpit, list the hardware, maybe throw in a few impressions, and that is kind of it. That stuff is fine, but it skips the part I actually care about now. Once I am in the rig trying to put together clean laps for more than ten minutes, the gear itself matters a lot less than whether the whole setup helps me stay consistent.
 
