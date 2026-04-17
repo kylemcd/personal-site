@@ -251,7 +251,7 @@
 @media (max-width: 768px) {
 	.navigation,
 	.navigation-overlay {
-		--navigation-vertical-padding: var(--spc-4);
+		--navigation-vertical-padding: var(--spc-5);
 		--navigation-menu-handle-width: var(--spc-12);
 	}
 
