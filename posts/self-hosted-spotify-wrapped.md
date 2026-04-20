@@ -49,6 +49,7 @@ What sold me on it was the [Discogs](https://www.discogs.com/) integration, sinc
 
 One thing I did not expect is that the same iOS device can also send the record player output to AirPlay speakers. I ended up throwing it on an old iPad I had sitting around, and now that iPad mostly lives next to the turntable as a now-playing display and whole home audio hub. That turned out to be a great bonus.
 
+![](/article-images/Pasted%20image%2020260420170318.png)
 ## What I did with the data
 
 Getting everything into one place was the original goal. Once that was working, I wanted somewhere better for it to end up.
