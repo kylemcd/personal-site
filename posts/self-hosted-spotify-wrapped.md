@@ -3,6 +3,7 @@ share: "true"
 ps-path: self-hosted-spotify-wrapped
 title: Rebuilding Spotify Wrapped for a self-hosted music setup
 date: 2026-04-20
+substack-link: https://kpmsh.substack.com/p/rebuilding-spotify-wrapped-for-a
 ---
 Before Spotify Wrapped was a thing, I used [Last.fm](http://last.fm/) to track my music.
 
