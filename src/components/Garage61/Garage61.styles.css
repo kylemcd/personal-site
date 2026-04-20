@@ -179,6 +179,36 @@
 	background: var(--color-text-light);
 }
 
+.g61-racing-split-meter {
+	display: flex;
+	height: 6px;
+	width: 100%;
+	border: 1px solid var(--color-ui-1);
+	background: var(--color-bg-2);
+	margin: var(--spc-1) 0;
+	overflow: hidden;
+}
+
+.g61-racing-split-meter-labels {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 2px;
+}
+
+.g61-racing-split-meter-segment {
+	height: 100%;
+	min-width: 0;
+}
+
+.g61-racing-split-meter-practice {
+	background: var(--color-text-light);
+}
+
+.g61-racing-split-meter-racing {
+	background: var(--color-ui-3);
+}
+
 .g61-racing-ladder {
 	display: grid;
 	gap: 8px;

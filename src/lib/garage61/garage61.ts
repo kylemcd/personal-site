@@ -13,7 +13,11 @@ class Garage61Error extends Data.TaggedError("Garage61Error")<{
 
 const GARAGE61_API_URL = "https://garage61.net/api/v1";
 const GARAGE61_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v6";
+const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v8";
+const GARAGE61_SUMMARY_CACHE_FALLBACK_KEYS = [
+	"garage61:summary:v7",
+	"garage61:summary:v6",
+] as const;
 const GARAGE61_SUMMARY_CACHE_TTL_SECONDS = 30 * 60;
 const GARAGE61_REQUEST_TIMEOUT = "15 seconds";
 const GARAGE61_SUMMARY_TIMEOUT = "25 seconds";
@@ -108,6 +112,7 @@ const emptySummary = (): Garage61Summary => ({
 			recentTracks: [],
 			recentCars: [],
 			insights: {
+				sessionTimeBreakdown: null,
 				secondsOffRecord: null,
 				cleanestCombo: null,
 				paceLadder: [],
@@ -116,6 +121,30 @@ const emptySummary = (): Garage61Summary => ({
 		},
 	},
 });
+
+const normalizeSummary = (summary: Garage61Summary): Garage61Summary => {
+	const empty = emptySummary();
+	return {
+		...empty,
+		...summary,
+		profile: {
+			...empty.profile,
+			...summary.profile,
+		},
+		derived: {
+			...empty.derived,
+			...summary.derived,
+			overview: {
+				...empty.derived.overview,
+				...summary.derived?.overview,
+				insights: {
+					...empty.derived.overview.insights,
+					...summary.derived?.overview?.insights,
+				},
+			},
+		},
+	};
+};
 
 const me = (apiKey: string) =>
 	fetchGarage61({
@@ -439,6 +468,17 @@ const extractTrackIsOval = (data: unknown, targetId: number): boolean => {
 const normalizeName = (value: string): string =>
 	value.trim().toLowerCase().replace(/\s+/g, " ");
 
+const stableNameId = (kind: "track" | "car", name: string): number => {
+	const key = `${kind}:${normalizeName(name)}`;
+	let hash = 2166136261;
+	for (let i = 0; i < key.length; i++) {
+		hash ^= key.charCodeAt(i);
+		hash = Math.imul(hash, 16777619);
+	}
+	const normalized = hash >>> 0;
+	return normalized === 0 ? -1 : -normalized;
+};
+
 const roundPercent = (value: number): number => Math.round(value * 10) / 10;
 const roundTo = (value: number, decimals = 2): number => {
 	const p = 10 ** decimals;
@@ -518,7 +558,10 @@ const summaryUncached = (garage61ApiKey: string) =>
 			isRaceOrQualiSession(row.sessionType),
 		);
 		const windowLabel = shouldFallback ? "Last 6 Months" : "Last 30 Days";
-		const { trackIds, carIds } = extractUniqueIds(raceQualiStatisticsRows);
+		const { trackIds, carIds } = extractUniqueIds(allStatisticsRows);
+		const { trackIds: raceQualiTrackIds } = extractUniqueIds(
+			raceQualiStatisticsRows,
+		);
 
 		const trackLookups = yield* forEachConcurrent(trackIds, (id) =>
 			trackById(garage61ApiKey, id).pipe(
@@ -568,35 +611,70 @@ const summaryUncached = (garage61ApiKey: string) =>
 			carLookups.map((car) => [car.id, car.categoryId]),
 		);
 
-		const enrichedRecentStatistics = raceQualiStatisticsRows.map((row) => ({
-			...row,
-			track:
-				row.trackId !== null
-					? (trackNameById.get(row.trackId) ?? row.track)
-					: row.track,
-			car:
-				row.carId !== null ? (carNameById.get(row.carId) ?? row.car) : row.car,
-		}));
-		const nonOvalStatistics = enrichedRecentStatistics.filter(
+		const enrichStatistics = (
+			rows: ReadonlyArray<(typeof allStatisticsRows)[number]>,
+		) =>
+			rows.map((row) => ({
+				...row,
+				track:
+					row.trackId !== null
+						? (trackNameById.get(row.trackId) ?? row.track)
+						: row.track,
+				car:
+					row.carId !== null
+						? (carNameById.get(row.carId) ?? row.car)
+						: row.car,
+			}));
+
+		const nonOvalTimeShareStatistics = enrichStatistics(
+			allStatisticsRows,
+		).filter(
+			(row) =>
+				row.trackId === null || trackIsOvalById.get(row.trackId) !== true,
+		);
+		const nonOvalRaceQualiStatistics = enrichStatistics(
+			raceQualiStatisticsRows,
+		).filter(
 			(row) =>
 				row.trackId === null || trackIsOvalById.get(row.trackId) !== true,
 		);
 
-		const totalTimeOnTrackSeconds = nonOvalStatistics.reduce(
+		const totalTimeOnTrackSeconds = nonOvalTimeShareStatistics.reduce(
 			(sum, row) => sum + (row.timeOnTrack ?? 0),
 			0,
 		);
-		const totalLapsDriven = nonOvalStatistics.reduce(
+		const racingTimeOnTrackSeconds = nonOvalRaceQualiStatistics.reduce(
+			(sum, row) => sum + (row.timeOnTrack ?? 0),
+			0,
+		);
+		const practiceTimeOnTrackSeconds = Math.max(
+			0,
+			totalTimeOnTrackSeconds - racingTimeOnTrackSeconds,
+		);
+		const totalLapsDriven = nonOvalRaceQualiStatistics.reduce(
 			(sum, row) => sum + (row.lapsDriven ?? 0),
 			0,
 		);
-		const totalCleanLapsDriven = nonOvalStatistics.reduce(
+		const totalCleanLapsDriven = nonOvalRaceQualiStatistics.reduce(
 			(sum, row) => sum + (row.cleanLapsDriven ?? 0),
 			0,
 		);
 		const cleanLapPercentage =
 			totalLapsDriven > 0
 				? Math.round((totalCleanLapsDriven / totalLapsDriven) * 1000) / 10
+				: null;
+		const sessionTimeBreakdown =
+			totalTimeOnTrackSeconds > 0
+				? {
+						practiceTimeOnTrackSeconds,
+						racingTimeOnTrackSeconds,
+						practicePercentage: roundPercent(
+							(practiceTimeOnTrackSeconds / totalTimeOnTrackSeconds) * 100,
+						),
+						racingPercentage: roundPercent(
+							(racingTimeOnTrackSeconds / totalTimeOnTrackSeconds) * 100,
+						),
+					}
 				: null;
 
 		const trackTimeMap = new Map<
@@ -620,60 +698,64 @@ const summaryUncached = (garage61ApiKey: string) =>
 			}
 		>();
 
-		for (const [rowIndex, row] of nonOvalStatistics.entries()) {
+		for (const [rowIndex, row] of nonOvalTimeShareStatistics.entries()) {
 			const rowTime = row.timeOnTrack ?? 0;
 			const rowTimestamp = row.day ? Date.parse(row.day) : Number.NaN;
 			const validTimestamp = Number.isFinite(rowTimestamp)
 				? rowTimestamp
 				: Number.NEGATIVE_INFINITY;
-			if (row.trackId !== null) {
-				const name = trackNameById.get(row.trackId) ?? row.track;
-				const key = normalizeName(name);
-				const current = trackTimeMap.get(key);
-				if (current) {
-					current.timeOnTrackSeconds += rowTime;
-					if (
-						validTimestamp > current.latestTimestamp ||
-						(validTimestamp === current.latestTimestamp &&
-							rowIndex < current.latestIndex)
-					) {
-						current.latestTimestamp = validTimestamp;
-						current.latestIndex = rowIndex;
-					}
-				} else {
-					trackTimeMap.set(key, {
-						id: row.trackId,
-						name,
-						timeOnTrackSeconds: rowTime,
-						latestTimestamp: validTimestamp,
-						latestIndex: rowIndex,
-					});
+			const trackName =
+				row.trackId !== null
+					? (trackNameById.get(row.trackId) ?? row.track)
+					: row.track;
+			const trackId =
+				row.trackId !== null ? row.trackId : stableNameId("track", trackName);
+			const trackKey = normalizeName(trackName);
+			const currentTrack = trackTimeMap.get(trackKey);
+			if (currentTrack) {
+				currentTrack.timeOnTrackSeconds += rowTime;
+				if (
+					validTimestamp > currentTrack.latestTimestamp ||
+					(validTimestamp === currentTrack.latestTimestamp &&
+						rowIndex < currentTrack.latestIndex)
+				) {
+					currentTrack.latestTimestamp = validTimestamp;
+					currentTrack.latestIndex = rowIndex;
 				}
+			} else {
+				trackTimeMap.set(trackKey, {
+					id: trackId,
+					name: trackName,
+					timeOnTrackSeconds: rowTime,
+					latestTimestamp: validTimestamp,
+					latestIndex: rowIndex,
+				});
 			}
 
-			if (row.carId !== null) {
-				const name = carNameById.get(row.carId) ?? row.car;
-				const key = normalizeName(name);
-				const current = carTimeMap.get(key);
-				if (current) {
-					current.timeOnTrackSeconds += rowTime;
-					if (
-						validTimestamp > current.latestTimestamp ||
-						(validTimestamp === current.latestTimestamp &&
-							rowIndex < current.latestIndex)
-					) {
-						current.latestTimestamp = validTimestamp;
-						current.latestIndex = rowIndex;
-					}
-				} else {
-					carTimeMap.set(key, {
-						id: row.carId,
-						name,
-						timeOnTrackSeconds: rowTime,
-						latestTimestamp: validTimestamp,
-						latestIndex: rowIndex,
-					});
+			const carName =
+				row.carId !== null ? (carNameById.get(row.carId) ?? row.car) : row.car;
+			const carId =
+				row.carId !== null ? row.carId : stableNameId("car", carName);
+			const carKey = normalizeName(carName);
+			const currentCar = carTimeMap.get(carKey);
+			if (currentCar) {
+				currentCar.timeOnTrackSeconds += rowTime;
+				if (
+					validTimestamp > currentCar.latestTimestamp ||
+					(validTimestamp === currentCar.latestTimestamp &&
+						rowIndex < currentCar.latestIndex)
+				) {
+					currentCar.latestTimestamp = validTimestamp;
+					currentCar.latestIndex = rowIndex;
 				}
+			} else {
+				carTimeMap.set(carKey, {
+					id: carId,
+					name: carName,
+					timeOnTrackSeconds: rowTime,
+					latestTimestamp: validTimestamp,
+					latestIndex: rowIndex,
+				});
 			}
 		}
 
@@ -721,7 +803,7 @@ const summaryUncached = (garage61ApiKey: string) =>
 							)
 						: null,
 			}));
-		const recentStatistics = nonOvalStatistics.slice(0, 12);
+		const recentStatistics = nonOvalRaceQualiStatistics.slice(0, 12);
 
 		const comboMap = new Map<
 			string,
@@ -757,7 +839,7 @@ const summaryUncached = (garage61ApiKey: string) =>
 				daySamples: Array<{ avgLapSeconds: number; laps: number }>;
 			}
 		>();
-		for (const [rowIndex, row] of nonOvalStatistics.entries()) {
+		for (const [rowIndex, row] of nonOvalRaceQualiStatistics.entries()) {
 			const time = row.timeOnTrack ?? 0;
 			const laps = row.lapsDriven ?? 0;
 			const clean = row.cleanLapsDriven ?? 0;
@@ -886,7 +968,7 @@ const summaryUncached = (garage61ApiKey: string) =>
 
 		const comboCandidates = [
 			...new Map(
-				nonOvalStatistics
+				nonOvalRaceQualiStatistics
 					.filter(
 						(row) =>
 							row.trackId !== null &&
@@ -1231,8 +1313,11 @@ const summaryUncached = (garage61ApiKey: string) =>
 			sessions: null,
 			derived: {
 				sessionCount:
-					nonOvalStatistics.length > 0 ? nonOvalStatistics.length : null,
-				trackCount: trackIds.length > 0 ? trackIds.length : null,
+					nonOvalRaceQualiStatistics.length > 0
+						? nonOvalRaceQualiStatistics.length
+						: null,
+				trackCount:
+					raceQualiTrackIds.length > 0 ? raceQualiTrackIds.length : null,
 				fastestLaps: [],
 				recentStatistics,
 				overview: {
@@ -1244,6 +1329,7 @@ const summaryUncached = (garage61ApiKey: string) =>
 					recentTracks,
 					recentCars,
 					insights: {
+						sessionTimeBreakdown,
 						secondsOffRecord,
 						cleanestCombo,
 						paceLadder: syncedPaceLadder,
@@ -1256,9 +1342,24 @@ const summaryUncached = (garage61ApiKey: string) =>
 
 const summary = () =>
 	Effect.gen(function* () {
-		return yield* getJson<Garage61Summary>({
+		const latestCached = yield* getJson<Garage61Summary>({
 			key: GARAGE61_SUMMARY_CACHE_KEY,
-		}).pipe(Effect.map((cached) => cached ?? emptySummary()));
+		});
+		if (latestCached) return normalizeSummary(latestCached);
+
+		const refreshed = yield* refreshSummary().pipe(
+			Effect.map((value) => normalizeSummary(value)),
+			Effect.catchAll(() => Effect.succeed<Garage61Summary | null>(null)),
+		);
+		if (refreshed) return refreshed;
+
+		for (const cacheKey of GARAGE61_SUMMARY_CACHE_FALLBACK_KEYS) {
+			const cached = yield* getJson<Garage61Summary>({
+				key: cacheKey,
+			});
+			if (cached) return normalizeSummary(cached);
+		}
+		return emptySummary();
 	});
 
 const refreshSummary = () =>

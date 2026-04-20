@@ -60,6 +60,12 @@ export type Garage61Summary = {
 				timeSharePercentage: number | null;
 			}>;
 			insights: {
+				sessionTimeBreakdown: {
+					practiceTimeOnTrackSeconds: number;
+					racingTimeOnTrackSeconds: number;
+					practicePercentage: number;
+					racingPercentage: number;
+				} | null;
 				secondsOffRecord: {
 					track: string;
 					car: string;

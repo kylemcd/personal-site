@@ -36,6 +36,7 @@ function Garage61({
 	titleHref,
 	recentLayout = "scroll",
 }: Garage61Props) {
+	const sessionTimeBreakdown = overview.insights.sessionTimeBreakdown;
 	const hasRecent =
 		overview.recentTracks.length > 0 || overview.recentCars.length > 0;
 	if (!hasRecent && overview.totalTimeOnTrackSeconds <= 0) return null;
@@ -203,53 +204,75 @@ function Garage61({
 						</div>
 					)}
 
-					{overview.insights.secondsOffRecord && (
-						<div className="g61-racing-row">
-							<div className="g61-racing-row-content">
-								<div className="g61-racing-meta">
+					<div className="g61-racing-row">
+						<div className="g61-racing-row-content">
+							<div className="g61-racing-meta">
+								<Text
+									as="p"
+									size="1"
+									weight="500"
+									className="g61-racing-track g61-racing-kpi-label"
+								>
+									Seat time balance
+								</Text>
+								<Text
+									as="p"
+									size="3"
+									weight="500"
+									family="mono"
+									className="g61-racing-kpi-value"
+								>
+									{sessionTimeBreakdown
+										? `${Math.round(sessionTimeBreakdown.practicePercentage)}%`
+										: "n/a"}
+								</Text>
+								<div className="g61-racing-split-meter-labels">
+									<Text as="p" size="0" color="1">
+										Practice
+									</Text>
+									<Text as="p" size="0" color="2">
+										Racing
+									</Text>
+								</div>
+								<div className="g61-racing-split-meter">
+									<div
+										className="g61-racing-split-meter-segment g61-racing-split-meter-practice"
+										style={{
+											width: `${clampPercent(sessionTimeBreakdown?.practicePercentage ?? 0)}%`,
+										}}
+									/>
+									<div
+										className="g61-racing-split-meter-segment g61-racing-split-meter-racing"
+										style={{
+											width: `${clampPercent(sessionTimeBreakdown?.racingPercentage ?? 0)}%`,
+										}}
+									/>
+								</div>
+								<div className="g61-racing-combo-container">
 									<Text
 										as="p"
-										size="1"
-										weight="500"
-										className="g61-racing-track g61-racing-kpi-label"
+										size="0"
+										color="1"
+										className="g61-racing-description g61-racing-combo"
 									>
-										Me vs Friends
+										{sessionTimeBreakdown
+											? `Practice ${formatDuration(sessionTimeBreakdown.practiceTimeOnTrackSeconds)}`
+											: "Practice n/a"}
 									</Text>
 									<Text
 										as="p"
-										size="3"
-										weight="500"
-										family="mono"
-										className="g61-racing-kpi-value"
+										size="0"
+										color="2"
+										className="g61-racing-description g61-racing-combo"
 									>
-										{overview.insights.secondsOffRecord.onlyMyLaps
-											? "Fastest so far"
-											: overview.insights.secondsOffRecord.isFastestInTeam
-												? "P1 in team"
-												: `+${overview.insights.secondsOffRecord.secondsOffRecord.toFixed(3)}s`}
+										{sessionTimeBreakdown
+											? `Racing ${formatDuration(sessionTimeBreakdown.racingTimeOnTrackSeconds)}`
+											: "Racing n/a"}
 									</Text>
-									<div>
-										<Text
-											as="p"
-											size="0"
-											color="1"
-											className="g61-racing-description g61-racing-combo"
-										>
-											{overview.insights.secondsOffRecord.track}
-										</Text>
-										<Text
-											as="p"
-											size="0"
-											color="2"
-											className="g61-racing-description g61-racing-combo"
-										>
-											{overview.insights.secondsOffRecord.car}
-										</Text>
-									</div>
 								</div>
 							</div>
 						</div>
-					)}
+					</div>
 
 					{overview.insights.paceLadder.length > 0 && (
 						<div className="g61-racing-row">
@@ -264,41 +287,39 @@ function Garage61({
 										Fastest laps
 									</Text>
 									<div className="g61-racing-ladder">
-										{overview.insights.paceLadder
-											.slice(0, 5)
-											.map((item, index) => (
-												<div
-													className="g61-racing-ladder-row"
-													key={`pace-${item.track}-${index}`}
-												>
-													<div className="g61-racing-ladder-meta">
-														<Text
-															as="p"
-															size="0"
-															color="1"
-															className="g61-racing-ladder-track"
-														>
-															{item.track}
-														</Text>
-														<Text
-															as="p"
-															size="0"
-															color="2"
-															className="g61-racing-ladder-subline"
-														>
-															{item.car}
-														</Text>
-													</div>
+										{overview.insights.paceLadder.slice(0, 5).map((item) => (
+											<div
+												className="g61-racing-ladder-row"
+												key={`pace-${item.track}-${item.car}`}
+											>
+												<div className="g61-racing-ladder-meta">
 													<Text
 														as="p"
 														size="0"
-														family="mono"
-														className="g61-racing-ladder-time"
+														color="1"
+														className="g61-racing-ladder-track"
 													>
-														{formatLapTime(item.avgLapSeconds)}
+														{item.track}
+													</Text>
+													<Text
+														as="p"
+														size="0"
+														color="2"
+														className="g61-racing-ladder-subline"
+													>
+														{item.car}
 													</Text>
 												</div>
-											))}
+												<Text
+													as="p"
+													size="0"
+													family="mono"
+													className="g61-racing-ladder-time"
+												>
+													{formatLapTime(item.avgLapSeconds)}
+												</Text>
+											</div>
+										))}
 									</div>
 								</div>
 							</div>
@@ -320,10 +341,10 @@ function Garage61({
 									<div className="g61-racing-ladder">
 										{overview.insights.trackConfidence
 											.slice(0, 5)
-											.map((track, index) => (
+											.map((track) => (
 												<div
 													className="g61-racing-ladder-row"
-													key={`track-confidence-${track.track}-${index}`}
+													key={`track-confidence-${track.track}`}
 												>
 													<div className="g61-racing-ladder-meta">
 														<Text
