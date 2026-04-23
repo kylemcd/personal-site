@@ -29,7 +29,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/prismjs": "^1.26.6",
     "effect": "^3.21.0",
-    "fast-xml-parser": "^5.5.11",
+    "fast-xml-parser": "^5.7.0",
     "js-yaml": "^4.1.1",
     "lucide-react": "^1.8.0",
     "match-sorter": "^8.3.0",
