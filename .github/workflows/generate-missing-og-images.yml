@@ -25,23 +25,10 @@ jobs:
         run: |
           shopt -s nullglob
 
-          before_sha="${{ github.event.before }}"
-          after_sha="${{ github.sha }}"
-
-          changed_posts=()
-          if [[ -n "$before_sha" && "$before_sha" != "0000000000000000000000000000000000000000" ]]; then
-            while IFS= read -r post; do
-              changed_posts+=("$post")
-            done < <(git diff --name-only "$before_sha" "$after_sha" -- "posts/*.md")
-          else
-            while IFS= read -r post; do
-              changed_posts+=("$post")
-            done < <(git diff-tree --no-commit-id --name-only -r "$after_sha" -- "posts/*.md")
-          fi
-
-          if (( ${#changed_posts[@]} == 0 )); then
+          posts=(posts/*.md)
+          if (( ${#posts[@]} == 0 )); then
             echo "missing=false" >> "$GITHUB_OUTPUT"
-            echo "No changed posts in this push."
+            echo "No posts found."
             exit 0
           fi
 
@@ -49,8 +36,13 @@ jobs:
           missing_slugs=()
           missing_files=()
 
-          for post in "${changed_posts[@]}"; do
+          for post in "${posts[@]}"; do
             [[ -f "$post" ]] || continue
+
+            # Skip draft posts because the OG generator intentionally excludes drafts.
+            if rg -n --max-count 1 "^[[:space:]]*draft:[[:space:]]*['\"]?true['\"]?[[:space:]]*$" "$post" > /dev/null; then
+              continue
+            fi
 
             slug="$(basename "$post" .md)"
             image="public/open-graph/${slug}.png"
@@ -69,7 +61,7 @@ jobs:
             echo "Missing OG images: ${missing_slugs[*]}"
           else
             echo "missing=false" >> "$GITHUB_OUTPUT"
-            echo "No missing OG images found for changed posts."
+            echo "No missing OG images found."
           fi
 
       - name: Setup Node.js
