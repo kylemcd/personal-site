@@ -58,7 +58,7 @@ export class RefreshGarage61Workflow extends WorkflowEntrypoint<
 					Effect.map((summary) => ({
 						status: "success" as const,
 						details: {
-							cacheKey: "garage61:summary:v6",
+							cacheKey: "garage61:summary:v8",
 							sessionCount: summary.derived.sessionCount,
 							trackCount: summary.derived.trackCount,
 							recentTracks: summary.derived.overview.recentTracks.length,
