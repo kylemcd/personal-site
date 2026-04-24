@@ -178,10 +178,13 @@ const writeToMemory = <A>(
 	value: A,
 	ttlSeconds: number | undefined,
 ): void => {
-	void ttlSeconds;
+	const expiresAt =
+		typeof ttlSeconds === "number" && Number.isFinite(ttlSeconds)
+			? Date.now() + ttlSeconds * 1000
+			: null;
 	inMemoryStore.set(key, {
 		value: JSON.stringify(value),
-		expiresAt: null,
+		expiresAt,
 	});
 };
 
