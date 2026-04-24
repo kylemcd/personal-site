@@ -40,7 +40,7 @@ jobs:
             [[ -f "$post" ]] || continue
 
             # Skip draft posts because the OG generator intentionally excludes drafts.
-            if rg -n --max-count 1 "^[[:space:]]*draft:[[:space:]]*['\"]?true['\"]?[[:space:]]*$" "$post" > /dev/null; then
+            if grep -Eq "^[[:space:]]*draft:[[:space:]]*['\"]?true['\"]?[[:space:]]*$" "$post"; then
               continue
             fi
 
