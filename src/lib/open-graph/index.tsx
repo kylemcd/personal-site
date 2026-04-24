@@ -159,12 +159,14 @@ async function generateImage() {
 
   const posts = response.value;
 
-  posts.forEach(async (post) => {
-    await constructImage({
-      title: post.title,
-      path: post.slug,
-    });
-  });
+  await Promise.all(
+    posts.map((post) =>
+      constructImage({
+        title: post.title,
+        path: post.slug,
+      }),
+    ),
+  );
 
   await constructImage({
     title: "Kyle McDonald's Personal Site",

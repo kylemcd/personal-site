@@ -83,6 +83,13 @@ jobs:
         if: steps.detect_missing.outputs.missing == 'true'
         run: npm ci
 
+      - name: Sync latest main
+        if: steps.detect_missing.outputs.missing == 'true'
+        run: |
+          git fetch origin main
+          git checkout main
+          git merge --ff-only origin/main
+
       - name: Generate OG images
         if: steps.detect_missing.outputs.missing == 'true'
         run: npm run og
@@ -120,4 +127,18 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git commit -m "chore: generate missing OG images"
-          git push
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+
+            echo "Push rejected on attempt ${attempt}. Rebasing and retrying..."
+            git fetch origin main
+            if ! git rebase origin/main; then
+              git rebase --abort || true
+              exit 1
+            fi
+          done
+
+          echo "Failed to push generated OG images after retries."
+          exit 1
