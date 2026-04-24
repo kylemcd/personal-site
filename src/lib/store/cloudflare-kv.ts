@@ -267,39 +267,13 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 			};
 		});
 
-	const readLatestEnvelope = <A>(
-		key: string,
-	): Effect.Effect<CacheEnvelope<A> | null> =>
-		Effect.gen(function* () {
-			let latest: CacheEnvelope<A> | null = null;
-			for (const readKey of getReadKeys(key)) {
-				const envelope = yield* readEnvelope<A>(readKey);
-				if (!envelope) continue;
-				if (!latest) {
-					latest = envelope;
-					continue;
-				}
-				const envelopeRefreshAfter =
-					typeof envelope.refreshAfter === "number" &&
-					Number.isFinite(envelope.refreshAfter)
-						? envelope.refreshAfter
-						: Number.NEGATIVE_INFINITY;
-				const latestRefreshAfter =
-					typeof latest.refreshAfter === "number" &&
-					Number.isFinite(latest.refreshAfter)
-						? latest.refreshAfter
-						: Number.NEGATIVE_INFINITY;
-				if (envelopeRefreshAfter > latestRefreshAfter) {
-					latest = envelope;
-				}
-			}
-			return latest;
-		});
-
 	const getJson = <A>({ key }: JsonCacheOptions): Effect.Effect<A | null> =>
 		Effect.gen(function* () {
-			const envelope = yield* readLatestEnvelope<A>(key);
-			return envelope?.value ?? null;
+			for (const readKey of getReadKeys(key)) {
+				const envelope = yield* readEnvelope<A>(readKey);
+				if (envelope) return envelope.value;
+			}
+			return null;
 		});
 
 	const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -510,7 +484,11 @@ const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
 	}: JsonGetOrComputeOptions<A, E, R>): Effect.Effect<A, E, R> =>
 		Effect.gen(function* () {
 			const scopedKey = toScopedKey(key);
-			const cached = yield* readLatestEnvelope<A>(key);
+			let cached: CacheEnvelope<A> | null = null;
+			for (const readKey of getReadKeys(key)) {
+				cached = yield* readEnvelope<A>(readKey);
+				if (cached) break;
+			}
 			if (!cached) {
 				const value = yield* computeWithStatus(key, compute);
 				yield* putJson({ key, value, ttlSeconds });
