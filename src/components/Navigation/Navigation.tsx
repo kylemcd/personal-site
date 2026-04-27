@@ -19,16 +19,26 @@ const SOCIAL_LINKS = [
 		href: "https://github.com/kylemcd",
 		label: "GitHub",
 		iconClassName: "hn hn-github",
+		external: true,
 	},
 	{
 		href: "https://x.com/kpmdev",
 		label: "X",
 		iconClassName: "hn hn-x",
+		external: true,
 	},
 	{
 		href: "https://www.linkedin.com/in/kylemcd1/",
 		label: "LinkedIn",
 		iconClassName: "hn hn-linkedin",
+		external: true,
+	},
+	{
+		href: "/rss.xml",
+		label: "RSS Feed",
+		iconClassName: "hn hn-rss",
+		external: false,
+		type: "application/rss+xml",
 	},
 ] as const;
 
@@ -157,8 +167,9 @@ function Navigation() {
 											href={link.href}
 											className="navigation-social-link"
 											aria-label={link.label}
-											target="_blank"
-											rel="noopener noreferrer"
+											target={link.external ? "_blank" : undefined}
+											rel={link.external ? "noopener noreferrer" : undefined}
+											type={link.type}
 										>
 											<i className={link.iconClassName} aria-hidden="true" />
 										</a>

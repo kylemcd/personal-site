@@ -19,6 +19,7 @@ import type {
 	StaleMonitorWorkflowEnv,
 } from "./workflows/stale-data-monitor";
 import { StaleDataMonitorWorkflow } from "./workflows/stale-data-monitor";
+import { RSS_PATH, createBlogRssFeed } from "./src/lib/rss";
 
 type WorkerEnv = StaleMonitorWorkflowEnv &
 	RefreshGarage61WorkflowEnv &
@@ -62,13 +63,40 @@ const applyRuntimeEnv = (env: WorkerEnv) => {
 	process.env.KV_CACHE_VERSION = env.KV_CACHE_VERSION ?? process.env.KV_CACHE_VERSION;
 };
 
+const respondWithRssFeed = async (): Promise<Response> => {
+	try {
+		const feed = await createBlogRssFeed();
+		return new Response(feed, {
+			headers: {
+				"content-type": "application/rss+xml; charset=utf-8",
+				"cache-control": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+				"x-robots-tag": "index, follow",
+			},
+		});
+	} catch (error) {
+		console.error("[rss] Failed to generate feed", error);
+		return new Response("Unable to generate RSS feed.", {
+			status: 500,
+			headers: {
+				"content-type": "text/plain; charset=utf-8",
+			},
+		});
+	}
+};
+
 export default {
-	fetch: (request: Request, env: WorkerEnv, ctx: ExecutionContext) => {
+	fetch: async (request: Request, env: WorkerEnv, ctx: ExecutionContext) => {
 		applyRuntimeEnv(env);
 		(globalThis as Record<string, unknown>).APP_STORE = env.APP_STORE;
 		(globalThis as Record<string, unknown>).KV_CACHE_VERSION =
 			env.KV_CACHE_VERSION;
 		void ctx;
+
+		const { pathname } = new URL(request.url);
+		if (request.method === "GET" && pathname === RSS_PATH) {
+			return respondWithRssFeed();
+		}
+
 		return server.fetch(request);
 	},
 	scheduled: (controller: ScheduledController, env: WorkerEnv, ctx: ExecutionContext) => {

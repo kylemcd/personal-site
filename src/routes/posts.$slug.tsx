@@ -126,9 +126,19 @@ function RouteComponent() {
 					<Text as="span" size="1" color="2">
 						{formatDateInCentral(frontmatter.date)}
 					</Text>
-					<Text as="span" size="1" color="2">
-						{readingTime} min read
-					</Text>
+					<div className="post-details-right">
+						<Text as="span" size="1" color="2">
+							{readingTime} min read
+						</Text>
+						<a
+							href="/rss.xml"
+							className="post-rss-link"
+							aria-label="Subscribe to the RSS feed"
+							type="application/rss+xml"
+						>
+							<i className="hn hn-rss" aria-hidden="true" />
+						</a>
+					</div>
 				</div>
 				<TableOfContents items={tableOfContents} />
 				<div

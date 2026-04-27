@@ -76,6 +76,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 		<html lang="en">
 			<head>
 				<HeadContent />
+				<link
+					rel="alternate"
+					type="application/rss+xml"
+					title="Kyle McDonald's RSS Feed"
+					href="https://kylemcd.com/rss.xml"
+				/>
 				<link rel="icon" href="/images/avatar.png" type="image/png" />
 			</head>
 			<body>

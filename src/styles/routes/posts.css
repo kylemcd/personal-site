@@ -35,6 +35,32 @@
 	border-bottom: 1px solid var(--color-ui-1);
 }
 
+.post-details-right {
+	align-items: center;
+	display: inline-flex;
+	gap: var(--spc-2);
+}
+
+.post-rss-link {
+	align-items: center;
+	border: 1px solid transparent;
+	border-radius: var(--rnd-3);
+	color: var(--color-text-2);
+	display: inline-flex;
+	font-size: 1rem;
+	height: var(--spc-7);
+	justify-content: center;
+	width: var(--spc-7);
+}
+
+.post-rss-link:hover,
+.post-rss-link:focus-visible {
+	background-color: var(--color-ui-1);
+	border-color: var(--color-ui-1);
+	color: var(--color-text-1);
+	text-decoration: none;
+}
+
 .post-substack {
 	align-items: center;
 	display: flex;
