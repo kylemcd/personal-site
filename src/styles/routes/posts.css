@@ -149,6 +149,10 @@
 	vertical-align: top;
 }
 
+[data-post] th {
+	background-color: var(--color-bg-2);
+}
+
 [data-post] img {
 	display: block;
 	max-height: 600px;
