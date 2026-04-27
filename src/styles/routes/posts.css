@@ -135,6 +135,20 @@
 	line-height: 1.7rem !important;
 }
 
+[data-post] table {
+	width: var(--spc-full);
+	margin-block: var(--spc-4);
+	border: 1px solid var(--color-ui-1);
+}
+
+[data-post] th,
+[data-post] td {
+	padding: var(--spc-2) var(--spc-3);
+	border: 1px solid var(--color-ui-1);
+	text-align: left;
+	vertical-align: top;
+}
+
 [data-post] img {
 	display: block;
 	max-height: 600px;
