@@ -117,6 +117,7 @@ function WrappedListening({
 						<span className="wrapped-row-thumb-fallback">{fallback}</span>
 					)}
 				</div>
+				<span className="sr-only">{params.label}</span>
 			</a>
 		);
 	};

@@ -137,6 +137,7 @@ function RouteComponent() {
 							type="application/rss+xml"
 						>
 							<i className="hn hn-rss" aria-hidden="true" />
+							<span className="sr-only">Subscribe to the RSS feed</span>
 						</a>
 					</div>
 				</div>

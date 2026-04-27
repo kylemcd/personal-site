@@ -104,11 +104,8 @@ function Navigation() {
 						</span>
 						<i className="hn hn-angle-left" aria-hidden="true" />
 					</button>
-					<div
-						className="navigation-theme-switcher navigation-top-theme-switcher"
-						role="group"
-						aria-label="Theme"
-					>
+					<fieldset className="navigation-theme-switcher navigation-top-theme-switcher">
+						<legend className="navigation-sr-only">Theme</legend>
 						<button
 							type="button"
 							className="navigation-theme-switcher-button"
@@ -129,7 +126,7 @@ function Navigation() {
 							<span className="navigation-sr-only">Dark</span>
 							<i className="hn hn-moon" aria-hidden="true" />
 						</button>
-					</div>
+					</fieldset>
 				</div>
 			</nav>
 
@@ -137,29 +134,32 @@ function Navigation() {
 				id="site-navigation-overlay"
 				className="navigation-overlay"
 				data-open={open}
-				onClick={(event) => {
-					if (event.target === event.currentTarget) {
-						closeMenu();
-					}
-				}}
 			>
+				<button
+					type="button"
+					className="navigation-overlay-dismiss"
+					onClick={closeMenu}
+				>
+					<span className="navigation-sr-only">Close navigation menu</span>
+				</button>
 				<div className="navigation-overlay-frame">
 					<div className="navigation-overlay-panel">
 						<div className="navigation-overlay-content">
 							<div className="navigation-overlay-main">
-								<div className="navigation-page-links" role="list">
+								<ul className="navigation-page-links">
 									{PAGE_LINKS.map((link) => (
-										<a
-											key={link.href}
-											href={link.href}
-											className="navigation-page-link"
-											data-active={isActiveLink(link.href)}
-											onClick={closeMenu}
-										>
-											{link.label}
-										</a>
+										<li key={link.href}>
+											<a
+												href={link.href}
+												className="navigation-page-link"
+												data-active={isActiveLink(link.href)}
+												onClick={closeMenu}
+											>
+												{link.label}
+											</a>
+										</li>
 									))}
-								</div>
+								</ul>
 								<div className="navigation-social-links">
 									{SOCIAL_LINKS.map((link) => (
 										<a
@@ -172,6 +172,7 @@ function Navigation() {
 											type={link.type}
 										>
 											<i className={link.iconClassName} aria-hidden="true" />
+											<span className="navigation-sr-only">{link.label}</span>
 										</a>
 									))}
 								</div>

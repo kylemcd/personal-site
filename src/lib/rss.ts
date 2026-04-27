@@ -66,12 +66,14 @@ const createBlogRssFeed = async (): Promise<string> => {
 						path: `./posts/${post.slug}.md`,
 					})
 					.pipe(
-						Effect.map(({ frontmatter, content }): FeedPost => ({
-							title: frontmatter.title,
-							slug: post.slug,
-							date: frontmatter.date,
-							content,
-						})),
+						Effect.map(
+							({ frontmatter, content }): FeedPost => ({
+								title: frontmatter.title,
+								slug: post.slug,
+								date: frontmatter.date,
+								content,
+							}),
+						),
 					),
 			),
 		),
@@ -121,4 +123,4 @@ const createBlogRssFeed = async (): Promise<string> => {
 	return `<?xml version="1.0" encoding="UTF-8"?>\n${xmlBody}`;
 };
 
-export { RSS_PATH, createBlogRssFeed };
+export { createBlogRssFeed, RSS_PATH };

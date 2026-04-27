@@ -1,30 +1,11 @@
-import { useRef } from "react";
-
 import { Text } from "@/components/Text";
 
 import "./HomeHero.styles.css";
 
 function HomeHero() {
-	const homeHeroFullImageRef = useRef<HTMLImageElement>(null);
 	return (
 		<div className="home-hero">
-			<div
-				className="home-hero-image-container"
-				onMouseEnter={() => {
-					if (homeHeroFullImageRef.current) {
-						homeHeroFullImageRef.current.style.opacity = "1";
-						homeHeroFullImageRef.current.style.transition =
-							"opacity 2s ease-in-out";
-					}
-				}}
-				onMouseLeave={() => {
-					if (homeHeroFullImageRef.current) {
-						homeHeroFullImageRef.current.style.opacity = "0";
-						homeHeroFullImageRef.current.style.transition =
-							"opacity 2s ease-in-out";
-					}
-				}}
-			>
+			<div className="home-hero-image-container">
 				<img
 					src="/images/ascii-picture.png"
 					alt="Kyle"
@@ -34,7 +15,6 @@ function HomeHero() {
 					src="/images/full-picture.png"
 					alt="Kyle"
 					className="home-hero-full-image"
-					ref={homeHeroFullImageRef}
 				/>
 			</div>
 			<div className="home-hero-text-container">

@@ -16,7 +16,10 @@ type TableOfContentsItemProps = {
 	itemIndex?: number;
 };
 
-const TableOfContentsItem = ({ item, itemIndex }: TableOfContentsItemProps) => {
+const TableOfContentsListItem = ({
+	item,
+	itemIndex,
+}: TableOfContentsItemProps) => {
 	const { activeId, setActiveId } = React.useContext(TableOfContentsContext);
 	const isActive = activeId === item.id || (!activeId && itemIndex === 0);
 
@@ -87,7 +90,7 @@ const TableOfContentsItem = ({ item, itemIndex }: TableOfContentsItemProps) => {
 			{item.children.length > 0 && (
 				<ul>
 					{item.children.map((child) => (
-						<TableOfContentsItem key={child.id} item={child} />
+						<TableOfContentsListItem key={child.id} item={child} />
 					))}
 				</ul>
 			)}
@@ -177,7 +180,7 @@ function TableOfContents({ items }: TableOfContentsProps) {
 				<div className="table-of-contents">
 					<ul>
 						{items.map((item, index) => (
-							<TableOfContentsItem
+							<TableOfContentsListItem
 								key={item.id}
 								item={item}
 								itemIndex={index}
