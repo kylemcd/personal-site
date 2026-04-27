@@ -3,12 +3,11 @@ share: "true"
 ps-path: making-things-your-own
 title: Making things your own
 date: 2026-04-27
-links: "false"
 ---
 
 I keep accidentally writing about the same thing.
 
-The topics look different at first. A [[split keyboard|split keyboard]] I have remapped so many times the layout barely resembles what it shipped with. A [[sim racing|sim racing]] rig dialed in across hundreds of sessions until the hardware stopped getting in the way. A [[dotfiles|dotfiles]] repo that keeps my work and personal Mac feeling like the same machine.
+The topics look different at first. A split keyboard I have remapped so many times the layout barely resembles what it shipped with. A sim racing rig dialed in across hundreds of sessions until the hardware stopped getting in the way. A dotfiles repo that keeps my work and personal Mac feeling like the same machine.
 
 Something off the shelf was close, but not quite right. It worked well enough that I could have left it alone. Then some small mismatch kept bothering me until I changed the thing to fit me better.
 
@@ -26,7 +25,7 @@ You get used to the mismatch, tell yourself that is just how the tool works, and
 
 My [`.computer`](https://github.com/kylemcd/.computer) repo started because I got tired of my work Mac and personal Mac feeling like different computers. Same person, same habits, same muscle memory, but one had the aliases, the shell setup, the editor config, and the other was always a little foreign. The repo fixed that. One place for everything, both machines pulling from it, both feeling like mine.
 
-Looking through the history, no single change stands out. It is what they add up to. There is a commit early on that deleted the entire [[Nix|Nix]] and Home Manager setup: the flake, the Darwin config, the bootstrap script, nearly 800 lines, replaced with plain [[Homebrew|Homebrew]] and GNU Stow. Not because Nix was broken, but because I could not hold the whole thing in my head. A simpler setup I actually understand beats a theoretically correct one I am always fighting. The nvim config went through something similar around the same time: twenty-plus individual plugin files, each with its own configuration, collapsed into a single file with less to maintain and more room to actually change things.
+Looking through the history, no single change stands out. It is what they add up to. There is a commit early on that deleted the entire Nix and Home Manager setup: the flake, the Darwin config, the bootstrap script, nearly 800 lines, replaced with plain Homebrew and GNU Stow. Not because Nix was broken, but because I could not hold the whole thing in my head. A simpler setup I actually understand beats a theoretically correct one I am always fighting. The nvim config went through something similar around the same time: twenty-plus individual plugin files, each with its own configuration, collapsed into a single file with less to maintain and more room to actually change things.
 
 Things get more granular from there. Three commits from a single afternoon where Ghostty, tmux, and the shell prompt are all getting their colors adjusted together, iterated until the whole environment looked like one place. Aliases accumulate because I kept typing the same sequences and eventually got annoyed enough to shorten them. Worktree helpers grow from a shell function into something more considered, then get revised as the way I actually work shifts. Even the `computer install` script grew its own conflict handling because the setup itself got complex enough to need it.
 
@@ -38,7 +37,7 @@ When a setup gets this intentional it stops feeling like a collection of tools. 
 
 There is a version of this that used to be genuinely painful. Customizing an nvim config, for example, was a real commitment. You were learning Lua on the fly, working through plugin documentation that was often sparse or simply wrong, debugging changes that broke silently, and hoping someone on a forum had hit the exact same issue in the exact same version. A lot of people tried, got partway, and settled for something close enough.
 
-[[AI agents|AI agents]] have changed that pretty dramatically. The same kind of adjustment that used to take an afternoon now takes a few minutes. You describe what you want, get something that mostly works, and tweak from there. The feedback loop is short enough that fixing small things actually feels worth doing instead of something to defer forever.
+AI agents have changed that pretty dramatically. The same kind of adjustment that used to take an afternoon now takes a few minutes. You describe what you want, get something that mostly works, and tweak from there. The feedback loop is short enough that fixing small things actually feels worth doing instead of something to defer forever.
 
 Friction rarely announces itself as one big problem. It accumulates in the things that never quite worked the way you wanted, the config that always needed an extra step before you could actually get to the thing you were trying to do, the color theme that was close but never felt like it was actually yours. Individually each one is easy to wave off, but together they create this low-grade sense that you are working around the tool rather than with it. When fixing any of them takes five minutes, you actually fix them.
 
@@ -48,7 +47,7 @@ And it goes further than config files. If no existing tool does exactly what you
 
 The tools and environments you spend real time in are not abstract. They have weight and position and texture, and whether they fit accumulates in ways that are hard to notice until you change something.
 
-My [[sim racing|sim racing]] rig is probably the clearest example I have of this. The adjustments look ridiculous from the outside: seat position, pedal angle, wheel settings, monitor distance, button box in exactly the right spot to reach without looking. None of those details are the hobby, but they determine how quickly the hardware disappears and the driving actually starts. A setup that almost fits keeps pulling your attention back to itself. One that fits just lets you drive.
+My sim racing rig is probably the clearest example I have of this. The adjustments look ridiculous from the outside: seat position, pedal angle, wheel settings, monitor distance, button box in exactly the right spot to reach without looking. None of those details are the hobby, but they determine how quickly the hardware disappears and the driving actually starts. A setup that almost fits keeps pulling your attention back to itself. One that fits just lets you drive.
 
 A note system that only sort of matches how you think will always feel faintly annoying to use. A workflow where you have to consciously locate things every time will slowly cost you more than you notice. The friction is easy to write off and hard to stop paying.
 
@@ -68,7 +67,7 @@ Caring about how it looks is just caring about removing one more layer of fricti
 
 Making things your own can become a way to avoid doing the actual thing.
 
-It is easy to spend an afternoon on the sim rig and call it racing, to redesign the note system and call it writing, to rebuild the [[homelab|homelab]] and call it productivity. The work of customizing something and the work of actually using it can blur together, especially when the customizing feels satisfying and the real thing is harder.
+It is easy to spend an afternoon on the sim rig and call it racing, to redesign the note system and call it writing, to rebuild the homelab and call it productivity. The work of customizing something and the work of actually using it can blur together, especially when the customizing feels satisfying and the real thing is harder.
 
 I have done this. The tell is usually that the tinkering stops being in service of anything specific. There is no problem to fix. You are just moving things around.
 
