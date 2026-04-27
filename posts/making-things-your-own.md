@@ -3,6 +3,7 @@ share: "true"
 ps-path: making-things-your-own
 title: Making things your own
 date: 2026-04-27
+links: "false"
 ---
 
 I keep accidentally writing about the same thing.
