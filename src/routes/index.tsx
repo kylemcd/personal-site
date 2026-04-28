@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { Effect } from "effect";
+import { Result } from "better-result";
 
 import { AlbumShelf, Equalizer, NowPlaying } from "@/components/AlbumShelf";
 import { Bookshelf } from "@/components/Bookshelf";
@@ -19,33 +19,29 @@ import { markdown } from "@/lib/markdown";
 import "@/styles/routes/home.css";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
-	const result = await Effect.runPromise(
-		Effect.all([
-			lastfm.recentActivity().pipe(Effect.catchAll(() => Effect.succeed(null))),
-			markdown.all().pipe(Effect.catchAll(() => Effect.succeed([]))),
-			goodreads
-				.shelf()
-				.pipe(
-					Effect.catchAll(() =>
-						Effect.succeed({ reading: [], finished: [], next: [] }),
-					),
-				),
-			garage61.summary().pipe(
-				Effect.tapErrorCause((cause) =>
-					Effect.sync(() => {
-						console.error("Garage61 summary failed:", cause);
-					}),
-				),
-				Effect.catchAllCause(() => Effect.succeed(null)),
-			),
-		]),
-	);
+	const [listeningRes, booksRes, racingRes] = await Promise.all([
+		lastfm.recentActivity(),
+		goodreads.shelf(),
+		garage61.summary(),
+	]);
+	const writingRes = markdown.all();
+
+	const listening = Result.isOk(listeningRes) ? listeningRes.value : null;
+	const writing = Result.isOk(writingRes) ? writingRes.value : [];
+	const books = Result.isOk(booksRes)
+		? booksRes.value
+		: { reading: [], finished: [], next: [] };
+	const racing = Result.isOk(racingRes) ? racingRes.value : null;
+
+	if (Result.isError(racingRes)) {
+		console.error("Garage61 summary failed:", racingRes.error);
+	}
 
 	return {
-		listening: result[0],
-		writing: result[1],
-		books: result[2],
-		racing: result[3],
+		listening,
+		writing,
+		books,
+		racing,
 	};
 });
 

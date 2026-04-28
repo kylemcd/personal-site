@@ -1,15 +1,15 @@
 import { Text } from "@/components/Text/Text";
-import type { BookSchema } from "@/lib/books/schema";
+import type { Book } from "@/lib/books/schema";
 
 import "./Bookshelf.styles.css";
 
 type BookshelfProps = {
-	books: ReadonlyArray<typeof BookSchema.Type>;
+	books: ReadonlyArray<Book>;
 	variant?: "row" | "grid";
 };
 
 type BookCardProps = {
-	book: typeof BookSchema.Type;
+	book: Book;
 };
 
 function BookCard({ book }: BookCardProps) {

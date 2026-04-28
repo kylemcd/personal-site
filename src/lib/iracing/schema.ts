@@ -1,40 +1,56 @@
-import { Schema } from "effect";
+import { z } from "zod";
 
-export const LinkLookupSchema = Schema.Struct({
-	link: Schema.String,
+export const LinkLookupSchema = z.object({
+	link: z.string(),
 });
 
-export const TrackSchema = Schema.Struct({
-	track_id: Schema.Number,
-	track_name: Schema.String,
+export type LinkLookup = z.infer<typeof LinkLookupSchema>;
+
+export const TrackSchema = z.object({
+	track_id: z.number(),
+	track_name: z.string(),
 });
 
-export const RaceSchema = Schema.Struct({
-	season_id: Schema.Number,
-	subsession_id: Schema.Number,
-	start_position: Schema.Number,
-	finish_position: Schema.Number,
+export type Track = z.infer<typeof TrackSchema>;
+
+export const RaceSchema = z.object({
+	season_id: z.number(),
+	subsession_id: z.number(),
+	start_position: z.number(),
+	finish_position: z.number(),
 	track: TrackSchema,
-	car_id: Schema.Number,
-}).annotations({ exact: false });
-
-export const IRacingRecentRacesSchema = Schema.Struct({
-	races: Schema.Array(RaceSchema),
-	cust_id: Schema.Number,
+	car_id: z.number(),
 });
 
-export const IRacingAuthSchema = Schema.Struct({
-	headers: Schema.Any,
-}).annotations({ exact: false });
+export type Race = z.infer<typeof RaceSchema>;
 
-export const IRacingCar = Schema.Struct({
-	car_name: Schema.String,
-	car_id: Schema.Number,
+export const IRacingRecentRacesSchema = z.object({
+	races: z.array(RaceSchema),
+	cust_id: z.number(),
 });
 
-export const IRacingCarsSchema = Schema.Array(IRacingCar);
+export type IRacingRecentRaces = z.infer<typeof IRacingRecentRacesSchema>;
 
-export const CarSchema = Schema.Struct({
-	car_id: Schema.Number,
-	car_name: Schema.String,
+export const IRacingAuthSchema = z.object({
+	headers: z.any(),
 });
+
+export type IRacingAuth = z.infer<typeof IRacingAuthSchema>;
+
+export const IRacingCar = z.object({
+	car_name: z.string(),
+	car_id: z.number(),
+});
+
+export type IRacingCarType = z.infer<typeof IRacingCar>;
+
+export const IRacingCarsSchema = z.array(IRacingCar);
+
+export type IRacingCars = z.infer<typeof IRacingCarsSchema>;
+
+export const CarSchema = z.object({
+	car_id: z.number(),
+	car_name: z.string(),
+});
+
+export type Car = z.infer<typeof CarSchema>;

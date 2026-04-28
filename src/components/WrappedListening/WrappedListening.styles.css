@@ -144,7 +144,7 @@
 	min-width: 0;
 }
 
-.wrapped-row-subline {
+.wrapped-row .wrapped-row-subline {
 	display: block;
 	min-width: 0;
 	overflow: hidden;
@@ -173,7 +173,7 @@
 	.horizontal-scroll-container
 	> .horizontal-scroll-container-items
 	> *:first-child {
-	margin-left: var(--spc-8) !important;
+	margin-left: var(--spc-8);
 }
 
 .wrapped-rich-list-title {

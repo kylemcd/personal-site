@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { Effect, Exit } from "effect";
+import { Result } from "better-result";
 import React from "react";
 
 import { ErrorComponent } from "@/components/ErrorComponent";
@@ -14,17 +14,15 @@ import "@/styles/routes/posts.css";
 const getPost = createServerFn({ method: "GET" })
 	.inputValidator((data: { slug: string }) => data)
 	.handler(async ({ data: { slug } }) => {
-		const result = Effect.runSyncExit(
-			markdown.fromPath<{
-				title: string;
-				date: string;
-				"substack-link"?: string;
-			}>({ path: `./posts/${slug}.md` }),
-		);
+		const result = markdown.fromPath<{
+			title: string;
+			date: string;
+			"substack-link"?: string;
+		}>({ path: `./posts/${slug}.md` });
 
-		if (Exit.isFailure(result)) {
+		if (Result.isError(result)) {
 			throw new Error("This post does not exist.", {
-				cause: result.cause.toString(),
+				cause: result.error,
 			});
 		}
 
@@ -82,7 +80,6 @@ function RouteComponent() {
 
 	React.useEffect(() => {
 		if (content.includes(`class="mermaid"`)) {
-			// Dynamically import mermaid on the client to avoid bundling it in SSR
 			(async () => {
 				const { default: mermaid } = await import("mermaid");
 				mermaid.initialize({ startOnLoad: true });

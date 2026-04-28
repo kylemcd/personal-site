@@ -1,6 +1,9 @@
 import { env as cloudflareEnv } from "cloudflare:workers";
 import { getGlobalStartContext } from "@tanstack/react-start";
-import { Context, Effect, Layer } from "effect";
+import { Result } from "better-result";
+
+import { env } from "@/lib/env";
+import { toError } from "@/lib/result";
 
 type KvNamespaceLike = {
 	get: (key: string, type: "text") => Promise<string | null>;
@@ -16,6 +19,7 @@ type MemoryCacheEntry = {
 	value: string;
 	expiresAt: number | null;
 };
+
 type CacheEnvelope<A> = {
 	__cacheEnvelope: 1;
 	value: A;
@@ -27,33 +31,17 @@ type JsonCacheOptions = {
 	ttlSeconds?: number;
 };
 
-type JsonGetOrComputeOptions<A, E, R> = {
+type JsonGetOrComputeOptions<A, E> = {
 	key: string;
 	ttlSeconds: number;
-	compute: Effect.Effect<A, E, R>;
+	compute: () => Promise<Result<A, E>>;
 };
-type JsonRefreshOptions<A, E, R> = {
+
+type JsonRefreshOptions<A, E> = {
 	key: string;
 	ttlSeconds: number;
-	compute: Effect.Effect<A, E, R>;
+	compute: () => Promise<Result<A, E>>;
 };
-
-type CloudflareKvStoreService = {
-	getJson: <A>(options: JsonCacheOptions) => Effect.Effect<A | null>;
-	putJson: <A>(options: JsonCacheOptions & { value: A }) => Effect.Effect<void>;
-	delete: (key: string) => Effect.Effect<void>;
-	getOrComputeJson: <A, E, R>(
-		options: JsonGetOrComputeOptions<A, E, R>,
-	) => Effect.Effect<A, E, R>;
-	refreshJson: <A, E, R>(
-		options: JsonRefreshOptions<A, E, R>,
-	) => Effect.Effect<A, E, R>;
-};
-
-class CloudflareKvStore extends Context.Tag("CloudflareKvStore")<
-	CloudflareKvStore,
-	CloudflareKvStoreService
->() {}
 
 const CACHE_BINDING_NAMES = [
 	"APP_STORE",
@@ -67,8 +55,7 @@ const inMemoryStore = new Map<string, MemoryCacheEntry>();
 const DEFAULT_CACHE_VERSION = "v1";
 const CACHE_ENVELOPE_VERSION = 1;
 
-const isKvWriteDisabled = (): boolean =>
-	process.env.KV_READ_ONLY_CACHE?.toLowerCase() === "true";
+const isKvWriteDisabled = (): boolean => env.KV_READ_ONLY_CACHE;
 
 const normalizeCacheVersion = (value: unknown): string | null => {
 	if (typeof value !== "string") return null;
@@ -79,30 +66,32 @@ const normalizeCacheVersion = (value: unknown): string | null => {
 	return trimmed;
 };
 
+const asRecord = (value: unknown): Record<string, unknown> | null => {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+	return value as Record<string, unknown>;
+};
+
 const getCacheVersion = (): string => {
 	const globalRecord = asRecord(globalThis);
 	const fromGlobal = normalizeCacheVersion(globalRecord?.KV_CACHE_VERSION);
 	if (fromGlobal) return fromGlobal;
 
-	const fromEnv = normalizeCacheVersion(process.env.KV_CACHE_VERSION);
+	const fromEnv = normalizeCacheVersion(env.KV_CACHE_VERSION);
 	if (fromEnv) return fromEnv;
 
 	return DEFAULT_CACHE_VERSION;
 };
 
 const toScopedKey = (key: string): string => `${getCacheVersion()}:${key}`;
+
 const getReadKeys = (key: string): ReadonlyArray<string> => {
 	const activeScopedKey = toScopedKey(key);
 	const defaultScopedKey = `${DEFAULT_CACHE_VERSION}:${key}`;
 	return [...new Set([activeScopedKey, defaultScopedKey, key])];
 };
+
 const toLookupStatusKey = (key: string): string =>
 	`monitor:lookup-status:${key}`;
-
-const asRecord = (value: unknown): Record<string, unknown> | null => {
-	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-	return value as Record<string, unknown>;
-};
 
 const isKvNamespaceLike = (value: unknown): value is KvNamespaceLike => {
 	const record = asRecord(value);
@@ -138,15 +127,15 @@ const resolveKvNamespace = (): KvNamespaceLike | null => {
 		const envCandidates: Array<Record<string, unknown>> = [];
 		const cloudflare = asRecord(context.cloudflare);
 		if (cloudflare) {
-			const cloudflareEnv = asRecord(cloudflare.env);
-			if (cloudflareEnv) envCandidates.push(cloudflareEnv);
+			const contextCloudflareEnv = asRecord(cloudflare.env);
+			if (contextCloudflareEnv) envCandidates.push(contextCloudflareEnv);
 		}
 		const directEnv = asRecord(context.env);
 		if (directEnv) envCandidates.push(directEnv);
 
-		for (const env of envCandidates) {
+		for (const candidateEnv of envCandidates) {
 			for (const name of CACHE_BINDING_NAMES) {
-				const candidate = env[name];
+				const candidate = candidateEnv[name];
 				if (isKvNamespaceLike(candidate)) return candidate;
 			}
 		}
@@ -185,388 +174,351 @@ const writeToMemory = <A>(
 	});
 };
 
-const deleteFromMemory = (key: string): void => {
-	inMemoryStore.delete(key);
+const parseEnvelope = <A>(raw: string): CacheEnvelope<A> | null => {
+	try {
+		const parsed = JSON.parse(raw) as unknown;
+		const record = asRecord(parsed);
+		if (
+			record &&
+			record.__cacheEnvelope === CACHE_ENVELOPE_VERSION &&
+			"value" in record
+		) {
+			const refreshAfterRaw = record.refreshAfter;
+			const refreshAfter =
+				typeof refreshAfterRaw === "number" && Number.isFinite(refreshAfterRaw)
+					? refreshAfterRaw
+					: null;
+			return {
+				__cacheEnvelope: CACHE_ENVELOPE_VERSION,
+				value: record.value as A,
+				refreshAfter,
+			};
+		}
+
+		// Backward-compatible support for legacy unwrapped cached values.
+		return {
+			__cacheEnvelope: CACHE_ENVELOPE_VERSION,
+			value: parsed as A,
+			refreshAfter: null,
+		};
+	} catch {
+		return null;
+	}
 };
 
-const CloudflareKvStoreLive = Layer.sync(CloudflareKvStore, () => {
-	const namespace = resolveKvNamespace();
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
 
-	const parseEnvelope = <A>(raw: string): CacheEnvelope<A> | null => {
-		try {
-			const parsed = JSON.parse(raw) as unknown;
-			const record = asRecord(parsed);
-			if (
-				record &&
-				record.__cacheEnvelope === CACHE_ENVELOPE_VERSION &&
-				"value" in record
-			) {
-				const refreshAfterRaw = record.refreshAfter;
-				const refreshAfter =
-					typeof refreshAfterRaw === "number" &&
-					Number.isFinite(refreshAfterRaw)
-						? refreshAfterRaw
-						: null;
-				return {
-					__cacheEnvelope: CACHE_ENVELOPE_VERSION,
-					value: record.value as A,
-					refreshAfter,
-				};
-			}
+const isResponseLike = (
+	value: Record<string, unknown>,
+): value is Record<string, unknown> & {
+	status: number;
+	statusText?: string;
+	url?: string;
+} => typeof value.status === "number";
 
-			// Backward-compatible support for legacy unwrapped cached values.
-			return {
-				__cacheEnvelope: CACHE_ENVELOPE_VERSION,
-				value: parsed as A,
-				refreshAfter: null,
-			};
-		} catch {
-			return null;
+const collectErrorFragments = (
+	value: unknown,
+	fragments: string[],
+	seen: WeakSet<object>,
+	depth = 0,
+): void => {
+	if (depth > 6 || value === null || value === undefined) return;
+	if (typeof value === "string") {
+		if (value.trim()) fragments.push(value.trim());
+		return;
+	}
+	if (typeof value === "number" || typeof value === "boolean") {
+		fragments.push(String(value));
+		return;
+	}
+
+	const nestedKeys: ReadonlyArray<string> = [
+		"error",
+		"cause",
+		"reason",
+		"response",
+		"left",
+		"right",
+		"failure",
+		"defect",
+	] as const;
+
+	if (value instanceof Error) {
+		const message = value.message?.trim();
+		if (message) {
+			fragments.push(`${value.name}: ${message}`);
+		} else {
+			fragments.push(value.name);
 		}
-	};
 
-	const readEnvelope = <A>(
-		scopedKey: string,
-	): Effect.Effect<CacheEnvelope<A> | null> =>
-		Effect.gen(function* () {
-			if (namespace) {
-				const raw = yield* Effect.tryPromise({
-					try: () => namespace.get(scopedKey, "text"),
-					catch: (error) => new Error(String(error)),
-				}).pipe(Effect.catchAll(() => Effect.succeed(null)));
-				if (raw) {
-					const parsed = parseEnvelope<A>(raw);
-					if (parsed) return parsed;
+		const nestedCause = (value as Error & { cause?: unknown }).cause;
+		if (nestedCause !== undefined) {
+			collectErrorFragments(nestedCause, fragments, seen, depth + 1);
+		}
+
+		if (isRecord(value)) {
+			if (seen.has(value)) return;
+			seen.add(value);
+			for (const key of nestedKeys) {
+				if (key in value) {
+					collectErrorFragments(value[key], fragments, seen, depth + 1);
 				}
 			}
-
-			const memValue = getFromMemory<CacheEnvelope<A> | A>(scopedKey);
-			if (memValue === null) return null;
-			if (
-				typeof memValue === "object" &&
-				memValue !== null &&
-				"__cacheEnvelope" in memValue &&
-				"value" in memValue
-			) {
-				const record = memValue as CacheEnvelope<A>;
-				return {
-					__cacheEnvelope: CACHE_ENVELOPE_VERSION,
-					value: record.value,
-					refreshAfter:
-						typeof record.refreshAfter === "number" &&
-						Number.isFinite(record.refreshAfter)
-							? record.refreshAfter
-							: null,
-				};
-			}
-
-			return {
-				__cacheEnvelope: CACHE_ENVELOPE_VERSION,
-				value: memValue as A,
-				refreshAfter: null,
-			};
-		});
-
-	const getJson = <A>({ key }: JsonCacheOptions): Effect.Effect<A | null> =>
-		Effect.gen(function* () {
-			for (const readKey of getReadKeys(key)) {
-				const envelope = yield* readEnvelope<A>(readKey);
-				if (envelope) return envelope.value;
-			}
-			return null;
-		});
-
-	const isRecord = (value: unknown): value is Record<string, unknown> =>
-		typeof value === "object" && value !== null && !Array.isArray(value);
-
-	const isResponseLike = (
-		value: Record<string, unknown>,
-	): value is Record<string, unknown> & {
-		status: number;
-		statusText?: string;
-		url?: string;
-	} => {
-		return typeof value.status === "number";
-	};
-
-	const collectErrorFragments = (
-		value: unknown,
-		fragments: string[],
-		seen: WeakSet<object>,
-		depth = 0,
-	): void => {
-		if (depth > 6 || value === null || value === undefined) return;
-		if (typeof value === "string") {
-			if (value.trim()) fragments.push(value.trim());
-			return;
-		}
-		if (typeof value === "number" || typeof value === "boolean") {
-			fragments.push(String(value));
-			return;
-		}
-		const nestedKeys: ReadonlyArray<string> = [
-			"error",
-			"cause",
-			"reason",
-			"response",
-			"left",
-			"right",
-			"failure",
-			"defect",
-		] as const;
-
-		if (value instanceof Error) {
-			const message = value.message?.trim();
-			if (message) {
-				fragments.push(`${value.name}: ${message}`);
-			} else {
-				fragments.push(value.name);
-			}
-			const nestedCause = (value as Error & { cause?: unknown }).cause;
-			if (nestedCause !== undefined) {
-				collectErrorFragments(nestedCause, fragments, seen, depth + 1);
-			}
-			if (isRecord(value)) {
-				if (seen.has(value)) return;
-				seen.add(value);
-				for (const key of nestedKeys) {
-					if (key in value) {
-						collectErrorFragments(value[key], fragments, seen, depth + 1);
-					}
-				}
-				for (const key of [
-					"details",
-					"detail",
-					"bodySnippet",
-					"responseBody",
-					"providerBody",
-				] as const) {
-					const candidate = value[key];
-					if (typeof candidate === "string" && candidate.trim()) {
-						fragments.push(candidate.trim());
-					}
+			for (const key of [
+				"details",
+				"detail",
+				"bodySnippet",
+				"responseBody",
+				"providerBody",
+			] as const) {
+				const candidate = value[key];
+				if (typeof candidate === "string" && candidate.trim()) {
+					fragments.push(candidate.trim());
 				}
 			}
-			return;
 		}
-		if (!isRecord(value)) return;
-		if (seen.has(value)) return;
-		seen.add(value);
+		return;
+	}
 
-		if (typeof value._tag === "string" && value._tag.trim()) {
-			fragments.push(value._tag.trim());
-		}
+	if (!isRecord(value)) return;
+	if (seen.has(value)) return;
+	seen.add(value);
 
-		if (isResponseLike(value)) {
-			const statusText =
-				typeof value.statusText === "string" ? value.statusText.trim() : "";
-			const url = typeof value.url === "string" ? value.url.trim() : "";
-			fragments.push(
-				`HTTP ${value.status}${statusText ? ` ${statusText}` : ""}${url ? ` (${url})` : ""}`,
-			);
-		}
+	if (typeof value._tag === "string" && value._tag.trim()) {
+		fragments.push(value._tag.trim());
+	}
 
-		for (const key of nestedKeys) {
-			if (key in value) {
-				collectErrorFragments(value[key], fragments, seen, depth + 1);
-			}
-		}
-
-		const message = value.message;
-		if (typeof message === "string" && message.trim()) {
-			fragments.push(message.trim());
-		}
-		for (const key of [
-			"details",
-			"detail",
-			"bodySnippet",
-			"responseBody",
-			"providerBody",
-		] as const) {
-			const candidate = value[key];
-			if (typeof candidate === "string" && candidate.trim()) {
-				fragments.push(candidate.trim());
-			}
-		}
-	};
-
-	const statusErrorSummary = (cause: unknown): string => {
-		const fragments: string[] = [];
-		collectErrorFragments(cause, fragments, new WeakSet<object>());
-		const summary = [...new Set(fragments.filter(Boolean))].join(" | ").trim();
-		if (summary) {
-			return summary.length > 2000 ? `${summary.slice(0, 2000)}...` : summary;
-		}
-		try {
-			return JSON.stringify(cause);
-		} catch {
-			return String(cause);
-		}
-	};
-
-	const writeLookupStatus = (
-		key: string,
-		status: Record<string, unknown>,
-	): Effect.Effect<void> =>
-		putJson({
-			key: toLookupStatusKey(key),
-			value: status,
-		}).pipe(Effect.catchAll(() => Effect.void));
-
-	const computeWithStatus = <A, E, R>(
-		key: string,
-		compute: Effect.Effect<A, E, R>,
-	): Effect.Effect<A, E, R> => {
-		const attemptAt = Date.now();
-		return compute.pipe(
-			Effect.tap(() =>
-				writeLookupStatus(key, {
-					lastAttemptAt: attemptAt,
-					lastSuccessAt: Date.now(),
-					lastFailureAt: null,
-					lastError: null,
-				}),
-			),
-			Effect.tapErrorCause((cause) =>
-				writeLookupStatus(key, {
-					lastAttemptAt: attemptAt,
-					lastFailureAt: Date.now(),
-					lastError: statusErrorSummary(cause),
-				}),
-			),
+	if (isResponseLike(value)) {
+		const statusText =
+			typeof value.statusText === "string" ? value.statusText.trim() : "";
+		const url = typeof value.url === "string" ? value.url.trim() : "";
+		fragments.push(
+			`HTTP ${value.status}${statusText ? ` ${statusText}` : ""}${url ? ` (${url})` : ""}`,
 		);
-	};
+	}
 
-	const putJson = <A>({
-		key,
-		value,
-		ttlSeconds,
-	}: JsonCacheOptions & { value: A }): Effect.Effect<void> =>
-		Effect.gen(function* () {
-			const scopedKey = toScopedKey(key);
-			const envelope: CacheEnvelope<typeof value> = {
-				__cacheEnvelope: CACHE_ENVELOPE_VERSION,
-				value,
-				refreshAfter:
-					typeof ttlSeconds === "number"
-						? Date.now() + ttlSeconds * 1000
-						: null,
-			};
-			writeToMemory(scopedKey, envelope, ttlSeconds);
-			if (!namespace || isKvWriteDisabled()) return;
-			yield* Effect.tryPromise({
-				try: () => namespace.put(scopedKey, JSON.stringify(envelope)),
-				catch: (error) => {
-					console.error("[kv] put failed", {
-						key: scopedKey,
-						error,
-					});
-					return new Error(String(error));
-				},
-			}).pipe(Effect.catchAll(() => Effect.void));
-		});
+	for (const key of nestedKeys) {
+		if (key in value) {
+			collectErrorFragments(value[key], fragments, seen, depth + 1);
+		}
+	}
 
-	const del = (key: string): Effect.Effect<void> =>
-		Effect.gen(function* () {
-			const scopedKey = toScopedKey(key);
-			deleteFromMemory(scopedKey);
-			if (!namespace || isKvWriteDisabled()) return;
-			yield* Effect.tryPromise({
-				try: () => namespace.delete(scopedKey),
-				catch: (error) => new Error(String(error)),
-			}).pipe(Effect.catchAll(() => Effect.void));
-		});
+	const message = value.message;
+	if (typeof message === "string" && message.trim()) {
+		fragments.push(message.trim());
+	}
 
-	const getOrComputeJson = <A, E, R>({
-		key,
-		ttlSeconds,
-		compute,
-	}: JsonGetOrComputeOptions<A, E, R>): Effect.Effect<A, E, R> =>
-		Effect.gen(function* () {
-			const scopedKey = toScopedKey(key);
-			let cached: CacheEnvelope<A> | null = null;
-			for (const readKey of getReadKeys(key)) {
-				cached = yield* readEnvelope<A>(readKey);
-				if (cached) break;
+	for (const key of [
+		"details",
+		"detail",
+		"bodySnippet",
+		"responseBody",
+		"providerBody",
+	] as const) {
+		const candidate = value[key];
+		if (typeof candidate === "string" && candidate.trim()) {
+			fragments.push(candidate.trim());
+		}
+	}
+};
+
+const statusErrorSummary = (cause: unknown): string => {
+	const fragments: string[] = [];
+	collectErrorFragments(cause, fragments, new WeakSet<object>());
+	const summary = [...new Set(fragments.filter(Boolean))].join(" | ").trim();
+	if (summary) {
+		return summary.length > 2000 ? `${summary.slice(0, 2000)}...` : summary;
+	}
+	try {
+		return JSON.stringify(cause);
+	} catch {
+		return String(cause);
+	}
+};
+
+const namespace = resolveKvNamespace();
+
+const readEnvelope = async <A>(
+	scopedKey: string,
+): Promise<CacheEnvelope<A> | null> => {
+	if (namespace) {
+		try {
+			const raw = await namespace.get(scopedKey, "text");
+			if (raw) {
+				const parsed = parseEnvelope<A>(raw);
+				if (parsed) return parsed;
 			}
-			if (!cached) {
-				const value = yield* computeWithStatus(key, compute);
-				yield* putJson({ key, value, ttlSeconds });
-				return value;
-			}
+		} catch {
+			// Ignore and continue to memory fallback.
+		}
+	}
 
-			const needsRefresh =
-				cached.refreshAfter !== null && cached.refreshAfter <= Date.now();
-			if (!needsRefresh) return cached.value;
-
-			const refreshed = yield* computeWithStatus(key, compute).pipe(
-				Effect.tap((value) => putJson({ key, value, ttlSeconds })),
-				Effect.catchAllCause((cause) =>
-					Effect.sync(() => {
-						console.error("[kv] refresh failed, serving stale cache", {
-							key: scopedKey,
-							cause,
-						});
-						return cached.value;
-					}),
-				),
-			);
-			return refreshed;
-		});
-
-	const refreshJson = <A, E, R>({
-		key,
-		ttlSeconds,
-		compute,
-	}: JsonRefreshOptions<A, E, R>): Effect.Effect<A, E, R> =>
-		Effect.gen(function* () {
-			const value = yield* computeWithStatus(key, compute);
-			yield* putJson({ key, value, ttlSeconds });
-			return value;
-		});
+	const memValue = getFromMemory<CacheEnvelope<A> | A>(scopedKey);
+	if (memValue === null) return null;
+	if (
+		typeof memValue === "object" &&
+		memValue !== null &&
+		"__cacheEnvelope" in memValue &&
+		"value" in memValue
+	) {
+		const record = memValue as CacheEnvelope<A>;
+		return {
+			__cacheEnvelope: CACHE_ENVELOPE_VERSION,
+			value: record.value,
+			refreshAfter:
+				typeof record.refreshAfter === "number" &&
+				Number.isFinite(record.refreshAfter)
+					? record.refreshAfter
+					: null,
+		};
+	}
 
 	return {
-		getJson,
-		putJson,
-		delete: del,
-		getOrComputeJson,
-		refreshJson,
-	} satisfies CloudflareKvStoreService;
-});
+		__cacheEnvelope: CACHE_ENVELOPE_VERSION,
+		value: memValue as A,
+		refreshAfter: null,
+	};
+};
 
-const withCloudflareKvStore = <A, E, R>(
-	effect: Effect.Effect<A, E, R | CloudflareKvStore>,
-): Effect.Effect<A, E, R> =>
-	effect.pipe(Effect.provide(CloudflareKvStoreLive)) as Effect.Effect<A, E, R>;
+const putJson = async <A>({
+	key,
+	value,
+	ttlSeconds,
+}: JsonCacheOptions & { value: A }): Promise<Result<void, never>> => {
+	const scopedKey = toScopedKey(key);
+	const envelope: CacheEnvelope<typeof value> = {
+		__cacheEnvelope: CACHE_ENVELOPE_VERSION,
+		value,
+		refreshAfter:
+			typeof ttlSeconds === "number" ? Date.now() + ttlSeconds * 1000 : null,
+	};
 
-const getOrComputeJson = <A, E, R>({
+	writeToMemory(scopedKey, envelope, ttlSeconds);
+
+	if (!namespace || isKvWriteDisabled()) {
+		return Result.ok();
+	}
+
+	try {
+		await namespace.put(scopedKey, JSON.stringify(envelope));
+	} catch (error) {
+		console.error("[kv] put failed", {
+			key: scopedKey,
+			error: toError(error),
+		});
+	}
+
+	return Result.ok();
+};
+
+const getJson = async <A>({
+	key,
+}: JsonCacheOptions): Promise<Result<A | null, never>> => {
+	for (const readKey of getReadKeys(key)) {
+		const envelope = await readEnvelope<A>(readKey);
+		if (envelope) return Result.ok(envelope.value);
+	}
+	return Result.ok(null);
+};
+
+const writeLookupStatus = async (
+	key: string,
+	status: Record<string, unknown>,
+): Promise<void> => {
+	await putJson({
+		key: toLookupStatusKey(key),
+		value: status,
+	});
+};
+
+const computeWithStatus = async <A, E>(
+	key: string,
+	compute: () => Promise<Result<A, E>>,
+): Promise<Result<A, E>> => {
+	const attemptAt = Date.now();
+	const result = await compute();
+
+	if (Result.isOk(result)) {
+		await writeLookupStatus(key, {
+			lastAttemptAt: attemptAt,
+			lastSuccessAt: Date.now(),
+			lastFailureAt: null,
+			lastError: null,
+		});
+		return result;
+	}
+
+	await writeLookupStatus(key, {
+		lastAttemptAt: attemptAt,
+		lastFailureAt: Date.now(),
+		lastError: statusErrorSummary(result.error),
+	});
+
+	return result;
+};
+
+const getOrComputeJson = async <A, E>({
 	key,
 	ttlSeconds,
 	compute,
-}: JsonGetOrComputeOptions<A, E, R>): Effect.Effect<A, E, R> =>
-	Effect.gen(function* () {
-		const store = yield* CloudflareKvStore;
-		return yield* store.getOrComputeJson({ key, ttlSeconds, compute });
-	}).pipe(Effect.provide(CloudflareKvStoreLive));
+}: JsonGetOrComputeOptions<A, E>): Promise<Result<A, E>> => {
+	const scopedKey = toScopedKey(key);
+	let cached: CacheEnvelope<A> | null = null;
 
-const getJson = <A>({
-	key,
-	ttlSeconds,
-}: JsonCacheOptions): Effect.Effect<A | null> =>
-	Effect.gen(function* () {
-		void ttlSeconds;
-		const store = yield* CloudflareKvStore;
-		return yield* store.getJson<A>({ key });
-	}).pipe(Effect.provide(CloudflareKvStoreLive));
+	for (const readKey of getReadKeys(key)) {
+		cached = await readEnvelope<A>(readKey);
+		if (cached) break;
+	}
 
-const refreshJson = <A, E, R>({
+	if (!cached) {
+		const valueResult = await computeWithStatus(key, compute);
+		if (Result.isError(valueResult)) return valueResult;
+
+		await putJson({
+			key,
+			value: valueResult.value,
+			ttlSeconds,
+		});
+		return valueResult;
+	}
+
+	const needsRefresh =
+		cached.refreshAfter !== null && cached.refreshAfter <= Date.now();
+	if (!needsRefresh) return Result.ok(cached.value);
+
+	const refreshedResult = await computeWithStatus(key, compute);
+	if (Result.isError(refreshedResult)) {
+		console.error("[kv] refresh failed, serving stale cache", {
+			key: scopedKey,
+			error: refreshedResult.error,
+		});
+		return Result.ok(cached.value);
+	}
+
+	await putJson({
+		key,
+		value: refreshedResult.value,
+		ttlSeconds,
+	});
+
+	return refreshedResult;
+};
+
+const refreshJson = async <A, E>({
 	key,
 	ttlSeconds,
 	compute,
-}: JsonRefreshOptions<A, E, R>): Effect.Effect<A, E, R> =>
-	Effect.gen(function* () {
-		const store = yield* CloudflareKvStore;
-		return yield* store.refreshJson({ key, ttlSeconds, compute });
-	}).pipe(Effect.provide(CloudflareKvStoreLive));
+}: JsonRefreshOptions<A, E>): Promise<Result<A, E>> => {
+	const valueResult = await computeWithStatus(key, compute);
+	if (Result.isError(valueResult)) return valueResult;
+
+	await putJson({ key, value: valueResult.value, ttlSeconds });
+	return valueResult;
+};
+
+const withCloudflareKvStore = async <A, E>(
+	effect: () => Promise<Result<A, E>>,
+): Promise<Result<A, E>> => effect();
 
 export { getJson, getOrComputeJson, refreshJson, withCloudflareKvStore };

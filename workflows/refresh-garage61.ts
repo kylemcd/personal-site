@@ -1,5 +1,5 @@
 import { WorkflowEntrypoint } from "cloudflare:workers";
-import { Effect } from "effect";
+import { Result } from "better-result";
 
 import { garage61 } from "@/lib/garage61";
 import {
@@ -27,7 +27,8 @@ type StepResult =
 
 const applyRuntimeEnv = (env: RefreshGarage61WorkflowEnv) => {
 	applyBaseRuntimeEnv(env);
-	process.env.GARAGE61_API_KEY = env.GARAGE61_API_KEY ?? process.env.GARAGE61_API_KEY;
+	process.env.GARAGE61_API_KEY =
+		env.GARAGE61_API_KEY ?? process.env.GARAGE61_API_KEY;
 };
 
 export class RefreshGarage61Workflow extends WorkflowEntrypoint<
@@ -53,29 +54,26 @@ export class RefreshGarage61Workflow extends WorkflowEntrypoint<
 				} satisfies StepResult;
 			}
 
-			return await Effect.runPromise(
-				garage61.refreshSummary().pipe(
-					Effect.map((summary) => ({
-						status: "success" as const,
-						details: {
-							cacheKey: "garage61:summary:v6",
-							sessionCount: summary.derived.sessionCount,
-							trackCount: summary.derived.trackCount,
-							recentTracks: summary.derived.overview.recentTracks.length,
-							recentCars: summary.derived.overview.recentCars.length,
-						},
-						payload: summary,
-					})),
-					Effect.catchAllCause((cause) =>
-						Effect.sync(() => {
-							throwWorkflowError(
-								`[refresh] garage61 failed: ${toErrorSummary(cause)}`,
-								cause,
-							);
-						}),
-					),
-				),
-			);
+			const summaryResult = await garage61.refreshSummary();
+			if (Result.isError(summaryResult)) {
+				return throwWorkflowError(
+					`[refresh] garage61 failed: ${toErrorSummary(summaryResult.error)}`,
+					summaryResult.error,
+				);
+			}
+			const summary = summaryResult.value;
+
+			return {
+				status: "success" as const,
+				details: {
+					cacheKey: "garage61:summary:v6",
+					sessionCount: summary.derived.sessionCount,
+					trackCount: summary.derived.trackCount,
+					recentTracks: summary.derived.overview.recentTracks.length,
+					recentCars: summary.derived.overview.recentCars.length,
+				},
+				payload: summary,
+			};
 		});
 	}
 }

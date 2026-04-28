@@ -74,5 +74,5 @@
 }
 
 .horizontal-scroll-container-items > *:last-child {
-	margin-right: var(--spc-12) !important;
+	margin-right: var(--spc-12);
 }

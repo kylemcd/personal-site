@@ -28,7 +28,7 @@ export const nodes = {
 			const slugifiedId = slugify(textContent.toString(), { lower: true });
 
 			return new Tag(
-				"h" + level,
+				`h${level}`,
 				{ id: slugifiedId, "data-heading-level": level },
 				textContent,
 			);

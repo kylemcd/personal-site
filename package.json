@@ -28,7 +28,7 @@
     "@tanstack/router-plugin": "^1.167.18",
     "@types/js-yaml": "^4.0.9",
     "@types/prismjs": "^1.26.6",
-    "effect": "^3.21.0",
+    "better-result": "^2.9.0",
     "fast-xml-parser": "^5.7.0",
     "js-yaml": "^4.1.1",
     "lucide-react": "^1.8.0",
@@ -38,7 +38,8 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "satori": "^0.26.0",
-    "slugify": "^1.6.9"
+    "slugify": "^1.6.9",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.11",

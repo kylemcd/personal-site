@@ -57,7 +57,7 @@
 	aspect-ratio: 1 / 1;
 }
 
-.album-image {
+.album .album-image {
 	width: 175px;
 	height: 175px;
 	object-fit: cover;

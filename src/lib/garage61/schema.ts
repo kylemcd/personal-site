@@ -1,13 +1,15 @@
-import { Schema } from "effect";
+import { z } from "zod";
 
 type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | { [key: string]: JsonValue } | JsonValue[];
 
-export const Garage61MeSchema = Schema.Struct({
-	id: Schema.Number,
-	name: Schema.String,
-	image: Schema.optional(Schema.String),
-}).annotations({ exact: false });
+export const Garage61MeSchema = z.object({
+	id: z.number(),
+	name: z.string(),
+	image: z.string().optional(),
+});
+
+export type Garage61Me = z.infer<typeof Garage61MeSchema>;
 
 export type Garage61Summary = {
 	profile: {

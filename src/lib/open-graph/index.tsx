@@ -1,6 +1,6 @@
+import { readFileSync, writeFileSync } from "node:fs";
 import { Resvg } from "@resvg/resvg-js";
-import { Effect, Exit } from "effect";
-import { readFileSync, writeFileSync } from "fs";
+import { Result } from "better-result";
 import satori from "satori";
 
 import { markdown } from "@/lib/markdown";
@@ -151,12 +151,10 @@ const constructImage = async ({
 };
 
 async function generateImage() {
-	const response = Effect.runSyncExit(markdown.all({ includeFuture: true }));
-
-	if (Exit.isFailure(response)) {
-		throw response;
+	const response = markdown.all({ includeFuture: true });
+	if (Result.isError(response)) {
+		throw response.error;
 	}
-
 	const posts = response.value;
 
 	await Promise.all(

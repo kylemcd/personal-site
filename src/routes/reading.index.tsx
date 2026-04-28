@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { Effect } from "effect";
+import { Result } from "better-result";
 
 import { Bookshelf } from "@/components/Bookshelf";
 import { ErrorComponent } from "@/components/ErrorComponent";
@@ -9,15 +9,10 @@ import { goodreads } from "@/lib/goodreads";
 import "@/styles/routes/home.css";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
-	const books = await Effect.runPromise(
-		goodreads
-			.shelf()
-			.pipe(
-				Effect.catchAll(() =>
-					Effect.succeed({ reading: [], finished: [], next: [] }),
-				),
-			),
-	);
+	const booksResult = await goodreads.shelf();
+	const books = Result.isOk(booksResult)
+		? booksResult.value
+		: { reading: [], finished: [], next: [] };
 
 	return { books };
 });

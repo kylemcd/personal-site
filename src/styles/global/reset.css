@@ -327,7 +327,7 @@ input:where([type="button"], [type="reset"], [type="submit"]),
 */
 
 [hidden]:where(:not([hidden="until-found"])) {
-	display: none !important;
+	display: none;
 }
 
 /*

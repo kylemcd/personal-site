@@ -48,7 +48,11 @@ function Navigation() {
 
 	const onThemeChange = (theme: "light" | "dark") => {
 		document.documentElement.setAttribute("data-appearance", theme);
-		document.cookie = `theme=${theme}; path=/`;
+		void window.cookieStore?.set({
+			name: "theme",
+			value: theme,
+			path: "/",
+		});
 	};
 
 	const closeMenu = () => setOpen(false);
@@ -169,7 +173,6 @@ function Navigation() {
 											aria-label={link.label}
 											target={link.external ? "_blank" : undefined}
 											rel={link.external ? "noopener noreferrer" : undefined}
-											type={link.type}
 										>
 											<i className={link.iconClassName} aria-hidden="true" />
 											<span className="navigation-sr-only">{link.label}</span>

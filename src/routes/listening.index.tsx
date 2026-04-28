@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { Effect } from "effect";
+import { Result } from "better-result";
 
 import { AlbumShelf, Equalizer, NowPlaying } from "@/components/AlbumShelf";
 import { ErrorComponent } from "@/components/ErrorComponent";
@@ -11,11 +11,10 @@ import "@/styles/routes/home.css";
 import "@/styles/routes/listening.css";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
-	const listening = await Effect.runPromise(
-		lastfm.recentActivity().pipe(Effect.catchAll(() => Effect.succeed(null))),
-	);
-
-	return { listening };
+	const listeningResult = await lastfm.recentActivity();
+	return {
+		listening: Result.isOk(listeningResult) ? listeningResult.value : null,
+	};
 });
 
 export const Route = createFileRoute("/listening/")({

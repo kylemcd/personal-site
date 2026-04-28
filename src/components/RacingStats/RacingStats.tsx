@@ -1,12 +1,12 @@
 import { Text } from "@/components/Text";
-import type { IRacingCar, RaceSchema } from "@/lib/iracing/schema";
+import type { IRacingCarType, Race } from "@/lib/iracing/schema";
 
 import "./RacingStats.styles.css";
 
 type RacingStatsProps = {
 	races: ReadonlyArray<
-		typeof RaceSchema.Type & {
-			car: typeof IRacingCar.Type;
+		Race & {
+			car: IRacingCarType;
 		}
 	>;
 };

@@ -1,13 +1,15 @@
-import { Data, Effect, pipe } from "effect";
+import { Result, TaggedError } from "better-result";
 
 import { fetchFresh } from "@/lib/fetch";
 
 import { booksQuery } from "./gql";
-import { BooksResponseSchema } from "./schema";
+import { type Book, BooksResponseSchema } from "./schema";
 
 const LITERAL_PROFILE_ID = "clqazgb086327830htsy14mo9ld";
 
-class FetchBooksError extends Data.TaggedError("FetchBooksError")<Error> {
+class FetchBooksError extends TaggedError("FetchBooksError")<{
+	readonly error: unknown;
+}>() {
 	message = "Failed to fetch books";
 }
 
@@ -16,8 +18,11 @@ type FetchBooksArgs = {
 	limit: number;
 };
 
-const getBooks = ({ readingStatus, limit }: FetchBooksArgs) => {
-	return fetchFresh({
+const getBooks = async ({
+	readingStatus,
+	limit,
+}: FetchBooksArgs): Promise<Result<ReadonlyArray<Book>, FetchBooksError>> => {
+	const response = await fetchFresh({
 		url: "https://api.literal.club/graphql/",
 		method: "POST",
 		headers: {
@@ -33,32 +38,38 @@ const getBooks = ({ readingStatus, limit }: FetchBooksArgs) => {
 			},
 		}),
 		schema: BooksResponseSchema,
-	}).pipe(
-		Effect.mapError((e) => new FetchBooksError(e as Error)),
-		Effect.flatMap(({ data }) =>
-			Effect.succeed(data.data.booksByReadingStateAndProfile),
-		),
-	);
+	});
+
+	if (Result.isError(response)) {
+		return Result.err(new FetchBooksError({ error: response.error }));
+	}
+
+	return Result.ok(response.value.data.data.booksByReadingStateAndProfile);
 };
 
-const shelf = () =>
-	pipe(
-		getBooks({ readingStatus: "IS_READING", limit: 10 }),
-		Effect.flatMap((reading) =>
-			getBooks({ readingStatus: "FINISHED", limit: 20 }).pipe(
-				Effect.map((finished) => {
-					return { reading, finished };
-				}),
-			),
-		),
-		Effect.flatMap((books) =>
-			getBooks({ readingStatus: "WANTS_TO_READ", limit: 10 }).pipe(
-				Effect.map((next) => {
-					return { ...books, next };
-				}),
-			),
-		),
-	);
+const shelf = async (): Promise<
+	Result<
+		{
+			reading: ReadonlyArray<Book>;
+			finished: ReadonlyArray<Book>;
+			next: ReadonlyArray<Book>;
+		},
+		FetchBooksError
+	>
+> =>
+	Result.gen(async function* () {
+		const reading = yield* Result.await(
+			getBooks({ readingStatus: "IS_READING", limit: 10 }),
+		);
+		const finished = yield* Result.await(
+			getBooks({ readingStatus: "FINISHED", limit: 20 }),
+		);
+		const next = yield* Result.await(
+			getBooks({ readingStatus: "WANTS_TO_READ", limit: 10 }),
+		);
+
+		return Result.ok({ reading, finished, next });
+	});
 
 const books = {
 	shelf,

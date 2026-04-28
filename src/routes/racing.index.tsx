@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { Effect } from "effect";
+import { Result } from "better-result";
 
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { Garage61 } from "@/components/Garage61";
@@ -8,18 +8,12 @@ import { garage61 } from "@/lib/garage61";
 import "@/styles/routes/home.css";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
-	const racing = await Effect.runPromise(
-		garage61.summary().pipe(
-			Effect.tapErrorCause((cause) =>
-				Effect.sync(() => {
-					console.error("Garage61 summary failed:", cause);
-				}),
-			),
-			Effect.catchAllCause(() => Effect.succeed(null)),
-		),
-	);
-
-	return { racing };
+	const racingResult = await garage61.summary();
+	if (Result.isError(racingResult)) {
+		console.error("Garage61 summary failed:", racingResult.error);
+		return { racing: null };
+	}
+	return { racing: racingResult.value };
 });
 
 export const Route = createFileRoute("/racing/")({

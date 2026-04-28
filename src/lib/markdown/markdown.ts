@@ -1,10 +1,11 @@
 // import nodeFs from "node:fs";
 // import nodePath from "node:path";
 import markdocPkg from "@markdoc/markdoc";
-import { Data, Effect, pipe } from "effect";
+import { Result, TaggedError } from "better-result";
 import yaml from "js-yaml";
 
 import { toComparableTimestampInCentral } from "@/lib/dates";
+import { combineResults } from "@/lib/result";
 import { nodes } from "./nodes";
 
 const POSTS = import.meta.glob(`../../../posts/*.md`, {
@@ -16,52 +17,59 @@ const POSTS = import.meta.glob(`../../../posts/*.md`, {
 // We need to import like this to avoid weird server / client boundary cjs issues.
 const { transform, parse, renderers } = markdocPkg;
 
-class InvalidMarkdownError extends Data.TaggedError(
+type MarkdownErrorDetails = {
+	readonly cause?: unknown;
+	readonly details?: string;
+};
+
+const toErrorDetails = (error: unknown): string => {
+	if (error instanceof Error && error.message.trim())
+		return error.message.trim();
+	if (typeof error === "string" && error.trim()) return error.trim();
+	try {
+		return JSON.stringify(error);
+	} catch {
+		return String(error);
+	}
+};
+
+class InvalidMarkdownError extends TaggedError(
 	"InvalidMarkdownError",
-)<{}> {
+)<MarkdownErrorDetails>() {
 	message = "Invalid markdown content provided.";
 }
 
-class ParseMarkdownError extends Data.TaggedError("ParseMarkdownError")<{}> {
+class ParseMarkdownError extends TaggedError(
+	"ParseMarkdownError",
+)<MarkdownErrorDetails>() {
 	message = "Unable to parse the provided markdown content.";
 }
 
-type toHtmlParams = {
+type ToHtmlParams = {
 	rawMarkdown: string;
 };
 
 const toHtml = ({
 	rawMarkdown,
-}: toHtmlParams): Effect.Effect<
-	string,
-	InvalidMarkdownError | ParseMarkdownError
-> => {
-	return pipe(
-		Effect.succeed(rawMarkdown),
-		Effect.filterOrFail(
-			(rawMarkdown): rawMarkdown is string =>
-				typeof rawMarkdown === "string" && rawMarkdown.trim() !== "",
-			() => new InvalidMarkdownError(),
-		),
-		Effect.flatMap((md) =>
-			Effect.try<string, ParseMarkdownError>({
-				try: () => {
-					const parsed = parse(md);
-					const transformed = transform(parsed, {
-						nodes,
-					});
-					const html = renderers.html(transformed);
-					return html;
-				},
-				catch: () => new ParseMarkdownError(),
-			}),
-		),
-	);
+}: ToHtmlParams): Result<string, InvalidMarkdownError | ParseMarkdownError> => {
+	if (typeof rawMarkdown !== "string" || rawMarkdown.trim() === "") {
+		return Result.err(new InvalidMarkdownError({}));
+	}
+
+	try {
+		const parsed = parse(rawMarkdown);
+		const transformed = transform(parsed, { nodes });
+		return Result.ok(renderers.html(transformed));
+	} catch (error) {
+		return Result.err(
+			new ParseMarkdownError({ cause: error, details: toErrorDetails(error) }),
+		);
+	}
 };
 
-class InvalidFrontmatterError extends Data.TaggedError(
+class InvalidFrontmatterError extends TaggedError(
 	"InvalidFrontmatterError",
-)<{}> {
+)<MarkdownErrorDetails>() {
 	message = "Invalid frontmatter provided.";
 }
 
@@ -71,46 +79,44 @@ type FrontmatterParams = {
 	rawMarkdown: string;
 };
 
-const toFrontmatter = <F extends Frontmatter = {}>({
+const toFrontmatter = <F extends Frontmatter = Frontmatter>({
 	rawMarkdown,
-}: FrontmatterParams): Effect.Effect<
+}: FrontmatterParams): Result<
 	F,
 	InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
-	return pipe(
-		Effect.succeed(rawMarkdown),
-		Effect.filterOrFail(
-			(rawMarkdown): rawMarkdown is string =>
-				typeof rawMarkdown === "string" && rawMarkdown.trim() !== "",
-			() => new InvalidMarkdownError(),
-		),
-		Effect.flatMap((validatedMarkdown) =>
-			Effect.try<F, ParseMarkdownError>({
-				try: () => {
-					const parsedMarkdown = parse(validatedMarkdown);
-					const rawFrontMatter = parsedMarkdown.attributes?.frontmatter;
-					const loadedFrontmatter = yaml.load(rawFrontMatter);
-					const frontMatter =
-						loadedFrontmatter &&
-						typeof loadedFrontmatter === "object" &&
-						!Array.isArray(loadedFrontmatter)
-							? Object.fromEntries(
-									Object.entries(loadedFrontmatter).map(([key, value]) => [
-										key,
-										value instanceof Date ? value.toISOString() : value,
-									]),
-								)
-							: loadedFrontmatter;
-					return frontMatter as F;
-				},
-				catch: () => new ParseMarkdownError(),
-			}),
-		),
-		Effect.filterOrFail(
-			(frontmatterData): frontmatterData is F => frontmatterData !== undefined,
-			() => new InvalidFrontmatterError(),
-		),
-	);
+	if (typeof rawMarkdown !== "string" || rawMarkdown.trim() === "") {
+		return Result.err(new InvalidMarkdownError({}));
+	}
+
+	let parsedFrontmatter: F;
+	try {
+		const parsedMarkdown = parse(rawMarkdown);
+		const rawFrontMatter = parsedMarkdown.attributes?.frontmatter;
+		const loadedFrontmatter = yaml.load(rawFrontMatter);
+		const frontMatter =
+			loadedFrontmatter &&
+			typeof loadedFrontmatter === "object" &&
+			!Array.isArray(loadedFrontmatter)
+				? Object.fromEntries(
+						Object.entries(loadedFrontmatter).map(([key, value]) => [
+							key,
+							value instanceof Date ? value.toISOString() : value,
+						]),
+					)
+				: loadedFrontmatter;
+		parsedFrontmatter = frontMatter as F;
+	} catch (error) {
+		return Result.err(
+			new ParseMarkdownError({ cause: error, details: toErrorDetails(error) }),
+		);
+	}
+
+	if (parsedFrontmatter === undefined) {
+		return Result.err(new InvalidFrontmatterError({}));
+	}
+
+	return Result.ok(parsedFrontmatter);
 };
 
 export type TableOfContentsItem = {
@@ -124,7 +130,7 @@ const toTableOfContents = (html: string): Array<TableOfContentsItem> => {
 	// Use regex to find all headings and their IDs
 	const headingRegex = /<h([1-6])[^>]*?id="([^"]*?)"[^>]*?>([^<]*?)<\/h[1-6]>/g;
 	const headings = Array.from(html.matchAll(headingRegex)).map((match) => ({
-		level: parseInt(match[1]),
+		level: Number.parseInt(match[1], 10),
 		id: match[2],
 		text: match[3].trim(),
 	}));
@@ -164,26 +170,25 @@ type ReadingTimeParams = {
 
 const toReadingTime = ({
 	rawMarkdown,
-}: ReadingTimeParams): Effect.Effect<
+}: ReadingTimeParams): Result<
 	number,
 	InvalidMarkdownError | ParseMarkdownError
 > => {
-	return pipe(
-		Effect.succeed(rawMarkdown),
-		Effect.map((rawMarkdown) => {
-			const words = rawMarkdown.split(" ").length;
-			return Math.ceil(words / 200);
-		}),
-	);
+	if (typeof rawMarkdown !== "string" || rawMarkdown.trim() === "") {
+		return Result.err(new InvalidMarkdownError({}));
+	}
+
+	const words = rawMarkdown.split(" ").length;
+	return Result.ok(Math.ceil(words / 200));
 };
 
 type FromPathParams = {
 	path: string;
 };
 
-const fromPath = <F extends Frontmatter = {}>({
+const fromPath = <F extends Frontmatter = Frontmatter>({
 	path,
-}: FromPathParams): Effect.Effect<
+}: FromPathParams): Result<
 	{
 		frontmatter: F;
 		content: string;
@@ -192,40 +197,40 @@ const fromPath = <F extends Frontmatter = {}>({
 	},
 	InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
-	return pipe(
-		Effect.try({
-			try: () => {
-				// const __dirname = nodePath.resolve();
-				// const filePath = nodePath.join(__dirname, path);
-				// const fileContent = nodeFs.readFileSync(filePath, "utf8");
-				const filePath = `${"../../."}${path}`;
-				const raw = POSTS[filePath];
-				if (!raw) throw new Error("File not found");
+	const rawMarkdownResult = Result.try<string, InvalidMarkdownError>({
+		try: () => {
+			// const __dirname = nodePath.resolve();
+			// const filePath = nodePath.join(__dirname, path);
+			// const fileContent = nodeFs.readFileSync(filePath, "utf8");
+			const filePath = `${"../../."}${path}`;
+			const raw = POSTS[filePath];
+			if (!raw) throw new Error("File not found");
+			return raw;
+		},
+		catch: (error) =>
+			new InvalidMarkdownError({
+				cause: error,
+				details: toErrorDetails(error),
+			}),
+	});
+	if (Result.isError(rawMarkdownResult)) return rawMarkdownResult;
 
-				return raw;
-			},
-			catch: (error) => {
-				console.error(error);
-				return new InvalidMarkdownError();
-			},
-			// catch: () => new InvalidMarkdownError(),
-		}),
-		Effect.flatMap((rawMarkdown) =>
-			pipe(
-				Effect.all({
-					frontmatter: toFrontmatter<F>({ rawMarkdown }),
-					content: toHtml({ rawMarkdown }),
-					readingTime: toReadingTime({ rawMarkdown }),
-				}),
-				Effect.map(({ frontmatter, content, readingTime }) => ({
-					frontmatter,
-					content,
-					tableOfContents: toTableOfContents(content),
-					readingTime,
-				})),
-			),
-		),
-	);
+	const rawMarkdown = rawMarkdownResult.value;
+	const frontmatterResult = toFrontmatter<F>({ rawMarkdown });
+	if (Result.isError(frontmatterResult)) return frontmatterResult;
+
+	const contentResult = toHtml({ rawMarkdown });
+	if (Result.isError(contentResult)) return contentResult;
+
+	const readingTimeResult = toReadingTime({ rawMarkdown });
+	if (Result.isError(readingTimeResult)) return readingTimeResult;
+
+	return Result.ok({
+		frontmatter: frontmatterResult.value,
+		content: contentResult.value,
+		tableOfContents: toTableOfContents(contentResult.value),
+		readingTime: readingTimeResult.value,
+	});
 };
 
 type AllParams = {
@@ -234,63 +239,61 @@ type AllParams = {
 
 const all = ({
 	includeFuture = false,
-}: AllParams = {}): Effect.Effect<
+}: AllParams = {}): Result<
 	{ title: string; slug: string; date: string; "substack-link"?: string }[],
 	InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
-	return pipe(
-		// Read the list of markdown files under ./posts
-		Effect.try<string[], InvalidMarkdownError>({
-			try: () => {
-				return Object.keys(POSTS).map((p) =>
-					p.replace("../../../posts/", "").replace(/\.md$/, ""),
-				);
-			},
-			catch: () => new InvalidMarkdownError(),
-		}),
-		// For each markdown file, load its frontmatter and pick the required fields
-		Effect.flatMap((slugs) =>
-			pipe(
-				slugs.map((slug) =>
-					pipe(
-						fromPath<{
-							title: string;
-							date: string;
-							draft: string;
-							"substack-link"?: string;
-						}>({
-							path: `./posts/${slug}.md`,
-						}),
-						Effect.map(({ frontmatter }) => ({
-							title: frontmatter.title,
-							slug,
-							date: frontmatter.date,
-							draft: frontmatter.draft || "false",
-							"substack-link": frontmatter["substack-link"],
-						})),
-					),
-				),
-				Effect.all,
-				// Sort by date descending
-				Effect.map((posts) => {
-					const now = Date.now();
-					return posts
-						.filter((p) => String(p.draft) !== "true")
-						.filter((p) => {
-							if (includeFuture) return true;
-							const timestamp = toComparableTimestampInCentral(p.date);
-							return Number.isNaN(timestamp) || timestamp <= now;
-						})
-						.sort(
-							(a, b) =>
-								toComparableTimestampInCentral(b.date) -
-								toComparableTimestampInCentral(a.date),
-						)
-						.map(({ title, slug, date }) => ({ title, slug, date }));
-				}),
+	const slugsResult = Result.try<string[], InvalidMarkdownError>({
+		try: () =>
+			Object.keys(POSTS).map((p) =>
+				p.replace("../../../posts/", "").replace(/\.md$/, ""),
 			),
-		),
+		catch: (error) =>
+			new InvalidMarkdownError({
+				cause: error,
+				details: toErrorDetails(error),
+			}),
+	});
+	if (Result.isError(slugsResult)) return slugsResult;
+
+	const postsResult = combineResults(
+		slugsResult.value.map((slug) => {
+			const postResult = fromPath<{
+				title: string;
+				date: string;
+				draft: string;
+				"substack-link"?: string;
+			}>({
+				path: `./posts/${slug}.md`,
+			});
+
+			return postResult.map(({ frontmatter }) => ({
+				title: frontmatter.title,
+				slug,
+				date: frontmatter.date,
+				draft: frontmatter.draft || "false",
+				"substack-link": frontmatter["substack-link"],
+			}));
+		}),
 	);
+	if (Result.isError(postsResult)) return postsResult;
+
+	const now = Date.now();
+	const posts = postsResult.value
+		.filter((p) => String(p.draft) !== "true")
+		.filter((p) => {
+			if (includeFuture) return true;
+			const timestamp = toComparableTimestampInCentral(p.date);
+			return Number.isNaN(timestamp) || timestamp <= now;
+		})
+		.sort(
+			(a, b) =>
+				toComparableTimestampInCentral(b.date) -
+				toComparableTimestampInCentral(a.date),
+		)
+		.map(({ title, slug, date }) => ({ title, slug, date }));
+
+	return Result.ok(posts);
 };
 
 const markdown = {

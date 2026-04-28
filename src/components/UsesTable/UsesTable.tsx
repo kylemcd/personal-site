@@ -268,7 +268,7 @@ function UsesTable({ items }: UsesTableProps) {
 									}
 									onClick={
 										item.link && item.link !== "—"
-											? () => openUseLink(item.link)
+											? () => openUseLink(item.link as string)
 											: undefined
 									}
 									onKeyDown={
@@ -282,7 +282,7 @@ function UsesTable({ items }: UsesTableProps) {
 													}
 
 													event.preventDefault();
-													openUseLink(item.link);
+													openUseLink(item.link as string);
 												}
 											: undefined
 									}

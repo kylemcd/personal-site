@@ -85,7 +85,7 @@
 	min-height: 100%;
 }
 
-.text-cover {
+.bookshelf .book .text-cover {
 	background-color: var(--color-bg-2);
 	min-height: 226px;
 	padding-left: var(--spc-1);

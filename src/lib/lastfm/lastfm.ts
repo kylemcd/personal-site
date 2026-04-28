@@ -1,5 +1,6 @@
-import { Data, Effect, pipe } from "effect";
+import { Result, TaggedError } from "better-result";
 
+import { env } from "@/lib/env";
 import { fetchFresh } from "@/lib/fetch";
 import { enrichWrappedWithSpotifyArtistImages } from "@/lib/spotify";
 import { getOrComputeJson } from "@/lib/store";
@@ -9,18 +10,19 @@ import {
 	type ListeningData,
 	type NowPlayingAlbum,
 	RecentTracksResponseSchema,
+	type TopAlbumsResponse,
 	TopAlbumsResponseSchema,
+	type TopArtistsResponse,
 	TopArtistsResponseSchema,
+	type TopTracksResponse,
 	TopTracksResponseSchema,
-	type TrackSchema,
+	type Track,
 	type WrappedData,
 } from "./schema";
 
-class LastFmRecentAlbumsError extends Data.TaggedError(
-	"LastFmRecentAlbumsError",
-)<{
+class LastFmRecentAlbumsError extends TaggedError("LastFmRecentAlbumsError")<{
 	readonly error: unknown;
-}> {
+}>() {
 	message = "Failed to fetch recent albums from Last.fm";
 }
 
@@ -54,7 +56,7 @@ const getPrimaryImage = (
 	return extralarge?.["#text"] ?? images[images.length - 1]?.["#text"] ?? "";
 };
 
-const getAlbumImage = (images: (typeof TrackSchema.Type)["image"]) => {
+const getAlbumImage = (images: Track["image"]) => {
 	return getPrimaryImage(images);
 };
 
@@ -72,10 +74,7 @@ const getArtistUrl = (artist: string) => {
 	return `https://www.last.fm/music/${encode(artist)}`;
 };
 
-const trackToAlbum = (
-	track: typeof TrackSchema.Type,
-	requireMbid = true,
-): Album | null => {
+const trackToAlbum = (track: Track, requireMbid = true): Album | null => {
 	if (requireMbid && !track.album.mbid) return null;
 
 	const primaryArtist = getPrimaryArtist(track.artist["#text"]);
@@ -94,9 +93,7 @@ const trackToAlbum = (
 	};
 };
 
-const trackToNowPlayingAlbum = (
-	track: typeof TrackSchema.Type,
-): NowPlayingAlbum | null => {
+const trackToNowPlayingAlbum = (track: Track): NowPlayingAlbum | null => {
 	const album = trackToAlbum(track, false);
 	if (!album) return null;
 
@@ -110,7 +107,7 @@ const trackToNowPlayingAlbum = (
 /**
  * Checks if a track was played within the threshold (5 minutes).
  */
-const isRecentlyPlayed = (track: typeof TrackSchema.Type): boolean => {
+const isRecentlyPlayed = (track: Track): boolean => {
 	if (!track.date?.uts) return false;
 
 	const playedAt = Number.parseInt(track.date.uts, 10) * 1000;
@@ -126,7 +123,7 @@ const isRecentlyPlayed = (track: typeof TrackSchema.Type): boolean => {
  * Returns null if nothing is playing or recently played.
  */
 const extractNowPlaying = (
-	tracks: ReadonlyArray<typeof TrackSchema.Type>,
+	tracks: ReadonlyArray<Track>,
 ): NowPlayingAlbum | null => {
 	// First, check for a track tagged as now playing
 	const nowPlayingTrack = tracks.find(
@@ -189,7 +186,7 @@ const getTrackKey = (trackName: string, artistName: string): string => {
 };
 
 const buildRecentTrackArtMap = (
-	tracks: ReadonlyArray<typeof TrackSchema.Type>,
+	tracks: ReadonlyArray<Track>,
 ): Map<string, string> => {
 	const artByTrack = new Map<string, string>();
 	for (const track of tracks) {
@@ -210,7 +207,7 @@ const buildRecentTrackArtMap = (
  * Maintains order (newest first).
  */
 const extractUniqueAlbums = (
-	tracks: ReadonlyArray<typeof TrackSchema.Type>,
+	tracks: ReadonlyArray<Track>,
 	nowPlayingKey: string | null,
 ): Album[] => {
 	const seen = new Set<string>();
@@ -261,7 +258,7 @@ const extractUniqueAlbums = (
  * Extracts listening data from recent tracks.
  */
 const extractListeningData = (
-	tracks: ReadonlyArray<typeof TrackSchema.Type>,
+	tracks: ReadonlyArray<Track>,
 	wrapped: WrappedData | null,
 ): ListeningData => {
 	const nowPlaying = extractNowPlaying(tracks);
@@ -294,9 +291,7 @@ const formatDuration = (totalSeconds: number): string => {
 };
 
 const getAverageTrackSeconds = (
-	topTracks: ReadonlyArray<
-		(typeof TopTracksResponseSchema.Type.toptracks.track)[number]
-	>,
+	topTracks: ReadonlyArray<TopTracksResponse["toptracks"]["track"][number]>,
 ): number => {
 	const totals = topTracks.reduce(
 		(acc, track) => {
@@ -321,7 +316,7 @@ const getAverageTrackSeconds = (
 };
 
 const getMonthlySessionStats = (params: {
-	recentTracks: ReadonlyArray<typeof TrackSchema.Type>;
+	recentTracks: ReadonlyArray<Track>;
 	nowMs: number;
 	averageTrackSeconds: number;
 }): { averageSessionSeconds: number } => {
@@ -473,16 +468,10 @@ const buildFunFacts = (params: {
 };
 
 const extractWrappedData = (params: {
-	topTracks: ReadonlyArray<
-		(typeof TopTracksResponseSchema.Type.toptracks.track)[number]
-	>;
-	topArtists: ReadonlyArray<
-		(typeof TopArtistsResponseSchema.Type.topartists.artist)[number]
-	>;
-	topAlbums: ReadonlyArray<
-		(typeof TopAlbumsResponseSchema.Type.topalbums.album)[number]
-	>;
-	recentTracks: ReadonlyArray<typeof TrackSchema.Type>;
+	topTracks: ReadonlyArray<TopTracksResponse["toptracks"]["track"][number]>;
+	topArtists: ReadonlyArray<TopArtistsResponse["topartists"]["artist"][number]>;
+	topAlbums: ReadonlyArray<TopAlbumsResponse["topalbums"]["album"][number]>;
+	recentTracks: ReadonlyArray<Track>;
 	nowMs: number;
 }): WrappedData | null => {
 	const {
@@ -620,20 +609,14 @@ const extractWrappedData = (params: {
 
 const getBaseParams = () => ({
 	user: LASTFM_USERNAME,
-	api_key: process.env.LASTFM_API_KEY ?? "",
+	api_key: env.LASTFM_API_KEY || "",
 	format: "json",
 });
 
 type CachedMonthlyTopData = {
-	topTracks: ReadonlyArray<
-		(typeof TopTracksResponseSchema.Type.toptracks.track)[number]
-	>;
-	topArtists: ReadonlyArray<
-		(typeof TopArtistsResponseSchema.Type.topartists.artist)[number]
-	>;
-	topAlbums: ReadonlyArray<
-		(typeof TopAlbumsResponseSchema.Type.topalbums.album)[number]
-	>;
+	topTracks: ReadonlyArray<TopTracksResponse["toptracks"]["track"][number]>;
+	topArtists: ReadonlyArray<TopArtistsResponse["topartists"]["artist"][number]>;
+	topAlbums: ReadonlyArray<TopAlbumsResponse["topalbums"]["album"][number]>;
 };
 
 const monthlyTopData = () => {
@@ -658,11 +641,11 @@ const monthlyTopData = () => {
 		limit: String(MONTHLY_TOP_LIMIT),
 	});
 
-	return getOrComputeJson<CachedMonthlyTopData, LastFmRecentAlbumsError, never>(
-		{
-			key: LASTFM_MONTHLY_TOP_CACHE_KEY,
-			ttlSeconds: LASTFM_MONTHLY_TOP_CACHE_TTL_SECONDS,
-			compute: Effect.all([
+	return getOrComputeJson<CachedMonthlyTopData, LastFmRecentAlbumsError>({
+		key: LASTFM_MONTHLY_TOP_CACHE_KEY,
+		ttlSeconds: LASTFM_MONTHLY_TOP_CACHE_TTL_SECONDS,
+		compute: async () => {
+			const [topTracksRes, topArtistsRes, topAlbumsRes] = await Promise.all([
 				fetchFresh({
 					url: `${LASTFM_API_URL}?${topTracksParams.toString()}`,
 					method: "GET",
@@ -678,55 +661,81 @@ const monthlyTopData = () => {
 					method: "GET",
 					schema: TopAlbumsResponseSchema,
 				}),
-			]).pipe(
-				Effect.map(([topTracksRes, topArtistsRes, topAlbumsRes]) => ({
-					topTracks: topTracksRes.data.toptracks.track,
-					topArtists: topArtistsRes.data.topartists.artist,
-					topAlbums: topAlbumsRes.data.topalbums.album,
-				})),
-				Effect.mapError((error) => new LastFmRecentAlbumsError({ error })),
-			),
+			]);
+
+			if (Result.isError(topTracksRes)) {
+				return Result.err(
+					new LastFmRecentAlbumsError({ error: topTracksRes.error }),
+				);
+			}
+			if (Result.isError(topArtistsRes)) {
+				return Result.err(
+					new LastFmRecentAlbumsError({ error: topArtistsRes.error }),
+				);
+			}
+			if (Result.isError(topAlbumsRes)) {
+				return Result.err(
+					new LastFmRecentAlbumsError({ error: topAlbumsRes.error }),
+				);
+			}
+
+			return Result.ok({
+				topTracks: topTracksRes.value.data.toptracks.track,
+				topArtists: topArtistsRes.value.data.topartists.artist,
+				topAlbums: topAlbumsRes.value.data.topalbums.album,
+			});
 		},
-	);
+	});
 };
 
-const recentActivity = () => {
+const recentActivity = async (): Promise<
+	Result<ListeningData, LastFmRecentAlbumsError>
+> => {
 	const recentTracksParams = new URLSearchParams({
 		...getBaseParams(),
 		method: "user.getrecenttracks",
 		limit: "200", // Fetch many tracks to get enough unique albums
 	});
 
-	return pipe(
-		Effect.all([
-			fetchFresh({
-				url: `${LASTFM_API_URL}?${recentTracksParams.toString()}`,
-				method: "GET",
-				schema: RecentTracksResponseSchema,
-			}),
-			monthlyTopData(),
-		]).pipe(
-			Effect.mapError((error) => new LastFmRecentAlbumsError({ error })),
-			Effect.flatMap(([recentTracksRes, monthlyTop]) => {
-				const listening = extractListeningData(
-					recentTracksRes.data.recenttracks.track,
-					extractWrappedData({
-						topTracks: monthlyTop.topTracks,
-						topArtists: monthlyTop.topArtists,
-						topAlbums: monthlyTop.topAlbums,
-						recentTracks: recentTracksRes.data.recenttracks.track,
-						nowMs: Date.now(),
-					}),
-				);
+	const [recentTracksRes, monthlyTopRes] = await Promise.all([
+		fetchFresh({
+			url: `${LASTFM_API_URL}?${recentTracksParams.toString()}`,
+			method: "GET",
+			schema: RecentTracksResponseSchema,
+		}),
+		monthlyTopData(),
+	]);
 
-				if (!listening.wrapped) return Effect.succeed(listening);
+	if (Result.isError(recentTracksRes)) {
+		return Result.err(
+			new LastFmRecentAlbumsError({ error: recentTracksRes.error }),
+		);
+	}
+	if (Result.isError(monthlyTopRes)) {
+		return Result.err(
+			new LastFmRecentAlbumsError({ error: monthlyTopRes.error }),
+		);
+	}
 
-				return enrichWrappedWithSpotifyArtistImages(listening.wrapped).pipe(
-					Effect.map((wrapped) => ({ ...listening, wrapped })),
-				);
-			}),
-		),
+	const listening = extractListeningData(
+		recentTracksRes.value.data.recenttracks.track,
+		extractWrappedData({
+			topTracks: monthlyTopRes.value.topTracks,
+			topArtists: monthlyTopRes.value.topArtists,
+			topAlbums: monthlyTopRes.value.topAlbums,
+			recentTracks: recentTracksRes.value.data.recenttracks.track,
+			nowMs: Date.now(),
+		}),
 	);
+
+	if (!listening.wrapped) return Result.ok(listening);
+
+	const wrappedRes = await enrichWrappedWithSpotifyArtistImages(
+		listening.wrapped,
+	);
+	if (Result.isError(wrappedRes)) return Result.ok(listening);
+
+	return Result.ok({ ...listening, wrapped: wrappedRes.value });
 };
 
 const refreshMonthlyTop = () => monthlyTopData();

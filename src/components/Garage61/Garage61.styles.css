@@ -80,7 +80,7 @@
 	border: 1px solid var(--color-ui-1);
 }
 
-.g61-racing-square-card {
+.g61-racing .g61-racing-square-card {
 	flex: 0 0 205px;
 	aspect-ratio: 1 / 1;
 }
@@ -287,7 +287,7 @@
 		gap: var(--spc-2);
 	}
 
-	.g61-racing-square-card {
+	.g61-racing .g61-racing-square-card {
 		flex-basis: 180px;
 	}
 }

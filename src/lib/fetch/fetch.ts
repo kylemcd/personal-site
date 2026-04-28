@@ -1,19 +1,20 @@
-import { Data, Effect, Schema } from "effect";
+import { Result, TaggedError } from "better-result";
+import type { z } from "zod";
 
 /**
  * A network failure occurred before a response could be obtained (e.g. DNS, CORS, offline).
  */
-export class FetchNetworkError extends Data.TaggedError("FetchNetworkError")<{
+export class FetchNetworkError extends TaggedError("FetchNetworkError")<{
 	readonly error: unknown;
-}> {}
+}>() {}
 
 /**
  * A non-2xx HTTP status was returned by the server.
  */
-export class FetchResponseError extends Data.TaggedError("FetchResponseError")<{
+export class FetchResponseError extends TaggedError("FetchResponseError")<{
 	readonly response: Response;
 	readonly bodySnippet?: string;
-}> {
+}>() {
 	get status() {
 		return this.response.status;
 	}
@@ -25,16 +26,16 @@ export class FetchResponseError extends Data.TaggedError("FetchResponseError")<{
 /**
  * Converting the response body to JSON failed.
  */
-export class JsonParseError extends Data.TaggedError("JsonParseError")<{
+export class JsonParseError extends TaggedError("JsonParseError")<{
 	readonly error: unknown;
-}> {}
+}>() {}
 
 /**
  * The decoded JSON did not conform to the provided Schema.
  */
-export class SchemaParseError extends Data.TaggedError("SchemaParseError")<{
+export class SchemaParseError extends TaggedError("SchemaParseError")<{
 	readonly error: unknown;
-}> {}
+}>() {}
 
 /**
  * Enhanced response type that includes both the parsed data and headers
@@ -54,66 +55,65 @@ export type FetchResponse<A> = {
  *  • Performs a fetch request
  *  • Verifies the HTTP status is 2xx
  *  • Parses the body as JSON
- *  • Optionally validates / transforms the data via an Effect Schema
+ *  • Optionally validates / transforms the data via a Zod schema
  *  • Returns both the parsed data and response headers
  *
- * All steps are wrapped in `Effect` so that failures are typed and composable.
+ * All steps return a typed `Result` so failures stay explicit and composable.
  */
-export const fetchJsonEffect = <A>(
+export const fetchJson = async <A>(
 	input: RequestInfo | URL,
-	options?: RequestInit & { readonly schema?: Schema.Schema<A> },
-): Effect.Effect<
-	FetchResponse<A>,
-	FetchNetworkError | FetchResponseError | JsonParseError | SchemaParseError,
-	never
+	options?: RequestInit & { readonly schema?: z.ZodType<A> },
+): Promise<
+	Result<
+		FetchResponse<A>,
+		FetchNetworkError | FetchResponseError | JsonParseError | SchemaParseError
+	>
 > => {
 	const { schema, ...init } = options ?? {};
 
-	return Effect.gen(function* () {
-		// Step 1 – perform the request
-		const response: Response = yield* Effect.tryPromise({
-			try: () => fetch(input, init),
-			catch: (error) => new FetchNetworkError({ error }),
-		});
-
-		// Step 2 – HTTP status check
-		if (!response.ok) {
-			const bodySnippet = yield* Effect.tryPromise({
-				try: async () => {
-					const raw = await response.clone().text();
-					const trimmed = raw.trim();
-					if (!trimmed) return "";
-					return trimmed.length > 2000
-						? `${trimmed.slice(0, 2000)}...`
-						: trimmed;
-				},
-				catch: (error) => new JsonParseError({ error }),
-			}).pipe(Effect.catchAll(() => Effect.succeed("")));
-			return yield* Effect.fail(
-				new FetchResponseError({ response, bodySnippet }),
-			);
-		}
-
-		// Step 3 – parse body as JSON
-		const raw: unknown = yield* Effect.tryPromise({
-			try: () => response.json() as Promise<unknown>,
-			catch: (error) => new JsonParseError({ error }),
-		});
-
-		// Step 4 – validate via Schema (optional)
-		const data = schema
-			? yield* Effect.try({
-					try: () => Schema.decodeUnknownSync(schema)(raw),
-					catch: (error) => new SchemaParseError({ error }),
-				})
-			: (raw as A);
-
-		// Return both data and headers
-		return {
-			data,
-			headers: response.headers,
-		};
+	const responseResult = await Result.tryPromise({
+		try: () => fetch(input, init),
+		catch: (error) => new FetchNetworkError({ error }),
 	});
+	if (Result.isError(responseResult)) return responseResult;
+	const response = responseResult.value;
+
+	if (!response.ok) {
+		const snippetResult = await Result.tryPromise({
+			try: async () => {
+				const raw = await response.clone().text();
+				const trimmed = raw.trim();
+				if (!trimmed) return "";
+				return trimmed.length > 2000 ? `${trimmed.slice(0, 2000)}...` : trimmed;
+			},
+			catch: () => "",
+		});
+		const bodySnippet = Result.isOk(snippetResult) ? snippetResult.value : "";
+		return Result.err(new FetchResponseError({ response, bodySnippet }));
+	}
+
+	const jsonResult = await Result.tryPromise({
+		try: () => response.json() as Promise<unknown>,
+		catch: (error) => new JsonParseError({ error }),
+	});
+	if (Result.isError(jsonResult)) return jsonResult;
+	const raw = jsonResult.value;
+
+	if (!schema) {
+		return Result.ok({
+			data: raw as A,
+			headers: response.headers,
+		});
+	}
+
+	try {
+		return Result.ok({
+			data: schema.parse(raw),
+			headers: response.headers,
+		});
+	} catch (error) {
+		return Result.err(new SchemaParseError({ error }));
+	}
 };
 
 // ---------------------------------------------------------------------------
@@ -122,7 +122,7 @@ export const fetchJsonEffect = <A>(
 
 export type FetchParams<A> = {
 	readonly url: RequestInfo | URL;
-	readonly schema?: Schema.Schema<A>;
+	readonly schema?: z.ZodType<A>;
 } & RequestInit;
 
 const withCache = <A>(
@@ -130,7 +130,7 @@ const withCache = <A>(
 	params: FetchParams<A>,
 ) => {
 	const { url, schema, ...init } = params;
-	return fetchJsonEffect<A>(url, {
+	return fetchJson<A>(url, {
 		...init,
 		cache,
 		schema,

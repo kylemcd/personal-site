@@ -1,4 +1,6 @@
-import { Effect } from "effect";
+import { Result } from "better-result";
+
+import { env } from "@/lib/env";
 import type { WrappedData } from "@/lib/lastfm/schema";
 import { getOrComputeJson } from "@/lib/store";
 
@@ -29,14 +31,10 @@ type WrappedMusicBrainzAssets = {
 };
 
 const hasMusicBrainzCredentials = (): boolean =>
-	Boolean(
-		process.env.MUSIC_BRAINZ_CLIENT_ID &&
-			process.env.MUSIC_BRAINZ_CLIENT_SECRET,
-	);
+	Boolean(env.MUSIC_BRAINZ_CLIENT_ID && env.MUSIC_BRAINZ_CLIENT_SECRET);
 
 const buildMusicBrainzUserAgent = (): string => {
-	const clientId =
-		process.env.MUSIC_BRAINZ_CLIENT_ID ?? "kylemcd-personal-site";
+	const clientId = env.MUSIC_BRAINZ_CLIENT_ID || "kylemcd-personal-site";
 	return `${clientId}/1.0.0 (https://kylemcd.com)`;
 };
 
@@ -78,13 +76,13 @@ const fetchJsonWithTimeout = async <T>(url: string): Promise<T | null> => {
 	}
 };
 
-const fetchJsonFromUrl = <T>(
-	url: string,
-): Effect.Effect<T | null, never, never> =>
-	Effect.tryPromise({
+const fetchJsonFromUrl = async <T>(url: string): Promise<T | null> => {
+	const result = await Result.tryPromise({
 		try: () => fetchJsonWithTimeout<T>(url),
 		catch: () => null,
-	}).pipe(Effect.catchAll(() => Effect.succeed(null)));
+	});
+	return Result.isOk(result) ? result.value : null;
+};
 
 const pickCoverArtUrl = (
 	data: CoverArtArchiveResponse | null,
@@ -99,31 +97,31 @@ const pickCoverArtUrl = (
 	);
 };
 
-const getReleaseCoverArt = (
+const getReleaseCoverArt = async (
 	releaseId: string,
-): Effect.Effect<string | null, never, never> =>
-	fetchJsonFromUrl<CoverArtArchiveResponse>(
+): Promise<string | null> => {
+	const data = await fetchJsonFromUrl<CoverArtArchiveResponse>(
 		`${COVER_ART_ARCHIVE_API_URL}/release/${releaseId}`,
-	).pipe(Effect.map((data) => pickCoverArtUrl(data)));
+	);
+	return pickCoverArtUrl(data);
+};
 
-const resolveArtistArtFromMusicBrainz = (
+const resolveArtistArtFromMusicBrainz = async (
 	artist: string,
-): Effect.Effect<string | null, never, never> => {
+): Promise<string | null> => {
 	const query = `artist:${quoteMusicBrainzQueryValue(artist)}`;
 	const searchParams = new URLSearchParams({
 		query,
 		fmt: "json",
 		limit: "1",
 	});
-	return fetchJsonFromUrl<MusicBrainzSearchReleaseResponse>(
+
+	const data = await fetchJsonFromUrl<MusicBrainzSearchReleaseResponse>(
 		`${MUSIC_BRAINZ_API_URL}/release?${searchParams.toString()}`,
-	).pipe(
-		Effect.flatMap((data) => {
-			const releaseId = data?.releases?.[0]?.id;
-			if (!releaseId) return Effect.succeed(null);
-			return getReleaseCoverArt(releaseId);
-		}),
 	);
+	const releaseId = data?.releases?.[0]?.id;
+	if (!releaseId) return null;
+	return getReleaseCoverArt(releaseId);
 };
 
 const getMusicBrainzAssetCacheKey = (wrapped: WrappedData): string => {
@@ -138,38 +136,60 @@ const emptyAssets = (wrapped: WrappedData): WrappedMusicBrainzAssets => ({
 	topArtists: wrapped.topArtists.map(() => null),
 });
 
-const resolveWrappedAssetsFromMusicBrainz = (
-	wrapped: WrappedData,
-): Effect.Effect<WrappedMusicBrainzAssets, never, never> => {
-	if (!hasMusicBrainzCredentials()) {
-		return Effect.succeed(emptyAssets(wrapped));
-	}
-
-	return getOrComputeJson<WrappedMusicBrainzAssets, never, never>({
-		key: getMusicBrainzAssetCacheKey(wrapped),
-		ttlSeconds: MUSIC_BRAINZ_ASSETS_CACHE_TTL_SECONDS,
-		compute: Effect.all({
-			topArtists: Effect.forEach(
-				wrapped.topArtists,
-				(artist) => resolveArtistArtFromMusicBrainz(artist.name),
-				{ concurrency: MUSIC_BRAINZ_CONCURRENCY },
-			),
-		}),
-	}).pipe(Effect.catchAll(() => Effect.succeed(emptyAssets(wrapped))));
+const mapConcurrent = async <A, B>(
+	items: ReadonlyArray<A>,
+	mapper: (item: A) => Promise<B>,
+	concurrency: number,
+): Promise<Array<B>> => {
+	const output: B[] = new Array(items.length);
+	let index = 0;
+	const workers = Array.from({ length: Math.max(1, concurrency) }, async () => {
+		while (true) {
+			const current = index;
+			index += 1;
+			if (current >= items.length) return;
+			output[current] = await mapper(items[current]);
+		}
+	});
+	await Promise.all(workers);
+	return output;
 };
 
-const enrichWrappedWithMusicBrainzAssets = (
+const resolveWrappedAssetsFromMusicBrainz = async (
 	wrapped: WrappedData,
-): Effect.Effect<WrappedData, never, never> =>
-	resolveWrappedAssetsFromMusicBrainz(wrapped).pipe(
-		Effect.map((assets) => ({
-			...wrapped,
-			topArtists: wrapped.topArtists.map((artist, index) => ({
-				...artist,
-				image: assets.topArtists[index] ?? null,
-			})),
+): Promise<WrappedMusicBrainzAssets> => {
+	if (!hasMusicBrainzCredentials()) {
+		return emptyAssets(wrapped);
+	}
+
+	const cached = await getOrComputeJson<WrappedMusicBrainzAssets, never>({
+		key: getMusicBrainzAssetCacheKey(wrapped),
+		ttlSeconds: MUSIC_BRAINZ_ASSETS_CACHE_TTL_SECONDS,
+		compute: async () =>
+			Result.ok({
+				topArtists: await mapConcurrent(
+					wrapped.topArtists,
+					(artist) => resolveArtistArtFromMusicBrainz(artist.name),
+					MUSIC_BRAINZ_CONCURRENCY,
+				),
+			}),
+	});
+
+	if (Result.isError(cached)) return emptyAssets(wrapped);
+	return cached.value;
+};
+
+const enrichWrappedWithMusicBrainzAssets = async (
+	wrapped: WrappedData,
+): Promise<WrappedData> => {
+	const assets = await resolveWrappedAssetsFromMusicBrainz(wrapped);
+	return {
+		...wrapped,
+		topArtists: wrapped.topArtists.map((artist, index) => ({
+			...artist,
+			image: assets.topArtists[index] ?? null,
 		})),
-		Effect.catchAll(() => Effect.succeed(wrapped)),
-	);
+	};
+};
 
 export { enrichWrappedWithMusicBrainzAssets };

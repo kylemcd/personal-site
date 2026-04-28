@@ -1,90 +1,116 @@
-import { Schema } from "effect";
+import { z } from "zod";
 
-export const ImageSchema = Schema.Struct({
-	"#text": Schema.String,
-	size: Schema.String,
-}).annotations({ exact: false });
+export const ImageSchema = z.object({
+	"#text": z.string(),
+	size: z.string(),
+});
 
-export const TrackArtistSchema = Schema.Struct({
-	"#text": Schema.String,
-	mbid: Schema.String,
-}).annotations({ exact: false });
+export type Image = z.infer<typeof ImageSchema>;
 
-export const TrackAlbumSchema = Schema.Struct({
-	"#text": Schema.String,
-	mbid: Schema.String,
-}).annotations({ exact: false });
+export const TrackArtistSchema = z.object({
+	"#text": z.string(),
+	mbid: z.string(),
+});
 
-export const NowPlayingAttrSchema = Schema.Struct({
-	nowplaying: Schema.String,
-}).annotations({ exact: false });
+export type TrackArtist = z.infer<typeof TrackArtistSchema>;
 
-export const TrackDateSchema = Schema.Struct({
-	uts: Schema.String,
-	"#text": Schema.String,
-}).annotations({ exact: false });
+export const TrackAlbumSchema = z.object({
+	"#text": z.string(),
+	mbid: z.string(),
+});
 
-export const TrackSchema = Schema.Struct({
-	name: Schema.String,
+export type TrackAlbum = z.infer<typeof TrackAlbumSchema>;
+
+export const NowPlayingAttrSchema = z.object({
+	nowplaying: z.string(),
+});
+
+export type NowPlayingAttr = z.infer<typeof NowPlayingAttrSchema>;
+
+export const TrackDateSchema = z.object({
+	uts: z.string(),
+	"#text": z.string(),
+});
+
+export type TrackDate = z.infer<typeof TrackDateSchema>;
+
+export const TrackSchema = z.object({
+	name: z.string(),
 	artist: TrackArtistSchema,
 	album: TrackAlbumSchema,
-	image: Schema.Array(ImageSchema),
-	url: Schema.String,
-	"@attr": Schema.optional(NowPlayingAttrSchema),
-	date: Schema.optional(TrackDateSchema),
-}).annotations({ exact: false });
+	image: z.array(ImageSchema),
+	url: z.string(),
+	"@attr": NowPlayingAttrSchema.optional(),
+	date: TrackDateSchema.optional(),
+});
 
-export const RecentTracksResponseSchema = Schema.Struct({
-	recenttracks: Schema.Struct({
-		track: Schema.Array(TrackSchema),
-	}).annotations({ exact: false }),
-}).annotations({ exact: false });
+export type Track = z.infer<typeof TrackSchema>;
 
-export const TopTrackItemSchema = Schema.Struct({
-	name: Schema.String,
-	playcount: Schema.String,
-	url: Schema.String,
-	duration: Schema.optional(Schema.String),
-	artist: Schema.Struct({
-		name: Schema.String,
-	}).annotations({ exact: false }),
-	image: Schema.Array(ImageSchema),
-}).annotations({ exact: false });
+export const RecentTracksResponseSchema = z.object({
+	recenttracks: z.object({
+		track: z.array(TrackSchema),
+	}),
+});
 
-export const TopTracksResponseSchema = Schema.Struct({
-	toptracks: Schema.Struct({
-		track: Schema.Array(TopTrackItemSchema),
-	}).annotations({ exact: false }),
-}).annotations({ exact: false });
+export type RecentTracksResponse = z.infer<typeof RecentTracksResponseSchema>;
 
-export const TopArtistItemSchema = Schema.Struct({
-	name: Schema.String,
-	playcount: Schema.String,
-	url: Schema.String,
-	image: Schema.Array(ImageSchema),
-}).annotations({ exact: false });
+export const TopTrackItemSchema = z.object({
+	name: z.string(),
+	playcount: z.string(),
+	url: z.string(),
+	duration: z.string().optional(),
+	artist: z.object({
+		name: z.string(),
+	}),
+	image: z.array(ImageSchema),
+});
 
-export const TopArtistsResponseSchema = Schema.Struct({
-	topartists: Schema.Struct({
-		artist: Schema.Array(TopArtistItemSchema),
-	}).annotations({ exact: false }),
-}).annotations({ exact: false });
+export type TopTrackItem = z.infer<typeof TopTrackItemSchema>;
 
-export const TopAlbumItemSchema = Schema.Struct({
-	name: Schema.String,
-	playcount: Schema.String,
-	url: Schema.String,
-	artist: Schema.Struct({
-		name: Schema.String,
-	}).annotations({ exact: false }),
-	image: Schema.Array(ImageSchema),
-}).annotations({ exact: false });
+export const TopTracksResponseSchema = z.object({
+	toptracks: z.object({
+		track: z.array(TopTrackItemSchema),
+	}),
+});
 
-export const TopAlbumsResponseSchema = Schema.Struct({
-	topalbums: Schema.Struct({
-		album: Schema.Array(TopAlbumItemSchema),
-	}).annotations({ exact: false }),
-}).annotations({ exact: false });
+export type TopTracksResponse = z.infer<typeof TopTracksResponseSchema>;
+
+export const TopArtistItemSchema = z.object({
+	name: z.string(),
+	playcount: z.string(),
+	url: z.string(),
+	image: z.array(ImageSchema),
+});
+
+export type TopArtistItem = z.infer<typeof TopArtistItemSchema>;
+
+export const TopArtistsResponseSchema = z.object({
+	topartists: z.object({
+		artist: z.array(TopArtistItemSchema),
+	}),
+});
+
+export type TopArtistsResponse = z.infer<typeof TopArtistsResponseSchema>;
+
+export const TopAlbumItemSchema = z.object({
+	name: z.string(),
+	playcount: z.string(),
+	url: z.string(),
+	artist: z.object({
+		name: z.string(),
+	}),
+	image: z.array(ImageSchema),
+});
+
+export type TopAlbumItem = z.infer<typeof TopAlbumItemSchema>;
+
+export const TopAlbumsResponseSchema = z.object({
+	topalbums: z.object({
+		album: z.array(TopAlbumItemSchema),
+	}),
+});
+
+export type TopAlbumsResponse = z.infer<typeof TopAlbumsResponseSchema>;
 
 /**
  * Normalized album type for use in components

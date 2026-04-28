@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Result } from "better-result";
 import { XMLBuilder } from "fast-xml-parser";
 
 import { toComparableTimestampInCentral } from "@/lib/dates";
@@ -57,27 +57,25 @@ type FeedPost = {
 };
 
 const createBlogRssFeed = async (): Promise<string> => {
-	const posts = await Effect.runPromise(markdown.all());
-	const feedPosts = await Effect.runPromise(
-		Effect.all(
-			posts.map((post) =>
-				markdown
-					.fromPath<{ title: string; date: string }>({
-						path: `./posts/${post.slug}.md`,
-					})
-					.pipe(
-						Effect.map(
-							({ frontmatter, content }): FeedPost => ({
-								title: frontmatter.title,
-								slug: post.slug,
-								date: frontmatter.date,
-								content,
-							}),
-						),
-					),
-			),
-		),
-	);
+	const postsResult = markdown.all();
+	if (Result.isError(postsResult)) {
+		throw postsResult.error;
+	}
+	const posts = postsResult.value;
+	const feedPosts = posts
+		.map((post) => {
+			const postResult = markdown.fromPath<{ title: string; date: string }>({
+				path: `./posts/${post.slug}.md`,
+			});
+			if (Result.isError(postResult)) return null;
+			return {
+				title: postResult.value.frontmatter.title,
+				slug: post.slug,
+				date: postResult.value.frontmatter.date,
+				content: postResult.value.content,
+			} satisfies FeedPost;
+		})
+		.filter((post): post is FeedPost => post !== null);
 
 	const lastBuildDate = feedPosts[0]
 		? toUtcDateString(feedPosts[0].date)

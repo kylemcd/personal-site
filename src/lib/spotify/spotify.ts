@@ -1,5 +1,6 @@
-import { Data, Effect } from "effect";
+import { Result, TaggedError } from "better-result";
 
+import { env } from "@/lib/env";
 import type { WrappedData } from "@/lib/lastfm/schema";
 import { getOrComputeJson } from "@/lib/store";
 
@@ -26,29 +27,29 @@ type SpotifySearchArtistResponse = {
 	};
 };
 
-class SpotifyRequestError extends Data.TaggedError("SpotifyRequestError")<{
+class SpotifyRequestError extends TaggedError("SpotifyRequestError")<{
 	readonly url: string;
 	readonly error: unknown;
-}> {}
+}>() {}
 
-class SpotifyTimeoutError extends Data.TaggedError("SpotifyTimeoutError")<{
+class SpotifyTimeoutError extends TaggedError("SpotifyTimeoutError")<{
 	readonly url: string;
 	readonly timeoutMs: number;
-}> {}
+}>() {}
 
-class SpotifyHttpError extends Data.TaggedError("SpotifyHttpError")<{
+class SpotifyHttpError extends TaggedError("SpotifyHttpError")<{
 	readonly url: string;
 	readonly status: number;
 	readonly statusText: string;
-}> {}
+}>() {}
 
-class SpotifyParseError extends Data.TaggedError("SpotifyParseError")<{
+class SpotifyParseError extends TaggedError("SpotifyParseError")<{
 	readonly url: string;
 	readonly error: unknown;
-}> {}
+}>() {}
 
 const hasSpotifyCredentials = (): boolean =>
-	Boolean(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET);
+	Boolean(env.SPOTIFY_CLIENT_ID && env.SPOTIFY_CLIENT_SECRET);
 
 const hashString = (value: string): string => {
 	let hash = 2166136261;
@@ -77,18 +78,19 @@ const toSpotifyError = (url: string, error: unknown) => {
 	return new SpotifyRequestError({ url, error });
 };
 
-const fetchJsonWithTimeoutEffect = <T>(
+const fetchJsonWithTimeout = async <T>(
 	url: string,
 	init?: RequestInit,
-): Effect.Effect<
-	T,
-	| SpotifyRequestError
-	| SpotifyTimeoutError
-	| SpotifyHttpError
-	| SpotifyParseError,
-	never
+): Promise<
+	Result<
+		T,
+		| SpotifyRequestError
+		| SpotifyTimeoutError
+		| SpotifyHttpError
+		| SpotifyParseError
+	>
 > =>
-	Effect.tryPromise({
+	Result.tryPromise({
 		try: async () => {
 			const controller = new AbortController();
 			const timeoutId = setTimeout(
@@ -129,29 +131,26 @@ const fetchJsonWithTimeoutEffect = <T>(
 		catch: (error) => toSpotifyError(url, error),
 	});
 
-const getSpotifyAccessToken = (): Effect.Effect<
-	string | null,
-	never,
-	never
+const getSpotifyAccessToken = async (): Promise<
+	Result<string | null, never>
 > => {
-	if (!hasSpotifyCredentials()) return Effect.succeed(null);
+	if (!hasSpotifyCredentials()) return Result.ok(null);
 
-	return getOrComputeJson<
+	const tokenResult = await getOrComputeJson<
 		string | null,
 		| SpotifyRequestError
 		| SpotifyTimeoutError
 		| SpotifyHttpError
-		| SpotifyParseError,
-		never
+		| SpotifyParseError
 	>({
 		key: SPOTIFY_TOKEN_CACHE_KEY,
 		ttlSeconds: SPOTIFY_TOKEN_TTL_SECONDS,
-		compute: Effect.gen(function* () {
-			const clientId = process.env.SPOTIFY_CLIENT_ID ?? "";
-			const clientSecret = process.env.SPOTIFY_CLIENT_SECRET ?? "";
-			const credentials = encodeBasicAuth(`${clientId}:${clientSecret}`);
+		compute: async () => {
+			const credentials = encodeBasicAuth(
+				`${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`,
+			);
 
-			const data = yield* fetchJsonWithTimeoutEffect<SpotifyTokenResponse>(
+			const data = await fetchJsonWithTimeout<SpotifyTokenResponse>(
 				SPOTIFY_TOKEN_URL,
 				{
 					method: "POST",
@@ -165,37 +164,42 @@ const getSpotifyAccessToken = (): Effect.Effect<
 				},
 			);
 
-			return data.access_token ?? null;
-		}),
-	}).pipe(Effect.catchAll(() => Effect.succeed(null)));
+			if (Result.isError(data)) return data;
+			return Result.ok(data.value.access_token ?? null);
+		},
+	});
+
+	if (Result.isError(tokenResult)) return Result.ok(null);
+	return Result.ok(tokenResult.value);
 };
 
-const getSpotifyArtistImage = (
+const getSpotifyArtistImage = async (
 	artistName: string,
-): Effect.Effect<string | null, never, never> =>
-	getSpotifyAccessToken().pipe(
-		Effect.flatMap((token) => {
-			if (!token) return Effect.succeed(null);
-			const params = new URLSearchParams({
-				q: artistName,
-				type: "artist",
-				limit: "1",
-			});
-			const url = `${SPOTIFY_API_URL}/search?${params.toString()}`;
+): Promise<Result<string | null, never>> => {
+	const tokenResult = await getSpotifyAccessToken();
+	if (Result.isError(tokenResult)) return Result.ok(null);
+	const token = tokenResult.value;
+	if (!token) return Result.ok(null);
 
-			return fetchJsonWithTimeoutEffect<SpotifySearchArtistResponse>(url, {
-				headers: {
-					Authorization: `Bearer ${token}`,
-				},
-			}).pipe(
-				Effect.map((data) => {
-					const images = data.artists?.items?.[0]?.images ?? [];
-					return images[0]?.url ?? null;
-				}),
-				Effect.catchAll(() => Effect.succeed(null)),
-			);
-		}),
+	const params = new URLSearchParams({
+		q: artistName,
+		type: "artist",
+		limit: "1",
+	});
+	const url = `${SPOTIFY_API_URL}/search?${params.toString()}`;
+	const response = await fetchJsonWithTimeout<SpotifySearchArtistResponse>(
+		url,
+		{
+			headers: {
+				Authorization: `Bearer ${token}`,
+			},
+		},
 	);
+	if (Result.isError(response)) return Result.ok(null);
+
+	const images = response.value.artists?.items?.[0]?.images ?? [];
+	return Result.ok(images[0]?.url ?? null);
+};
 
 const getArtistImageCacheKey = (wrapped: WrappedData): string => {
 	const signature = [
@@ -208,35 +212,64 @@ const getArtistImageCacheKey = (wrapped: WrappedData): string => {
 const emptyArtistImages = (wrapped: WrappedData): Array<string | null> =>
 	wrapped.topArtists.map(() => null);
 
-const resolveWrappedArtistImagesFromSpotify = (
-	wrapped: WrappedData,
-): Effect.Effect<Array<string | null>, never, never> => {
-	if (!hasSpotifyCredentials())
-		return Effect.succeed(emptyArtistImages(wrapped));
-
-	return getOrComputeJson<Array<string | null>, never, never>({
-		key: getArtistImageCacheKey(wrapped),
-		ttlSeconds: SPOTIFY_ARTIST_IMAGE_TTL_SECONDS,
-		compute: Effect.forEach(
-			wrapped.topArtists,
-			(artist) => getSpotifyArtistImage(artist.name),
-			{ concurrency: SPOTIFY_CONCURRENCY },
-		),
-	}).pipe(Effect.catchAll(() => Effect.succeed(emptyArtistImages(wrapped))));
+const mapConcurrent = async <A, B>(
+	items: ReadonlyArray<A>,
+	mapper: (item: A) => Promise<B>,
+	concurrency: number,
+): Promise<Array<B>> => {
+	const output: B[] = new Array(items.length);
+	let index = 0;
+	const workers = Array.from({ length: Math.max(1, concurrency) }, async () => {
+		while (true) {
+			const current = index;
+			index += 1;
+			if (current >= items.length) return;
+			output[current] = await mapper(items[current]);
+		}
+	});
+	await Promise.all(workers);
+	return output;
 };
 
-const enrichWrappedWithSpotifyArtistImages = (
+const resolveWrappedArtistImagesFromSpotify = async (
 	wrapped: WrappedData,
-): Effect.Effect<WrappedData, never, never> =>
-	resolveWrappedArtistImagesFromSpotify(wrapped).pipe(
-		Effect.map((artistImages) => ({
-			...wrapped,
-			topArtists: wrapped.topArtists.map((artist, index) => ({
-				...artist,
-				image: artistImages[index] ?? null,
-			})),
+): Promise<Result<Array<string | null>, never>> => {
+	if (!hasSpotifyCredentials()) return Result.ok(emptyArtistImages(wrapped));
+
+	const result = await getOrComputeJson<Array<string | null>, never>({
+		key: getArtistImageCacheKey(wrapped),
+		ttlSeconds: SPOTIFY_ARTIST_IMAGE_TTL_SECONDS,
+		compute: async () =>
+			Result.ok(
+				await mapConcurrent(
+					wrapped.topArtists,
+					async (artist) => {
+						const imageResult = await getSpotifyArtistImage(artist.name);
+						return Result.isOk(imageResult) ? imageResult.value : null;
+					},
+					SPOTIFY_CONCURRENCY,
+				),
+			),
+	});
+
+	if (Result.isError(result)) return Result.ok(emptyArtistImages(wrapped));
+	return result;
+};
+
+const enrichWrappedWithSpotifyArtistImages = async (
+	wrapped: WrappedData,
+): Promise<Result<WrappedData, never>> => {
+	const artistImagesResult =
+		await resolveWrappedArtistImagesFromSpotify(wrapped);
+	if (Result.isError(artistImagesResult)) return Result.ok(wrapped);
+
+	return Result.ok({
+		...wrapped,
+		topArtists: wrapped.topArtists.map((artist, index) => ({
+			...artist,
+			image: artistImagesResult.value[index] ?? null,
 		})),
-		Effect.catchAll(() => Effect.succeed(wrapped)),
-	);
+	});
+};
 
 export { enrichWrappedWithSpotifyArtistImages };

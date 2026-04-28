@@ -1,20 +1,24 @@
-import { Schema } from "effect";
+import { z } from "zod";
 
-export const BookSchema = Schema.Struct({
-	title: Schema.String,
-	subtitle: Schema.Union(Schema.String, Schema.Null),
-	description: Schema.Union(Schema.String, Schema.Null),
-	slug: Schema.Union(Schema.String, Schema.Null),
-	cover: Schema.Union(Schema.String, Schema.Null),
-	authors: Schema.Array(
-		Schema.Struct({
-			name: Schema.String,
+export const BookSchema = z.object({
+	title: z.string(),
+	subtitle: z.string().nullable(),
+	description: z.string().nullable(),
+	slug: z.string().nullable(),
+	cover: z.string().nullable(),
+	authors: z.array(
+		z.object({
+			name: z.string(),
 		}),
 	),
-}).annotations({ exact: false });
+});
 
-export const BooksResponseSchema = Schema.Struct({
-	data: Schema.Struct({
-		booksByReadingStateAndProfile: Schema.Array(BookSchema),
+export type Book = z.infer<typeof BookSchema>;
+
+export const BooksResponseSchema = z.object({
+	data: z.object({
+		booksByReadingStateAndProfile: z.array(BookSchema),
 	}),
 });
+
+export type BooksResponse = z.infer<typeof BooksResponseSchema>;

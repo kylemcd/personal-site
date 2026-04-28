@@ -108,25 +108,25 @@
 
 [data-post] h1,
 [data-post] h1 > * {
-	font-size: 2rem !important;
-	line-height: 2.5rem !important;
+	font-size: 2rem;
+	line-height: 2.5rem;
 }
 
 [data-post] h2,
 [data-post] h2 > * {
-	font-size: 1.75rem !important;
-	line-height: 2rem !important;
+	font-size: 1.75rem;
+	line-height: 2rem;
 }
 
 [data-post] h3,
 [data-post] h3 > * {
-	font-size: 1.5rem !important;
-	line-height: 1.75rem !important;
+	font-size: 1.5rem;
+	line-height: 1.75rem;
 }
 
 [data-post] p {
 	padding-block: var(--spc-2);
-	line-height: 1.7rem !important;
+	line-height: 1.7rem;
 }
 
 [data-post] code {
@@ -158,7 +158,7 @@
 }
 
 [data-post] li {
-	line-height: 1.7rem !important;
+	line-height: 1.7rem;
 }
 
 [data-post] table {

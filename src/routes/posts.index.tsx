@@ -1,19 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { Effect } from "effect";
 
 import { Text } from "@/components/Text";
 import { WritingList } from "@/components/WritingList";
-import { markdown } from "@/lib/markdown";
+import { getPostsWritingData } from "@/lib/posts/posts-data";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
-	const result = await Effect.runPromise(
-		Effect.all([
-			markdown.all().pipe(Effect.catchAll(() => Effect.succeed([]))),
-		]),
-	);
-
-	return { writing: result[0] };
+	return getPostsWritingData();
 });
 
 export const Route = createFileRoute("/posts/")({

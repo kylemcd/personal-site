@@ -116,7 +116,7 @@ const normalizeLink = (rawLink: string): string | undefined => {
 };
 
 export const parseUsesMarkdown = (rawMarkdown: string): UseItem[] => {
-	if (!rawMarkdown || !rawMarkdown.trim()) {
+	if (!rawMarkdown?.trim()) {
 		throw new Error("The uses markdown file is empty.");
 	}
 
