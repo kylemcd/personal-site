@@ -7,7 +7,7 @@ export type StaleMonitorParams = {
 export type StaleMonitorWorkflowEnv = {
 	APP_STORE?: KVNamespace;
 	KV_CACHE_VERSION?: string;
-	RESEND_API_KEY?: string;
+	EMAIL?: SendEmail;
 	STALE_ALERT_EMAIL_TO?: string;
 	STALE_ALERT_EMAIL_FROM?: string;
 };
@@ -76,29 +76,19 @@ const getAlertStateKey = (cacheVersion: string | undefined, key: string): string
 	`monitor:stale-alert:${normalizeCacheVersion(cacheVersion)}:${key}`;
 const getLookupStatusKey = (key: string): string => `monitor:lookup-status:${key}`;
 
-const sendResendEmail = async (
-	apiKey: string,
+const sendCloudflareEmail = async (
+	email: SendEmail,
 	to: string,
 	from: string,
 	subject: string,
 	text: string,
 ): Promise<void> => {
-	const response = await fetch("https://api.resend.com/emails", {
-		method: "POST",
-		headers: {
-			"content-type": "application/json",
-			Authorization: `Bearer ${apiKey}`,
-		},
-		body: JSON.stringify({
-			from,
-			to: [to],
-			subject,
-			text,
-		}),
+	await email.send({
+		from,
+		to: [to],
+		subject,
+		text,
 	});
-	if (!response.ok) {
-		throw new Error(`Resend email failed with HTTP ${response.status}`);
-	}
 };
 
 const kvGet = async (store: KVNamespace, key: string): Promise<string | null> => {
@@ -129,18 +119,28 @@ const kvDelete = async (store: KVNamespace, key: string): Promise<void> => {
 	}
 };
 
-const sendResendEmailSafe = async (
-	apiKey: string,
+const sendCloudflareEmailSafe = async (
+	email: SendEmail,
 	to: string,
 	from: string,
 	subject: string,
 	text: string,
 ): Promise<void> => {
 	try {
-		await sendResendEmail(apiKey, to, from, subject, text);
+		await sendCloudflareEmail(email, to, from, subject, text);
 	} catch (error) {
+		const errorCode =
+			typeof error === "object" &&
+			error !== null &&
+			"code" in error &&
+			typeof (error as { code?: unknown }).code === "string"
+				? (error as { code: string }).code
+				: null;
+		const errorMessage = error instanceof Error ? error.message : String(error);
 		console.error("[monitor] failed to send email alert", {
 			subject,
+			errorCode,
+			errorMessage,
 			error,
 		});
 	}
@@ -209,10 +209,10 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 
 		const nowMs = Date.now();
 		const cacheVersion = this.env.KV_CACHE_VERSION;
-		const resendApiKey = this.env.RESEND_API_KEY?.trim() || "";
+		const email = this.env.EMAIL;
 		const emailTo = this.env.STALE_ALERT_EMAIL_TO?.trim() || "";
 		const emailFrom = this.env.STALE_ALERT_EMAIL_FROM?.trim() || "";
-		const canSendEmail = Boolean(resendApiKey && emailTo && emailFrom);
+		const canSendEmail = Boolean(email && emailTo && emailFrom);
 
 		for (const item of MONITORED_KEYS) {
 			await steps.do(`check-${item.key}`, async () => {
@@ -239,9 +239,9 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 				if (!envelope || envelope.refreshAfter === null) {
 					const existingAlert = await kvGet(store, alertStateKey);
 					let emailSent = false;
-					if (!existingAlert && canSendEmail) {
-						await sendResendEmailSafe(
-							resendApiKey,
+					if (!existingAlert && canSendEmail && email) {
+						await sendCloudflareEmailSafe(
+							email,
 							emailTo,
 							emailFrom,
 							`[stale-data] Missing refreshAfter for ${item.label}`,
@@ -331,8 +331,29 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 					} satisfies StaleCheckOutput;
 				}
 
-				await sendResendEmailSafe(
-					resendApiKey,
+				if (!email) {
+					console.warn("[monitor] stale data detected but EMAIL binding is missing", {
+						key: item.key,
+						label: item.label,
+						staleForMs,
+					});
+					return {
+						key: item.key,
+						label: item.label,
+						isStale: true,
+						state: "stale",
+						thresholdMinutes: STALE_THRESHOLD_MS / (60 * 1000),
+						staleForMinutes: Math.floor(staleForMs / (60 * 1000)),
+						refreshAfter: new Date(envelope.refreshAfter).toISOString(),
+						emailSent: false,
+						alertAlreadyActive: false,
+						emailConfigured: false,
+						lastError: lookupStatus?.lastError ?? null,
+					} satisfies StaleCheckOutput;
+				}
+
+				await sendCloudflareEmailSafe(
+					email,
 					emailTo,
 					emailFrom,
 					`[stale-data] ${item.label} is stale`,

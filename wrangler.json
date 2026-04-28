@@ -17,6 +17,11 @@
       "remote": true
     }
   ],
+  "send_email": [
+    {
+      "name": "EMAIL"
+    }
+  ],
   "workflows": [
     {
       "binding": "GARAGE61_REFRESH_WORKFLOW",
