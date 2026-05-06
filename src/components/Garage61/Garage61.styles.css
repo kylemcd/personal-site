@@ -1,305 +1,386 @@
 .g61-racing {
 	display: flex;
 	flex-direction: column;
-	gap: var(--spc-4);
+	gap: var(--spc-5);
+	padding: 0 var(--spc-6);
 }
 
-.g61-racing-header {
-	margin-bottom: var(--spc-2);
-}
-
-.g61-racing-list {
-	display: grid;
-	grid-template-columns: 1fr;
-	gap: var(--spc-2);
-}
-
-.g61-racing-recent-lists {
-	display: grid;
-	grid-template-columns: 1fr;
-	gap: var(--spc-8);
-	padding-top: var(--spc-4);
-	min-width: 0;
-}
-
-.g61-racing-scroller {
+.g61-racing-top {
 	display: flex;
-	flex-wrap: nowrap;
-	align-items: stretch;
-	gap: var(--spc-2);
-}
-
-.g61-racing-list-block {
-	display: flex;
-	flex-direction: column;
-	gap: var(--spc-2);
-	min-width: 0;
-}
-
-.g61-racing .horizontal-scroll-container {
-	min-width: 0;
-	max-width: 100%;
-}
-
-.g61-racing-scroller {
-	min-width: 0;
-}
-
-.g61-racing-recent-grid {
-	display: grid;
-	grid-template-columns: 1fr;
-	gap: var(--spc-2);
-}
-
-.g61-racing-list-block > h2,
-.g61-racing-list-block > h3,
-.g61-racing-list-block > .g61-racing-list,
-.g61-racing-list-block > .g61-racing-recent-grid {
-	padding: 0 var(--spc-8);
-}
-
-.g61-racing-recent-grid .g61-racing-square-card {
-	flex: initial;
-}
-
-.g61-racing-insights {
-	grid-template-columns: repeat(4, minmax(0, 1fr));
-	align-items: stretch;
-}
-
-.g61-racing-insights > .g61-racing-row:nth-child(-n + 4) {
-	aspect-ratio: 1 / 1;
-}
-
-.g61-racing-insights > .g61-racing-row:nth-last-child(-n + 2) {
-	grid-column: span 2;
-}
-
-.g61-racing-row {
-	display: block;
-	border: 1px solid var(--color-ui-1);
-}
-
-.g61-racing .g61-racing-square-card {
-	flex: 0 0 205px;
-	aspect-ratio: 1 / 1;
-}
-
-.g61-racing-row-content {
-	display: grid;
-	grid-template-columns: 1fr;
-	align-items: center;
-	gap: var(--spc-3);
-	padding: var(--spc-3) var(--spc-4);
-	min-width: 0;
-}
-
-.g61-racing-square-card .g61-racing-row-content {
-	height: 100%;
-	align-items: stretch;
-}
-
-.g61-racing-insights .g61-racing-row-content {
 	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--spc-3);
 }
 
-.g61-racing-meta {
+.g61-racing-window {
+	margin-top: var(--spc-1);
+	text-transform: lowercase;
+	letter-spacing: 0.08em;
+}
+
+.g61-racing-kpis {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-evenly;
+	gap: clamp(var(--spc-3), 2.2vw, var(--spc-6));
+	align-items: start;
+}
+
+.g61-racing-kpi-card {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--spc-1);
 	min-width: 0;
-}
-
-.g61-racing-track,
-.g61-racing-car {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.g61-racing-square-card .g61-racing-meta {
-	height: 100%;
-}
-
-.g61-racing-square-card .g61-racing-track {
-	white-space: normal;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	display: -webkit-box;
-	-webkit-line-clamp: 4;
-	-webkit-box-orient: vertical;
-}
-
-.g61-racing-square-card .g61-racing-car {
-	margin-top: auto;
-	white-space: normal;
-	overflow-wrap: anywhere;
-}
-
-.g61-racing-variant {
-	white-space: normal;
-	overflow-wrap: anywhere;
-}
-
-.g61-racing-description {
-	white-space: normal;
-	overflow-wrap: anywhere;
+	flex: 1 1 auto;
 }
 
 .g61-racing-kpi-label {
-	margin-bottom: var(--spc-1);
+	letter-spacing: 0.02em;
 }
 
 .g61-racing-kpi-value {
 	line-height: 1.15;
+	max-width: 100%;
 }
 
-.g61-racing-combo {
-	margin-top: 2px;
+.g61-racing-kpi-time-value {
+	white-space: nowrap;
+	word-spacing: -0.18em;
 }
 
-.g61-racing-combo-container {
+.g61-racing-kpi-stack {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
 }
 
-.g61-racing-meter {
-	height: 6px;
-	width: 100%;
-	border: 1px solid var(--color-ui-1);
-	background: var(--color-bg-2);
-	margin: var(--spc-1) 0;
+.g61-racing-red {
+	color: var(--color-racing-red);
 }
 
-.g61-racing-meter-fill {
-	display: block;
-	height: 100%;
-	min-width: 2px;
-	background: var(--color-text-light);
-}
-
-.g61-racing-split-meter {
+.g61-racing-balance-bar {
 	display: flex;
-	height: 6px;
-	width: 100%;
-	border: 1px solid var(--color-ui-1);
-	background: var(--color-bg-2);
-	margin: var(--spc-1) 0;
+	height: 5px;
+	width: min(100%, 248px);
+	background: var(--color-ui-1);
 	overflow: hidden;
+	align-self: flex-start;
 }
 
-.g61-racing-split-meter-labels {
+.g61-racing-balance-practice {
+	height: 100%;
+	background: var(--color-text-2);
+}
+
+.g61-racing-balance-racing {
+	height: 100%;
+	background: var(--color-racing-red);
+}
+
+.g61-racing-balance-labels {
 	display: flex;
 	justify-content: space-between;
-	align-items: center;
+	gap: var(--spc-1);
+	width: min(100%, 248px);
+	align-self: flex-start;
+}
+
+.g61-racing-chart-card {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spc-5);
+	margin-top: var(--spc-5);
+}
+
+.g61-racing-chart-head {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--spc-3);
+	align-items: flex-start;
+}
+
+.g61-racing-chart-combo {
 	margin-top: 2px;
 }
 
-.g61-racing-split-meter-segment {
-	height: 100%;
-	min-width: 0;
+.g61-racing-chart-subline {
+	margin-top: 2px;
 }
 
-.g61-racing-split-meter-practice {
-	background: var(--color-text-light);
+.g61-racing-chart-side {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 4px;
 }
 
-.g61-racing-split-meter-racing {
-	background: var(--color-ui-3);
+.g61-racing-chart-tabs {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 0;
+	margin-bottom: 6px;
 }
 
-.g61-racing-ladder {
-	display: grid;
-	gap: 8px;
-	margin-top: var(--spc-1);
+.g61-racing-chart-tab {
+	border: 1px solid var(--color-ui-2);
+	background: var(--color-bg-1);
+	color: var(--color-text-2);
+	font-family: var(--font-family-mono);
+	font-size: 0.7rem;
+	line-height: 1;
+	padding: 2px 5px;
+	cursor: pointer;
 }
 
-.g61-racing-ladder-row {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	align-items: flex-start;
-	gap: var(--spc-2);
-	min-width: 0;
+.g61-racing-chart-tab.is-active {
+	border-color: var(--color-racing-red);
+	color: var(--color-racing-red);
+}
+
+.g61-racing-chart-meta {
+	white-space: nowrap;
+	margin-top: 2px;
+}
+
+.g61-racing-chart {
+	position: relative;
+	height: 290px;
 	width: 100%;
 }
 
-.g61-racing-ladder-meta {
+.g61-racing-recharts-grid line {
+	stroke: var(--color-text-2);
+	opacity: 0.26;
+}
+
+.g61-racing-recharts-ref line {
+	stroke: var(--color-racing-red);
+	stroke-dasharray: 8 5;
+	stroke-width: 1;
+	opacity: 0.9;
+}
+
+.g61-racing-chart-dot {
+	fill: var(--color-text-1);
+	transition: r 120ms ease;
+}
+
+.g61-racing-chart-dot-active {
+	transition: r 120ms ease;
+}
+
+.g61-racing-chart .recharts-reference-line text {
+	letter-spacing: 0.08em;
+}
+
+.g61-racing-empty {
+	padding: var(--spc-1) 0;
+}
+
+.g61-racing-chart-tooltip {
+	background-color: var(--color-bg-1);
+	border: 1px solid var(--color-ui-2);
+	border-radius: 0;
+	padding: 2px 6px;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--color-text-1);
+	font-family: var(--font-family-mono);
+	font-size: 11px;
+	line-height: 1.1;
+	pointer-events: none;
+}
+
+.g61-racing-chart-tooltip-lap {
+	font-weight: 600;
+}
+
+.g61-racing-chart-tooltip-time {
+	font-weight: 400;
+}
+
+.g61-racing-chart-point-tooltip {
+	position: absolute;
+	z-index: 3;
+}
+
+.g61-racing-tables,
+.g61-racing-recent-lists {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--spc-7);
+}
+
+.g61-racing-table-card,
+.g61-racing-recent-card {
 	display: flex;
 	flex-direction: column;
+	gap: var(--spc-3);
+	min-width: 0;
+}
+
+.g61-racing-table-header {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--spc-2);
+	align-items: flex-end;
+	letter-spacing: 0.02em;
+}
+
+.g61-racing-table-rows {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spc-3);
+}
+
+.g61-racing-table-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: var(--spc-4);
+	align-items: start;
+}
+
+.g61-racing-table-left {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: var(--spc-3);
+	align-items: start;
+	min-width: 0;
+}
+
+.g61-racing-table-left-no-rank {
+	display: block;
+}
+
+.g61-racing-table-right {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 2px;
+	justify-self: end;
+	min-width: 0;
+}
+
+.g61-racing-clean-row {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spc-2);
+}
+
+.g61-racing-clean-head {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: var(--spc-3);
+	align-items: start;
+}
+
+.g61-racing-metric-side {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
 	gap: 2px;
 	min-width: 0;
 }
 
-.g61-racing-ladder-track {
-	display: block;
-	min-width: 0;
-	min-inline-size: 0;
-	max-width: 100%;
-	overflow: hidden;
-	text-overflow: ellipsis;
+.g61-racing-metric-primary {
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+}
+
+.g61-racing-clean-progress {
+	display: flex;
+	align-items: center;
+	gap: var(--spc-2);
+}
+
+.g61-racing-progress-percent {
 	white-space: nowrap;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+	min-width: 3ch;
+	text-align: right;
+	color: var(--color-racing-red);
+}
+
+.g61-racing-clean-bar,
+.g61-racing-recent-bar {
+	height: 4px;
 	width: 100%;
+	background: color-mix(in srgb, var(--color-ui-1) 68%, transparent);
+	overflow: hidden;
 }
 
-.g61-racing-ladder-subline {
-	display: block;
-	min-width: 0;
+.g61-racing-clean-bar-fill,
+.g61-racing-recent-bar-fill {
+	height: 100%;
+	background: var(--color-racing-red);
+	min-width: 2px;
+}
+
+.g61-racing-recent-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 220px;
+	gap: var(--spc-3);
+	align-items: center;
+}
+
+.g61-racing-recent-name {
+	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 
-.g61-racing-ladder-time {
-	display: block;
-	white-space: nowrap;
-	align-self: flex-start;
-	justify-self: start;
-}
-
-.g61-racing-insights .g61-racing-track,
-.g61-racing-insights .g61-racing-car {
-	white-space: normal;
-	overflow: visible;
-	text-overflow: clip;
+@media (max-width: 1200px) {
+	.g61-racing-recent-row {
+		grid-template-columns: minmax(0, 1fr) 180px;
+	}
 }
 
 @media (max-width: 900px) {
-	.g61-racing-list-block > h2,
-	.g61-racing-list-block > h3,
-	.g61-racing-list-block > .g61-racing-list {
-		padding: 0 var(--spc-8);
+	.g61-racing {
+		padding: 0 var(--spc-5);
 	}
 
-	.g61-racing-insights {
+	.g61-racing-top {
+		flex-direction: column;
+		gap: var(--spc-1);
+	}
+
+	.g61-racing-kpis,
+	.g61-racing-tables,
+	.g61-racing-recent-lists {
 		grid-template-columns: 1fr;
 	}
 
-	.g61-racing-insights > .g61-racing-row:nth-child(-n + 4) {
-		aspect-ratio: auto;
+	.g61-racing-kpis {
+		flex-direction: column;
+		align-items: stretch;
+		justify-content: flex-start;
 	}
 
-	.g61-racing-insights > .g61-racing-row:nth-last-child(-n + 2) {
-		grid-column: auto;
+	.g61-racing-chart {
+		height: 250px;
 	}
 
-	.g61-racing-scroller {
-		gap: var(--spc-2);
+	.g61-racing-chart-meta {
+		white-space: normal;
 	}
 
-	.g61-racing .g61-racing-square-card {
-		flex-basis: 180px;
-	}
-}
-
-@media (min-width: 768px) {
-	.g61-racing-recent-grid {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
+	.g61-racing-recent-row {
+		grid-template-columns: 1fr;
+		gap: var(--spc-1);
 	}
 }
 
-@media (min-width: 1024px) {
-	.g61-racing-recent-grid {
-		grid-template-columns: repeat(4, minmax(0, 1fr));
+@media (max-width: 640px) {
+	.g61-racing {
+		padding: 0 var(--spc-4);
+		gap: var(--spc-5);
+	}
+
+	.g61-racing-kpis {
+		gap: var(--spc-3);
 	}
 }

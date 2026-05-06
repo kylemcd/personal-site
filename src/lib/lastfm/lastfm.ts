@@ -12,6 +12,8 @@ import {
 	RecentTracksResponseSchema,
 	type TopAlbumsResponse,
 	TopAlbumsResponseSchema,
+	SimilarTagsResponseSchema,
+	TopArtistTagsResponseSchema,
 	type TopArtistsResponse,
 	TopArtistsResponseSchema,
 	type TopTracksResponse,
@@ -30,9 +32,13 @@ const LASTFM_USERNAME = "kylemcd1";
 const LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
 const ALBUMS_LIMIT = 20;
 const MONTHLY_TOP_LIMIT = 200;
-const LASTFM_MONTHLY_TOP_CACHE_KEY = "lastfm:monthly-top:v1";
+const LASTFM_MONTHLY_TOP_CACHE_KEY = "lastfm:monthly-top:v3";
 const LASTFM_MONTHLY_TOP_CACHE_TTL_SECONDS = 30 * 60; // 30 minutes
 const WRAPPED_TOP_COUNT = 10;
+const WRAPPED_GENRE_COUNT = 6;
+const GENRE_ARTIST_SAMPLE_LIMIT = 10;
+const ARTIST_TAG_LIMIT = 6;
+const GENRE_SIMILAR_TAG_SAMPLE_LIMIT = 20;
 const RECENTLY_PLAYED_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const MIN_SESSION_SECONDS = 5 * 60;
 const SESSION_BREAK_SECONDS = 45 * 60;
@@ -74,6 +80,131 @@ const getArtistUrl = (artist: string) => {
 	return `https://www.last.fm/music/${encode(artist)}`;
 };
 
+const normalizeGenreTag = (tag: string): string => {
+	const trimmed = tag.trim().toLowerCase();
+	if (!trimmed) return "";
+	const normalized = trimmed
+		.replace(/[./_,]+/g, " ")
+		.replace(/[-]+/g, " ")
+		.replace(/\s+/g, " ");
+	if (
+		normalized.includes("seen live") ||
+		normalized.includes("favorites") ||
+		normalized.includes("favorite")
+	) {
+		return "";
+	}
+	return normalized;
+};
+
+const formatGenreLabel = (tag: string): string =>
+	tag
+		.split(" ")
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+		.join(" ");
+
+const groupGenresByLastFmSimilarity = (params: {
+	genreScores: ReadonlyMap<string, number>;
+	similarGenreTags: Readonly<Record<string, Array<string>>>;
+}): Map<string, number> => {
+	const { genreScores, similarGenreTags } = params;
+	if (genreScores.size === 0) return new Map();
+
+	const adjacency = new Map<string, Set<string>>();
+	for (const tag of genreScores.keys()) {
+		adjacency.set(tag, new Set([tag]));
+	}
+	for (const [tag, similarTags] of Object.entries(similarGenreTags)) {
+		if (!adjacency.has(tag)) continue;
+		for (const similar of similarTags) {
+			if (!adjacency.has(similar)) continue;
+			adjacency.get(tag)?.add(similar);
+			adjacency.get(similar)?.add(tag);
+		}
+	}
+
+	const visited = new Set<string>();
+	const grouped = new Map<string, number>();
+
+	for (const tag of genreScores.keys()) {
+		if (visited.has(tag)) continue;
+
+		const stack = [tag];
+		const component: string[] = [];
+		while (stack.length > 0) {
+			const current = stack.pop();
+			if (!current || visited.has(current)) continue;
+			visited.add(current);
+			component.push(current);
+			for (const next of adjacency.get(current) ?? []) {
+				if (!visited.has(next)) stack.push(next);
+			}
+		}
+
+		if (component.length === 0) continue;
+		const canonical = component
+			.sort((a, b) => {
+				const scoreDelta = (genreScores.get(b) ?? 0) - (genreScores.get(a) ?? 0);
+				if (scoreDelta !== 0) return scoreDelta;
+				return a.localeCompare(b);
+			})
+			.at(0);
+		if (!canonical) continue;
+
+		const combinedScore = component.reduce(
+			(total, item) => total + (genreScores.get(item) ?? 0),
+			0,
+		);
+		grouped.set(canonical, combinedScore);
+	}
+
+	return grouped;
+};
+
+const buildTopGenres = (params: {
+	topArtists: ReadonlyArray<TopArtistsResponse["topartists"]["artist"][number]>;
+	artistTopTags: Readonly<Record<string, Array<{ name: string; count: number }>>>;
+	similarGenreTags: Readonly<Record<string, Array<string>>>;
+}): Array<{ name: string; share: number }> => {
+	const { topArtists, artistTopTags, similarGenreTags } = params;
+	const weightedGenreScores = new Map<string, number>();
+
+	for (const artist of topArtists.slice(0, GENRE_ARTIST_SAMPLE_LIMIT)) {
+		const artistPlays = parsePlayCount(artist.playcount);
+		if (artistPlays <= 0) continue;
+		const artistKey = getPrimaryArtist(artist.name).toLowerCase();
+		const tags = artistTopTags[artistKey] ?? [];
+		for (const tag of tags.slice(0, ARTIST_TAG_LIMIT)) {
+			const normalized = normalizeGenreTag(tag.name);
+			if (!normalized) continue;
+			const tagWeight = Math.max(1, tag.count);
+			const score = artistPlays * tagWeight;
+			weightedGenreScores.set(
+				normalized,
+				(weightedGenreScores.get(normalized) ?? 0) + score,
+			);
+		}
+	}
+
+	const groupedScores = groupGenresByLastFmSimilarity({
+		genreScores: weightedGenreScores,
+		similarGenreTags,
+	});
+	const totalScore = [...groupedScores.values()].reduce(
+		(total, score) => total + score,
+		0,
+	);
+	if (totalScore <= 0 || groupedScores.size === 0) return [];
+
+	return [...groupedScores.entries()]
+		.sort((a, b) => b[1] - a[1])
+		.slice(0, WRAPPED_GENRE_COUNT)
+		.map(([tag, score]) => ({
+			name: formatGenreLabel(tag),
+			share: Math.max(1, Math.round((score / totalScore) * 100)),
+		}));
+};
+
 const trackToAlbum = (track: Track, requireMbid = true): Album | null => {
 	if (requireMbid && !track.album.mbid) return null;
 
@@ -101,6 +232,7 @@ const trackToNowPlayingAlbum = (track: Track): NowPlayingAlbum | null => {
 		...album,
 		trackName: track.name,
 		trackUrl: getTrackUrl(track.artist["#text"], track.name),
+		artistUrl: getArtistUrl(track.artist["#text"]),
 	};
 };
 
@@ -412,9 +544,9 @@ const buildFunFacts = (params: {
 		facts.push(
 			`He stayed very focused this month, rotating just ${uniqueArtists} artists.`,
 		);
-	} else if (uniqueArtists >= 15) {
+	} else if (uniqueArtists >= 25) {
 		facts.push(
-			`Discovery mode showed up too, with ${uniqueArtists} artists in rotation.`,
+			`This month had a wider range than usual, with ${uniqueArtists} artists in rotation.`,
 		);
 	} else {
 		facts.push(
@@ -471,6 +603,8 @@ const extractWrappedData = (params: {
 	topTracks: ReadonlyArray<TopTracksResponse["toptracks"]["track"][number]>;
 	topArtists: ReadonlyArray<TopArtistsResponse["topartists"]["artist"][number]>;
 	topAlbums: ReadonlyArray<TopAlbumsResponse["topalbums"]["album"][number]>;
+	artistTopTags: Readonly<Record<string, Array<{ name: string; count: number }>>>;
+	similarGenreTags: Readonly<Record<string, Array<string>>>;
 	recentTracks: ReadonlyArray<Track>;
 	nowMs: number;
 }): WrappedData | null => {
@@ -478,6 +612,8 @@ const extractWrappedData = (params: {
 		topTracks,
 		topArtists: topArtistsRaw,
 		topAlbums,
+		artistTopTags,
+		similarGenreTags,
 		recentTracks,
 		nowMs,
 	} = params;
@@ -593,16 +729,24 @@ const extractWrappedData = (params: {
 		topArtists,
 		topTracks: topTracksSummary,
 	});
+	const topGenres = buildTopGenres({
+		topArtists: topArtistsRaw,
+		artistTopTags,
+		similarGenreTags,
+	});
 
 	return {
 		monthStartIso: monthStart.toISOString(),
 		totalScrobbles,
+		totalListeningSeconds,
+		averageSessionSeconds,
 		uniqueArtists,
 		topArtist,
 		topTrack,
 		topArtists,
 		topTracks: topTracksSummary,
 		topAlbums: topAlbumsSummary,
+		topGenres,
 		funFacts,
 	};
 };
@@ -617,6 +761,60 @@ type CachedMonthlyTopData = {
 	topTracks: ReadonlyArray<TopTracksResponse["toptracks"]["track"][number]>;
 	topArtists: ReadonlyArray<TopArtistsResponse["topartists"]["artist"][number]>;
 	topAlbums: ReadonlyArray<TopAlbumsResponse["topalbums"]["album"][number]>;
+	artistTopTags: Record<string, Array<{ name: string; count: number }>>;
+	similarGenreTags: Record<string, Array<string>>;
+};
+
+const fetchArtistTopTags = async (
+	artist: string,
+): Promise<Result<Array<{ name: string; count: number }>, LastFmRecentAlbumsError>> => {
+	const params = new URLSearchParams({
+		...getBaseParams(),
+		method: "artist.gettoptags",
+		artist,
+		autocorrect: "1",
+	});
+	const res = await fetchFresh({
+		url: `${LASTFM_API_URL}?${params.toString()}`,
+		method: "GET",
+		schema: TopArtistTagsResponseSchema,
+	});
+	if (Result.isError(res)) {
+		return Result.err(new LastFmRecentAlbumsError({ error: res.error }));
+	}
+	const tags = res.value.data.toptags.tag
+		.map((tag) => ({
+			name: tag.name,
+			count:
+				typeof tag.count === "number"
+					? tag.count
+					: Number.parseInt(tag.count ?? "0", 10) || 0,
+		}))
+		.filter((tag) => tag.name.trim().length > 0);
+	return Result.ok(tags);
+};
+
+const fetchSimilarGenreTags = async (
+	tag: string,
+): Promise<Result<Array<string>, LastFmRecentAlbumsError>> => {
+	const params = new URLSearchParams({
+		...getBaseParams(),
+		method: "tag.getsimilar",
+		tag,
+	});
+	const res = await fetchFresh({
+		url: `${LASTFM_API_URL}?${params.toString()}`,
+		method: "GET",
+		schema: SimilarTagsResponseSchema,
+	});
+	if (Result.isError(res)) {
+		return Result.err(new LastFmRecentAlbumsError({ error: res.error }));
+	}
+	return Result.ok(
+		res.value.data.similartags.tag
+			.map((item) => normalizeGenreTag(item.name))
+			.filter((item) => item.length > 0),
+	);
 };
 
 const monthlyTopData = () => {
@@ -679,10 +877,63 @@ const monthlyTopData = () => {
 				);
 			}
 
+			const primaryArtists = topArtistsRes.value.data.topartists.artist
+				.slice(0, GENRE_ARTIST_SAMPLE_LIMIT)
+				.map((artist) => getPrimaryArtist(artist.name));
+			const uniqueArtists = [...new Set(primaryArtists)];
+			const tagResults = await Promise.all(
+				uniqueArtists.map(async (artist) => ({
+					artist,
+					result: await fetchArtistTopTags(artist),
+				})),
+			);
+			const artistTopTags: Record<string, Array<{ name: string; count: number }>> =
+				{};
+			for (const tagResult of tagResults) {
+				if (Result.isError(tagResult.result)) continue;
+				artistTopTags[tagResult.artist.toLowerCase()] = tagResult.result.value;
+			}
+
+			const genreSeedScores = new Map<string, number>();
+			for (const artist of topArtistsRes.value.data.topartists.artist.slice(
+				0,
+				GENRE_ARTIST_SAMPLE_LIMIT,
+			)) {
+				const artistKey = getPrimaryArtist(artist.name).toLowerCase();
+				const artistPlays = parsePlayCount(artist.playcount);
+				const tags = artistTopTags[artistKey] ?? [];
+				for (const tag of tags.slice(0, ARTIST_TAG_LIMIT)) {
+					const normalized = normalizeGenreTag(tag.name);
+					if (!normalized) continue;
+					const score = artistPlays * Math.max(1, tag.count);
+					genreSeedScores.set(
+						normalized,
+						(genreSeedScores.get(normalized) ?? 0) + score,
+					);
+				}
+			}
+			const genreSeeds = [...genreSeedScores.entries()]
+				.sort((a, b) => b[1] - a[1])
+				.slice(0, GENRE_SIMILAR_TAG_SAMPLE_LIMIT)
+				.map(([name]) => name);
+			const similarTagResults = await Promise.all(
+				genreSeeds.map(async (tag) => ({
+					tag,
+					result: await fetchSimilarGenreTags(tag),
+				})),
+			);
+			const similarGenreTags: Record<string, Array<string>> = {};
+			for (const entry of similarTagResults) {
+				if (Result.isError(entry.result)) continue;
+				similarGenreTags[entry.tag] = entry.result.value;
+			}
+
 			return Result.ok({
 				topTracks: topTracksRes.value.data.toptracks.track,
 				topArtists: topArtistsRes.value.data.topartists.artist,
 				topAlbums: topAlbumsRes.value.data.topalbums.album,
+				artistTopTags,
+				similarGenreTags,
 			});
 		},
 	});
@@ -723,6 +974,8 @@ const recentActivity = async (): Promise<
 			topTracks: monthlyTopRes.value.topTracks,
 			topArtists: monthlyTopRes.value.topArtists,
 			topAlbums: monthlyTopRes.value.topAlbums,
+			artistTopTags: monthlyTopRes.value.artistTopTags,
+			similarGenreTags: monthlyTopRes.value.similarGenreTags,
 			recentTracks: recentTracksRes.value.data.recenttracks.track,
 			nowMs: Date.now(),
 		}),

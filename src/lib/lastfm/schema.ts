@@ -112,6 +112,43 @@ export const TopAlbumsResponseSchema = z.object({
 
 export type TopAlbumsResponse = z.infer<typeof TopAlbumsResponseSchema>;
 
+const TopTagItemSchema = z.object({
+	name: z.string(),
+	count: z.union([z.string(), z.number()]).optional(),
+});
+
+export const TopArtistTagsResponseSchema = z.object({
+	toptags: z.object({
+		tag: z
+			.union([z.array(TopTagItemSchema), TopTagItemSchema])
+			.optional()
+			.transform((value) => {
+				if (!value) return [];
+				return Array.isArray(value) ? value : [value];
+			}),
+	}),
+});
+
+export type TopArtistTagsResponse = z.infer<typeof TopArtistTagsResponseSchema>;
+
+const SimilarTagItemSchema = z.object({
+	name: z.string(),
+});
+
+export const SimilarTagsResponseSchema = z.object({
+	similartags: z.object({
+		tag: z
+			.union([z.array(SimilarTagItemSchema), SimilarTagItemSchema])
+			.optional()
+			.transform((value) => {
+				if (!value) return [];
+				return Array.isArray(value) ? value : [value];
+			}),
+	}),
+});
+
+export type SimilarTagsResponse = z.infer<typeof SimilarTagsResponseSchema>;
+
 /**
  * Normalized album type for use in components
  */
@@ -129,6 +166,7 @@ export type Album = {
 export type NowPlayingAlbum = Album & {
 	trackName: string;
 	trackUrl: string;
+	artistUrl: string;
 };
 
 /**
@@ -137,6 +175,8 @@ export type NowPlayingAlbum = Album & {
 export type WrappedData = {
 	monthStartIso: string;
 	totalScrobbles: number;
+	totalListeningSeconds: number;
+	averageSessionSeconds: number;
 	uniqueArtists: number;
 	topArtist: {
 		name: string;
@@ -174,6 +214,10 @@ export type WrappedData = {
 		share: number;
 		url: string;
 		image: string | null;
+	}>;
+	topGenres: Array<{
+		name: string;
+		share: number;
 	}>;
 	funFacts: string[];
 };

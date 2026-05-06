@@ -43,6 +43,23 @@
 	margin-left: var(--spc-8);
 }
 
+.section-container-flush-right > .listening-stack > .listening-recent-section {
+	padding: 0;
+}
+
+.section-container-flush-right > .listening-stack > .listening-recent-section > h3 {
+	margin-left: var(--spc-6);
+}
+
+.section-container-flush-right
+	> .listening-stack
+	> .listening-recent-section
+	> .horizontal-scroll-container
+	> .horizontal-scroll-container-items
+	> *:first-child {
+	margin-left: var(--spc-6);
+}
+
 /* Same left inset for Garage61 nested horizontal rows */
 .section-container-flush-right > .g61-racing
 	> .g61-racing-recent-lists
@@ -99,4 +116,22 @@
 
 .section-container:not(:has(+ .section-container)) {
 	border-bottom: none;
+}
+
+@media (max-width: 640px) {
+	.section-container-flush-right
+		> .listening-stack
+		> .listening-recent-section
+		> h3 {
+		margin-left: var(--spc-5);
+	}
+
+	.section-container-flush-right
+		> .listening-stack
+		> .listening-recent-section
+		> .horizontal-scroll-container
+		> .horizontal-scroll-container-items
+		> *:first-child {
+		margin-left: var(--spc-5);
+	}
 }

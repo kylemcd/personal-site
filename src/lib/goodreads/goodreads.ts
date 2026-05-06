@@ -215,9 +215,17 @@ const shelf = async (): Promise<Result<ShelfData, never>> => {
 		key: GOODREADS_SHELF_CACHE_KEY,
 	});
 	if (Result.isOk(cachedResult)) {
-		return Result.ok(
-			cachedResult.value ?? { reading: [], finished: [], next: [] },
-		);
+		if (cachedResult.value) {
+			return Result.ok(cachedResult.value);
+		}
+
+		// Cache miss: warm and return fresh shelf data.
+		const refreshed = await refreshShelf();
+		if (Result.isOk(refreshed)) {
+			return Result.ok(refreshed.value);
+		}
+
+		return Result.ok({ reading: [], finished: [], next: [] });
 	}
 
 	// `getJson` currently returns `Result<_, never>`, but keeping a defensive

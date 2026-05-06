@@ -1,389 +1,514 @@
-import { HorizontalScrollContainer } from "@/components/HorizontalScrollContainer";
 import { Text } from "@/components/Text";
-import type { WrappedData } from "@/lib/lastfm/schema";
+import type { NowPlayingAlbum, WrappedData } from "@/lib/lastfm/schema";
+import {
+	PolarAngleAxis,
+	PolarGrid,
+	PolarRadiusAxis,
+	Radar,
+	RadarChart,
+	ResponsiveContainer,
+	Treemap,
+	Tooltip,
+} from "recharts";
 
 import "./WrappedListening.styles.css";
 
 type WrappedListeningProps = {
 	wrapped: WrappedData;
+	nowPlaying?: NowPlayingAlbum | null;
 	variant?: "compact" | "rich";
-	preListsContent?: React.ReactNode;
+	titleHref?: string;
+};
+
+type WaveformBar = {
+	height: number;
+	warm: boolean;
+};
+
+type RadarAngleTickProps = {
+	x?: number | string;
+	y?: number | string;
+	textAnchor?: string;
+	payload?: { value?: string };
+};
+
+type TreemapArtistNode = {
+	name: string;
+	plays: number;
+	share: number;
+};
+
+type TreemapNodeProps = {
+	x?: number;
+	y?: number;
+	width?: number;
+	height?: number;
+	name?: string;
+	depth?: number;
+	index?: number;
+};
+
+type TreemapTooltipPayload = {
+	payload?: TreemapArtistNode;
+};
+
+type TreemapTooltipProps = {
+	active?: boolean;
+	payload?: ReadonlyArray<TreemapTooltipPayload>;
+};
+
+const formatDurationCompact = (seconds: number) => {
+	if (seconds <= 0) return "0m";
+	const days = Math.floor(seconds / 86400);
+	const hours = Math.floor((seconds % 86400) / 3600);
+	const minutes = Math.round((seconds % 3600) / 60);
+	if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+	if (hours > 0) return `${hours}h ${minutes}m`;
+	return `${minutes}m`;
+};
+
+const formatSharePercent = (value: number) => {
+	if (!Number.isFinite(value) || value <= 0) return "<1%";
+	if (value < 1) return "<1%";
+	return `${Math.round(value)}%`;
+};
+
+const formatGenreAxisLabel = (value: string) => {
+	const label = value.trim();
+	const maxChars = 12;
+	if (label.length <= maxChars) return label;
+	return `${label.slice(0, maxChars - 1)}…`;
+};
+
+const truncateTreemapLabel = (label: string, tileWidth: number) => {
+	const innerWidth = Math.max(0, tileWidth - 14);
+	const estimatedCharWidth = 7.2;
+	const maxChars = Math.max(3, Math.floor(innerWidth / estimatedCharWidth));
+	if (label.length <= maxChars) return label;
+	if (maxChars <= 3) return "…";
+	return `${label.slice(0, maxChars - 1)}…`;
+};
+
+const renderTreemapTile = ({
+	x,
+	y,
+	width,
+	height,
+	name,
+	depth,
+	index,
+}: TreemapNodeProps) => {
+	if (
+		typeof x !== "number" ||
+		typeof y !== "number" ||
+		typeof width !== "number" ||
+		typeof height !== "number" ||
+		!name
+	) {
+		return <g />;
+	}
+	if (depth !== 1) return <g />;
+
+	const showLabel = width >= 54 && height >= 26;
+	const label = truncateTreemapLabel(String(name), width);
+	const tint = 0.84 - ((index ?? 0) % 5) * 0.07;
+	const fill = `color-mix(in srgb, var(--color-listening-blue) ${Math.round(
+		tint * 100,
+	)}%, black)`;
+
+	return (
+		<g>
+			<rect
+				x={x}
+				y={y}
+				width={width}
+				height={height}
+				fill={fill}
+				stroke="var(--color-bg-1)"
+				strokeWidth={1}
+			/>
+			{showLabel ? (
+				<text
+					x={x + 8}
+					y={y + 18}
+					fill="var(--color-static-white)"
+					fontSize={11}
+					fontWeight={500}
+					fontFamily="var(--font-family-body)"
+				>
+					{label}
+					{label !== name ? <title>{String(name)}</title> : null}
+				</text>
+			) : null}
+		</g>
+	);
+};
+
+const renderTreemapTooltip = ({ active, payload }: TreemapTooltipProps) => {
+	if (!active || !payload || payload.length === 0) return null;
+	const item = payload[0]?.payload;
+	if (!item) return null;
+	return (
+		<div className="wrapped-treemap-tooltip">
+			<p>{item.name}</p>
+			<p>{item.plays} plays</p>
+			<p>{formatSharePercent(item.share)}</p>
+		</div>
+	);
+};
+
+const renderGenreAxisTick = ({
+	x,
+	y,
+	textAnchor,
+	payload,
+}: RadarAngleTickProps) => {
+	const rawValue = payload?.value ?? "";
+	const fullLabel = String(rawValue);
+	const shortLabel = formatGenreAxisLabel(fullLabel);
+	const tickX =
+		typeof x === "number" ? x : typeof x === "string" ? Number.parseFloat(x) : Number.NaN;
+	const tickY =
+		typeof y === "number" ? y : typeof y === "string" ? Number.parseFloat(y) : Number.NaN;
+	if (!Number.isFinite(tickX) || !Number.isFinite(tickY)) return null;
+	const safeTextAnchor: "start" | "middle" | "end" | "inherit" =
+		textAnchor === "start" ||
+		textAnchor === "middle" ||
+		textAnchor === "end" ||
+		textAnchor === "inherit"
+			? textAnchor
+			: "middle";
+	return (
+		<text
+			x={tickX}
+			y={tickY}
+			textAnchor={safeTextAnchor}
+			fill="var(--color-text-2)"
+			fontSize={11}
+			fontFamily="var(--font-family-mono)"
+			dominantBaseline="middle"
+			style={{ cursor: shortLabel !== fullLabel ? "help" : "default" }}
+		>
+			{shortLabel}
+			{shortLabel !== fullLabel ? <title>{fullLabel}</title> : null}
+		</text>
+	);
+};
+
+const createWaveformBars = (seed: string, count: number): Array<WaveformBar> => {
+	let state = 0;
+	for (const character of seed) {
+		state = (state * 31 + character.charCodeAt(0)) >>> 0;
+	}
+	if (state === 0) state = 0x6d2b79f5;
+
+	const bars: Array<WaveformBar> = [];
+	for (let index = 0; index < count; index += 1) {
+		state = (state * 1664525 + 1013904223) >>> 0;
+		const noise = state / 4294967295;
+		// Blend periodic waves + deterministic noise to create clustered peaks
+		// similar to an audio waveform strip.
+		const phaseA = Math.abs(Math.sin((index / count) * Math.PI * 10));
+		const phaseB = Math.abs(Math.sin((index / count) * Math.PI * 22 + 0.7));
+		const pulse = 0.58 * phaseA + 0.3 * phaseB + 0.12 * noise;
+		const height = Math.round(7 + pulse * 58);
+		const warmCutoff = Math.floor(count * 0.42);
+		bars.push({
+			height,
+			warm: index <= warmCutoff,
+		});
+	}
+
+	return bars;
 };
 
 function WrappedListening({
 	wrapped,
+	nowPlaying,
 	variant = "compact",
-	preListsContent,
+	titleHref,
 }: WrappedListeningProps) {
-	const compactLimit = 5;
-	const topTracks =
-		variant === "compact"
-			? wrapped.topTracks.slice(0, compactLimit)
-			: wrapped.topTracks;
-	const topArtists =
-		variant === "compact"
-			? wrapped.topArtists.slice(0, compactLimit)
-			: wrapped.topArtists;
-	const topAlbums =
-		variant === "compact"
-			? wrapped.topAlbums.slice(0, compactLimit)
-			: wrapped.topAlbums;
+	const isRich = variant === "rich";
+	const trackLimit = isRich ? 10 : 5;
+	const artistLimit = isRich ? 10 : 5;
+	const albumLimit = isRich ? 8 : 0;
 
-	const funFactsParagraph = wrapped.funFacts.join(" ");
-	const openingSentence =
-		wrapped.topTrack.plays > 3 ? (
-			<>
-				This month, Kyle kept{" "}
-				<a
-					href={wrapped.topTrack.url}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="wrapped-inline-link"
-				>
-					{wrapped.topTrack.name}
-				</a>{" "}
-				by{" "}
-				<a
-					href={wrapped.topTrack.artistUrl}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="wrapped-inline-link"
-				>
-					{wrapped.topTrack.artist}
-				</a>{" "}
-				on repeat for {wrapped.topTrack.plays} plays.
-			</>
-		) : (
-			<>
-				This month, Kyle's most-played track was{" "}
-				<a
-					href={wrapped.topTrack.url}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="wrapped-inline-link"
-				>
-					{wrapped.topTrack.name}
-				</a>{" "}
-				by{" "}
-				<a
-					href={wrapped.topTrack.artistUrl}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="wrapped-inline-link"
-				>
-					{wrapped.topTrack.artist}
-				</a>{" "}
-				at {wrapped.topTrack.plays} plays.
-			</>
-		);
-	const topArtistSentence =
-		wrapped.topArtist.share >= 30 ? (
-			<>
-				{" "}
-				<a
-					href={wrapped.topArtists[0]?.url ?? wrapped.topTrack.artistUrl}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="wrapped-inline-link"
-				>
-					{wrapped.topArtist.name}
-				</a>{" "}
-				accounted for {wrapped.topArtist.share}% of listening.
-			</>
-		) : null;
-
-	const renderThumbnail = (params: {
-		image: string | null;
-		label: string;
-		href: string;
-	}) => {
-		const fallback = params.label.charAt(0).toUpperCase();
-		return (
-			<a
-				href={params.href}
-				target="_blank"
-				rel="noopener noreferrer"
-				className="wrapped-thumb-link"
-				aria-label={params.label}
-			>
-				<div className="wrapped-row-thumb" aria-hidden="true">
-					{params.image ? (
-						<img
-							src={params.image}
-							alt=""
-							className="wrapped-row-thumb-image"
-						/>
-					) : (
-						<span className="wrapped-row-thumb-fallback">{fallback}</span>
-					)}
-				</div>
-				<span className="sr-only">{params.label}</span>
-			</a>
-		);
-	};
-
-	if (variant === "rich") {
-		return (
-			<div className="wrapped-listening wrapped-listening-rich">
-				<div className="wrapped-repeat">
-					<div className="wrapped-repeat-copy">
-						<Text as="p" size="1" color="1">
-							{openingSentence}
-							{topArtistSentence} {funFactsParagraph}
-						</Text>
-					</div>
-				</div>
-
-				{preListsContent ? (
-					<div className="wrapped-rich-prelists">{preListsContent}</div>
-				) : null}
-
-				<div className="wrapped-rich-lists">
-					<div className="wrapped-list">
-						<Text
-							as="p"
-							size="1"
-							weight="500"
-							className="wrapped-rich-list-title"
-						>
-							Top Tracks
-						</Text>
-						<HorizontalScrollContainer className="wrapped-rich-scroller">
-							{topTracks.map((track, index) => (
-								<div
-									className="wrapped-rich-card"
-									key={`${track.name}-${track.artist}-${track.plays}`}
-								>
-									{renderThumbnail({
-										image: track.image,
-										label: track.name,
-										href: track.url,
-									})}
-									<div className="wrapped-rich-card-body">
-										<Text
-											as="p"
-											size="0"
-											color="2"
-											className="wrapped-rich-rank"
-										>
-											{index + 1}
-										</Text>
-										<div className="wrapped-rich-track-copy">
-											<Text as="p" size="0" className="wrapped-rich-card-title">
-												<a
-													href={track.url}
-													target="_blank"
-													rel="noopener noreferrer"
-													className="wrapped-inline-link"
-												>
-													{track.name}
-												</a>
-											</Text>
-											<Text
-												as="p"
-												size="0"
-												color="2"
-												className="wrapped-rich-card-subtitle"
-											>
-												<a
-													href={track.artistUrl}
-													target="_blank"
-													rel="noopener noreferrer"
-													className="wrapped-inline-link"
-												>
-													{track.artist}
-												</a>
-											</Text>
-											<Text
-												as="p"
-												size="0"
-												color="2"
-												className="wrapped-rich-card-detail"
-											>
-												{track.share}% of listening ({track.plays} plays)
-											</Text>
-										</div>
-									</div>
-								</div>
-							))}
-						</HorizontalScrollContainer>
-					</div>
-
-					<div className="wrapped-list">
-						<Text
-							as="p"
-							size="1"
-							weight="500"
-							className="wrapped-rich-list-title"
-						>
-							Top Artists
-						</Text>
-						<HorizontalScrollContainer className="wrapped-rich-scroller">
-							{topArtists.map((artist, index) => (
-								<div
-									className="wrapped-rich-card"
-									key={`${artist.name}-${artist.plays}`}
-								>
-									{renderThumbnail({
-										image: artist.image,
-										label: artist.name,
-										href: artist.url,
-									})}
-									<div className="wrapped-rich-card-body">
-										<Text
-											as="p"
-											size="0"
-											color="2"
-											className="wrapped-rich-rank"
-										>
-											{index + 1}
-										</Text>
-										<Text as="p" size="0" className="wrapped-rich-card-title">
-											<a
-												href={artist.url}
-												target="_blank"
-												rel="noopener noreferrer"
-												className="wrapped-inline-link"
-											>
-												{artist.name}
-											</a>
-										</Text>
-										<Text
-											as="p"
-											size="0"
-											color="2"
-											className="wrapped-rich-card-detail"
-										>
-											{artist.share}% of listening ({artist.plays} plays)
-										</Text>
-									</div>
-								</div>
-							))}
-						</HorizontalScrollContainer>
-					</div>
-
-					<div className="wrapped-list">
-						<Text
-							as="p"
-							size="1"
-							weight="500"
-							className="wrapped-rich-list-title"
-						>
-							Top Albums
-						</Text>
-						<HorizontalScrollContainer className="wrapped-rich-scroller">
-							{topAlbums.map((album, index) => (
-								<div
-									className="wrapped-rich-card"
-									key={`${album.name}-${album.artist}-${album.plays}`}
-								>
-									{renderThumbnail({
-										image: album.image,
-										label: album.name,
-										href: album.url,
-									})}
-									<div className="wrapped-rich-card-body">
-										<Text
-											as="p"
-											size="0"
-											color="2"
-											className="wrapped-rich-rank"
-										>
-											{index + 1}
-										</Text>
-										<Text as="p" size="0" className="wrapped-rich-card-title">
-											<a
-												href={album.url}
-												target="_blank"
-												rel="noopener noreferrer"
-												className="wrapped-inline-link"
-											>
-												{album.name}
-											</a>
-										</Text>
-										<Text
-											as="p"
-											size="0"
-											color="2"
-											className="wrapped-rich-card-subtitle"
-										>
-											<a
-												href={album.artistUrl}
-												target="_blank"
-												rel="noopener noreferrer"
-												className="wrapped-inline-link"
-											>
-												{album.artist}
-											</a>
-										</Text>
-										<Text
-											as="p"
-											size="0"
-											color="2"
-											className="wrapped-rich-card-detail"
-										>
-											{album.share}% of listening ({album.plays} plays)
-										</Text>
-									</div>
-								</div>
-							))}
-						</HorizontalScrollContainer>
-					</div>
-				</div>
-			</div>
-		);
+	const topTracks = wrapped.topTracks.slice(0, trackLimit);
+	const topArtists = wrapped.topArtists.slice(0, artistLimit);
+	const topAlbums = wrapped.topAlbums.slice(0, albumLimit);
+	const topGenres = (wrapped.topGenres ?? []).slice(0, 6);
+	const topArtistsTreemapBase = wrapped.topArtists
+		.filter((artist) => artist.plays > 0)
+		.slice(0, 10);
+	const topArtistsTreemapHead = topArtistsTreemapBase.slice(0, 6);
+	const topArtistsTreemapTail = topArtistsTreemapBase.slice(6);
+	const topArtistsTreemapData: Array<TreemapArtistNode> = topArtistsTreemapHead.map(
+		(artist) => ({
+			name: artist.name,
+			plays: artist.plays,
+			share: artist.share,
+		}),
+	);
+	if (topArtistsTreemapTail.length > 0) {
+		topArtistsTreemapData.push({
+			name: "Other",
+			plays: topArtistsTreemapTail.reduce((total, artist) => total + artist.plays, 0),
+			share: topArtistsTreemapTail.reduce((total, artist) => total + artist.share, 0),
+		});
 	}
 
+	const hasLiveNowPlaying = Boolean(nowPlaying);
+	const liveTrackName = nowPlaying?.trackName ?? "";
+	const liveArtist = nowPlaying?.artist ?? "";
+	const liveArtistUrl = nowPlaying?.artistUrl ?? "";
+	const liveAlbum = nowPlaying?.name ?? "";
+	const liveAlbumUrl = nowPlaying?.url ?? "";
+	const liveArtwork = nowPlaying?.image ?? null;
+	const liveUrl = nowPlaying?.trackUrl ?? "";
+
+	const waveformBars = hasLiveNowPlaying
+		? createWaveformBars(
+				`${liveTrackName}|${liveArtist}|${wrapped.totalScrobbles}`,
+				isRich ? 48 : 40,
+			)
+		: [];
+
+	const sectionTitle = titleHref ? (
+		<a className="section-heading-link" href={titleHref}>
+			<span className="section-heading-label">Listening</span>
+			<i className="hn hn-angle-right section-heading-icon" aria-hidden="true" />
+		</a>
+	) : (
+		"Listening"
+	);
+
 	return (
-		<div className="wrapped-listening">
-			<div className="wrapped-repeat">
-				<div className="wrapped-repeat-copy">
-					<Text as="p" size="1" color="1">
-						{openingSentence}
-						{topArtistSentence} {funFactsParagraph}
+		<div
+			className={`wrapped-listening-redesign${isRich ? " wrapped-listening-redesign-rich" : ""}`}
+		>
+			<div className="wrapped-listening-top">
+				<Text as="h2" size="2" className="wrapped-listening-title">
+					{sectionTitle}
+				</Text>
+				<Text
+					as="p"
+					size="0"
+					color="2"
+					family="mono"
+					className="wrapped-listening-window"
+				>
+					last 30 days
+				</Text>
+			</div>
+
+			{hasLiveNowPlaying ? (
+				<div className="wrapped-live">
+					<a
+						href={liveUrl}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="wrapped-live-cover-link"
+					>
+						{liveArtwork ? (
+							<img src={liveArtwork} alt={liveAlbum} className="wrapped-live-cover" />
+						) : (
+							<div className="wrapped-live-cover-fallback" aria-hidden="true">
+								<Text as="span" size="4" family="mono" color="2">
+									{liveTrackName.charAt(0).toUpperCase()}
+								</Text>
+							</div>
+						)}
+					</a>
+					<div className="wrapped-live-copy">
+						<Text as="p" size="0" color="2" family="mono" className="wrapped-live-label">
+							<span className="wrapped-live-dot" aria-hidden="true" />
+							Live
+						</Text>
+						<Text as="p" size={isRich ? "7" : "6"} weight="500" className="wrapped-live-track">
+							<a
+								href={liveUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="wrapped-inline-link wrapped-live-track-link"
+							>
+								{liveTrackName}
+							</a>
+						</Text>
+						<Text as="p" size="1" color="2" className="wrapped-live-meta">
+							{liveArtistUrl ? (
+								<a
+									href={liveArtistUrl}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="wrapped-inline-link"
+								>
+									{liveArtist}
+								</a>
+							) : (
+								liveArtist
+							)}{" "}
+							·{" "}
+							{liveAlbumUrl ? (
+								<a
+									href={liveAlbumUrl}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="wrapped-inline-link"
+								>
+									{liveAlbum}
+								</a>
+							) : (
+								liveAlbum
+							)}
+						</Text>
+					</div>
+					<div className="wrapped-waveform wrapped-live-waveform" aria-hidden="true">
+						{waveformBars.map((bar, index) => (
+							<span
+								key={`wave-${index}`}
+								className={`wrapped-waveform-bar${bar.warm ? " is-warm" : ""}`}
+								style={{
+									height: `${bar.height}px`,
+									animationDelay: `${(index % 9) * 90}ms`,
+									animationDuration: `${1050 + (index % 7) * 85}ms`,
+								}}
+							/>
+						))}
+					</div>
+				</div>
+			) : null}
+
+			<div className="wrapped-listening-kpis">
+				<div className="wrapped-listening-kpi">
+					<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
+						Plays
+					</Text>
+					<Text as="p" size="6" family="mono" className="wrapped-kpi-value">
+						{wrapped.totalScrobbles}
+					</Text>
+				</div>
+				<div className="wrapped-listening-kpi">
+					<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
+						Listening time
+					</Text>
+					<Text
+						as="p"
+						size="6"
+						family="mono"
+						className="wrapped-kpi-value wrapped-kpi-duration-value"
+					>
+						{formatDurationCompact(wrapped.totalListeningSeconds)}
+					</Text>
+				</div>
+				<div className="wrapped-listening-kpi">
+					<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
+						Avg session
+					</Text>
+					<Text
+						as="p"
+						size="6"
+						family="mono"
+						className="wrapped-kpi-value wrapped-kpi-duration-value"
+					>
+						{formatDurationCompact(wrapped.averageSessionSeconds)}
+					</Text>
+				</div>
+				<div className="wrapped-listening-kpi">
+					<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
+						Artists
+					</Text>
+					<Text as="p" size="6" family="mono" className="wrapped-kpi-value">
+						{wrapped.uniqueArtists}
 					</Text>
 				</div>
 			</div>
 
-			<div className="wrapped-lists">
-				<div className="wrapped-list">
-					<Text as="p" size="1" weight="500">
-						Top Tracks
-					</Text>
-					<div className="wrapped-row-group">
-						{topTracks.map((track, index) => (
-							<div
-								className="wrapped-row wrapped-row-ladder"
-								key={`${track.name}-${track.artist}-${track.plays}`}
+			<div className="wrapped-repeat">
+				<div className="wrapped-repeat-copy wrapped-artist-treemap-block">
+					<div className="wrapped-artist-treemap">
+						<ResponsiveContainer width="100%" height={220}>
+							<Treemap
+								data={topArtistsTreemapData}
+								dataKey="plays"
+								nameKey="name"
+								aspectRatio={4 / 3}
+								isAnimationActive={false}
+								content={renderTreemapTile}
 							>
-								<div className="wrapped-row-meta">
-									<Text as="p" size="0" className="wrapped-row-title">
-										<span className="wrapped-row-rank">{index + 1}</span>
-										<a
-											href={track.url}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="wrapped-inline-link"
-										>
+								<Tooltip
+									content={renderTreemapTooltip}
+									cursor={{ stroke: "var(--color-static-white)", strokeOpacity: 0.35, strokeWidth: 1 }}
+								/>
+							</Treemap>
+						</ResponsiveContainer>
+					</div>
+				</div>
+				{topGenres.length > 2 ? (
+					<div className="wrapped-genre-radar">
+						<ResponsiveContainer width="100%" height={220}>
+							<RadarChart
+								data={topGenres}
+								margin={{ top: 24, right: 36, bottom: 24, left: 36 }}
+								outerRadius="68%"
+							>
+								<PolarGrid stroke="var(--color-ui-2)" strokeOpacity={0.6} />
+								<PolarAngleAxis
+									dataKey="name"
+									tick={renderGenreAxisTick}
+								/>
+								<PolarRadiusAxis
+									axisLine={false}
+									tick={false}
+									tickCount={4}
+									domain={[0, "dataMax"]}
+								/>
+								<Radar
+									dataKey="share"
+									stroke="var(--color-listening-blue)"
+									fill="var(--color-listening-blue)"
+									fillOpacity={0.24}
+									strokeWidth={1.5}
+									dot={false}
+									activeDot={false}
+								/>
+							</RadarChart>
+						</ResponsiveContainer>
+					</div>
+				) : null}
+			</div>
+
+			<div className="wrapped-lists-grid">
+				<div className="wrapped-list-panel">
+					<div className="wrapped-list-head">
+						<Text as="p" size="0" color="2">
+							Top tracks
+						</Text>
+					</div>
+					<div className="wrapped-list-rows">
+						{topTracks.map((track) => (
+							<div className="wrapped-share-row" key={`${track.name}-${track.artist}-${track.plays}`}>
+								<div className="wrapped-share-head">
+									<Text as="p" size="0" weight="500" className="wrapped-rank-title">
+										<a href={track.url} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
 											{track.name}
-										</a>{" "}
-										by{" "}
-										<a
-											href={track.artistUrl}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="wrapped-inline-link"
-										>
-											{track.artist}
 										</a>
 									</Text>
-									<Text
-										as="p"
-										size="0"
-										color="2"
-										className="wrapped-row-subline"
-									>
-										{track.share}% of listening ({track.plays} plays)
+									<Text as="p" size="0" color="2" className="wrapped-share-subtitle">
+										<a href={track.artistUrl} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
+											{track.artist}
+										</a>{" "}
+										· {track.plays} plays
+									</Text>
+								</div>
+								<div className="wrapped-share-progress">
+									<div className="wrapped-share-bar" aria-hidden="true">
+										<div
+											className="wrapped-share-bar-fill"
+											style={{ width: `${Math.max(2, track.share)}%` }}
+										/>
+									</div>
+									<Text as="p" size="0" family="mono" className="wrapped-share-percent">
+										{formatSharePercent(track.share)}
 									</Text>
 								</div>
 							</div>
@@ -391,35 +516,34 @@ function WrappedListening({
 					</div>
 				</div>
 
-				<div className="wrapped-list">
-					<Text as="p" size="1" weight="500">
-						Top Artists
-					</Text>
-					<div className="wrapped-row-group">
-						{topArtists.map((artist, index) => (
-							<div
-								className="wrapped-row wrapped-row-ladder"
-								key={`${artist.name}-${artist.plays}`}
-							>
-								<div className="wrapped-row-meta">
-									<Text as="p" size="0" className="wrapped-row-title">
-										<span className="wrapped-row-rank">{index + 1}</span>
-										<a
-											href={artist.url}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="wrapped-inline-link"
-										>
+				<div className="wrapped-list-panel">
+					<div className="wrapped-list-head">
+						<Text as="p" size="0" color="2">
+							Top artists
+						</Text>
+					</div>
+					<div className="wrapped-list-rows">
+						{topArtists.map((artist) => (
+							<div className="wrapped-share-row" key={`${artist.name}-${artist.plays}`}>
+								<div className="wrapped-share-head">
+									<Text as="p" size="0" weight="500" className="wrapped-rank-title">
+										<a href={artist.url} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
 											{artist.name}
 										</a>
 									</Text>
-									<Text
-										as="p"
-										size="0"
-										color="2"
-										className="wrapped-row-subline"
-									>
-										{artist.share}% of listening ({artist.plays} plays)
+									<Text as="p" size="0" color="2" className="wrapped-share-subtitle">
+										{artist.plays} plays
+									</Text>
+								</div>
+								<div className="wrapped-share-progress">
+									<div className="wrapped-share-bar" aria-hidden="true">
+										<div
+											className="wrapped-share-bar-fill"
+											style={{ width: `${Math.max(2, artist.share)}%` }}
+										/>
+									</div>
+									<Text as="p" size="0" family="mono" className="wrapped-share-percent">
+										{formatSharePercent(artist.share)}
 									</Text>
 								</div>
 							</div>
@@ -427,6 +551,46 @@ function WrappedListening({
 					</div>
 				</div>
 			</div>
+
+			{isRich && topAlbums.length > 0 ? (
+				<div className="wrapped-list-panel wrapped-albums-panel">
+					<div className="wrapped-list-head">
+						<Text as="p" size="0" color="2">
+							Top albums
+						</Text>
+					</div>
+					<div className="wrapped-list-rows">
+						{topAlbums.map((album) => (
+							<div className="wrapped-share-row" key={`${album.name}-${album.artist}-${album.plays}`}>
+								<div className="wrapped-share-head">
+									<Text as="p" size="0" weight="500" className="wrapped-rank-title">
+										<a href={album.url} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
+											{album.name}
+										</a>
+									</Text>
+									<Text as="p" size="0" color="2" className="wrapped-share-subtitle">
+										<a href={album.artistUrl} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
+											{album.artist}
+										</a>{" "}
+										· {album.plays} plays
+									</Text>
+								</div>
+								<div className="wrapped-share-progress">
+									<div className="wrapped-share-bar" aria-hidden="true">
+										<div
+											className="wrapped-share-bar-fill"
+											style={{ width: `${Math.max(2, album.share)}%` }}
+										/>
+									</div>
+									<Text as="p" size="0" family="mono" className="wrapped-share-percent">
+										{formatSharePercent(album.share)}
+									</Text>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			) : null}
 		</div>
 	);
 }

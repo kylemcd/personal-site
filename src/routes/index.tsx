@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Result } from "better-result";
 
-import { AlbumShelf, Equalizer, NowPlaying } from "@/components/AlbumShelf";
+import { AlbumShelf } from "@/components/AlbumShelf";
 import { Bookshelf } from "@/components/Bookshelf";
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { Experience } from "@/components/Experience";
@@ -124,42 +124,20 @@ function Home() {
 			</div>
 			{hasListeningContent && listening && (
 				<div className="section-container section-container-flush-right">
-					<Text
-						as="h2"
-						size="2"
-						className="section-title-padded section-title-tight"
-					>
-						<a className="section-heading-link" href="/listening">
-							<span className="section-heading-label">Listening</span>
-							<i
-								className="hn hn-angle-right section-heading-icon"
-								aria-hidden="true"
-							/>
-						</a>
-					</Text>
 					<div className="listening-stack">
 						{listening.wrapped && (
-							<WrappedListening wrapped={listening.wrapped} />
+							<WrappedListening
+								wrapped={listening.wrapped}
+								nowPlaying={listening.nowPlaying}
+								titleHref="/listening"
+							/>
 						)}
-						<HorizontalScrollContainer className="listening-container">
-							{listening.nowPlaying && (
-								<div className="listening-section">
-									<div className="listening-section-header">
-										<Text as="h3" size="1" weight="500">
-											Now
-										</Text>
-										<Equalizer />
-									</div>
-									<NowPlaying album={listening.nowPlaying} />
-								</div>
-							)}
-							<div className="listening-section">
-								<Text as="h3" size="1" weight="500">
-									Recently Played
-								</Text>
-								<AlbumShelf albums={listening.albums} />
-							</div>
-						</HorizontalScrollContainer>
+						<div className="listening-section listening-recent-section">
+							<Text as="h3" size="1" weight="500">
+								Recently played
+							</Text>
+							<AlbumShelf albums={listening.albums} variant="scroll" />
+						</div>
 					</div>
 				</div>
 			)}

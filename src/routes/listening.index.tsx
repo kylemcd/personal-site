@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Result } from "better-result";
 
-import { AlbumShelf, Equalizer, NowPlaying } from "@/components/AlbumShelf";
+import { AlbumShelf } from "@/components/AlbumShelf";
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { Text } from "@/components/Text";
 import { WrappedListening } from "@/components/WrappedListening";
@@ -41,34 +41,19 @@ function ListeningRoute() {
 
 	return (
 		<div className="section-container section-container-flush-right listening-page-section">
-			<Text as="h2" size="2">
-				Listening
-			</Text>
 			<div className="listening-stack">
 				{listening.wrapped && (
 					<WrappedListening
 						wrapped={listening.wrapped}
+						nowPlaying={listening.nowPlaying}
 						variant="rich"
-						preListsContent={
-							listening.nowPlaying ? (
-								<div className="listening-section">
-									<div className="listening-section-header">
-										<Text as="h3" size="1" weight="500">
-											Now
-										</Text>
-										<Equalizer />
-									</div>
-									<NowPlaying album={listening.nowPlaying} />
-								</div>
-							) : null
-						}
 					/>
 				)}
-				<div className="listening-section">
+				<div className="listening-section listening-recent-section">
 					<Text as="h3" size="1" weight="500">
-						Recently Played
+						Recently played
 					</Text>
-					<AlbumShelf albums={listening.albums} variant="grid" />
+					<AlbumShelf albums={listening.albums} variant="scroll" />
 				</div>
 			</div>
 		</div>

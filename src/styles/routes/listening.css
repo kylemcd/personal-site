@@ -1,4 +1,3 @@
-.listening-page-section > h2,
-.listening-page-section > .listening-stack > .listening-section {
-	padding-inline: var(--spc-8);
+.listening-page-section > .listening-stack > .listening-recent-section {
+	padding: 0;
 }

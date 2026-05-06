@@ -15,10 +15,11 @@ class Garage61Error extends TaggedError("Garage61Error")<{
 
 const GARAGE61_API_URL = "https://garage61.net/api/v1";
 const GARAGE61_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v8";
+const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v10";
 const GARAGE61_SUMMARY_CACHE_FALLBACK_KEYS = [
+	"garage61:summary:v9",
+	"garage61:summary:v8",
 	"garage61:summary:v7",
-	"garage61:summary:v6",
 ] as const;
 const GARAGE61_SUMMARY_CACHE_TTL_SECONDS = 30 * 60;
 const GARAGE61_REQUEST_TIMEOUT_MS = 15_000;
@@ -124,6 +125,11 @@ const emptySummary = (): Garage61Summary => ({
 			recentTracks: [],
 			recentCars: [],
 			insights: {
+				chart: {
+					sessions: [],
+					bestSession: null,
+					fallbackTrend: null,
+				},
 				sessionTimeBreakdown: null,
 				secondsOffRecord: null,
 				cleanestCombo: null,
@@ -152,6 +158,10 @@ const normalizeSummary = (summary: Garage61Summary): Garage61Summary => {
 				insights: {
 					...empty.derived.overview.insights,
 					...summary.derived?.overview?.insights,
+					chart: {
+						...empty.derived.overview.insights.chart,
+						...summary.derived?.overview?.insights?.chart,
+					},
 				},
 			},
 		},
@@ -480,6 +490,9 @@ const extractTrackIsOval = (data: unknown, targetId: number): boolean => {
 const normalizeName = (value: string): string =>
 	value.trim().toLowerCase().replace(/\s+/g, " ");
 
+const isLikelyOvalTrackName = (trackName: string): boolean =>
+	/\b(oval|speedway|superspeedway|tri-oval)\b/.test(normalizeName(trackName));
+
 const stableNameId = (kind: "track" | "car", name: string): number => {
 	const key = `${kind}:${normalizeName(name)}`;
 	let hash = 2166136261;
@@ -495,6 +508,13 @@ const roundPercent = (value: number): number => Math.round(value * 10) / 10;
 const roundTo = (value: number, decimals = 2): number => {
 	const p = 10 ** decimals;
 	return Math.round(value * p) / p;
+};
+const computeSharePercentage = (
+	value: number,
+	total: number,
+): number | null => {
+	if (total <= 0) return null;
+	return roundPercent((Math.max(0, value) / total) * 100);
 };
 
 const median = (values: ReadonlyArray<number>): number => {
@@ -538,6 +558,224 @@ const filteredWeightedAverage = (
 	const totalLaps = safe.reduce((sum, s) => sum + s.laps, 0);
 	if (totalLaps <= 0) return null;
 	return safe.reduce((sum, s) => sum + s.avgLapSeconds * s.laps, 0) / totalLaps;
+};
+
+type ChartLapPoint = { lapNumber: number; lapSeconds: number };
+type ChartBestSession = NonNullable<
+	Garage61Summary["derived"]["overview"]["insights"]["chart"]["bestSession"]
+>;
+type ChartFallbackTrend = NonNullable<
+	Garage61Summary["derived"]["overview"]["insights"]["chart"]["fallbackTrend"]
+>;
+type ChartSession =
+	Garage61Summary["derived"]["overview"]["insights"]["chart"]["sessions"][number];
+
+const toChartLapPoints = (laps: ReadonlyArray<number>): Array<ChartLapPoint> =>
+	laps.map((lapSeconds, index) => ({
+		lapNumber: index + 1,
+		lapSeconds: roundTo(lapSeconds, 3),
+	}));
+
+const buildFallbackTrendFromStatistics = (
+	rows: ReadonlyArray<Garage61Summary["derived"]["recentStatistics"][number]>,
+): ChartFallbackTrend | null => {
+	const series = rows
+		.map((row) => {
+			const lapsDriven = row.lapsDriven ?? 0;
+			const timeOnTrack = row.timeOnTrack ?? 0;
+			if (lapsDriven <= 0 || timeOnTrack <= 0) return null;
+			return {
+				day: row.day ? Date.parse(row.day) : Number.NaN,
+				track: row.track,
+				car: row.car,
+				lapSeconds: timeOnTrack / lapsDriven,
+				lapsDriven,
+			};
+		})
+		.filter(
+			(
+				value,
+			): value is {
+				day: number;
+				track: string;
+				car: string;
+				lapSeconds: number;
+				lapsDriven: number;
+			} => value !== null,
+		)
+		.sort((a, b) => a.day - b.day)
+		.slice(-25);
+	if (series.length < 2) return null;
+
+	const lapSeries = toChartLapPoints(series.map((item) => item.lapSeconds));
+	const lapTimes = lapSeries.map((item) => item.lapSeconds);
+	const bestLapSeconds = Math.min(...lapTimes);
+	const slowestLapSeconds = Math.max(...lapTimes);
+	const bestItem = series.reduce((best, current) =>
+		current.lapSeconds < best.lapSeconds ? current : best,
+	);
+	const track = bestItem.track;
+	const car = bestItem.car;
+
+	return {
+		track,
+		car,
+		source: "trend_fallback",
+		bestLapSeconds: roundTo(bestLapSeconds, 3),
+		rangeSeconds: roundTo(Math.max(0, slowestLapSeconds - bestLapSeconds), 3),
+		lapCount: lapSeries.length,
+		laps: lapSeries,
+	};
+};
+
+type SessionLapRow = {
+	sessionKey: string;
+	lapSeconds: number;
+	lapNumber: number | null;
+	timestampMs: number | null;
+	index: number;
+};
+
+const extractSessionLapRows = (data: unknown): ReadonlyArray<SessionLapRow> =>
+	getArrayCandidate(asRecord(data)?.items ?? data)
+		.map((row, index) => ({ row: asRecord(row), index }))
+		.filter(
+			(value): value is { row: Record<string, unknown>; index: number } =>
+				value.row !== null,
+		)
+		.map(({ row, index }): SessionLapRow | null => {
+			const lapSeconds = getNumberValue(
+				getFirstValue(row, ["lapTime", "lap_time", "lt"]),
+			);
+			if (lapSeconds === null || lapSeconds <= 0) return null;
+			const clean = getFirstValue(row, ["clean"]);
+			const incomplete = getFirstValue(row, ["incomplete"]);
+			const missing = getFirstValue(row, ["missing"]);
+			const offtrack = getFirstValue(row, ["offtrack"]);
+			if (
+				clean === false ||
+				incomplete === true ||
+				missing === true ||
+				offtrack === true
+			) {
+				return null;
+			}
+
+			const sessionValue = getFirstValue(row, [
+				"subsession_id",
+				"subsessionId",
+				"subsession",
+				"session_id",
+				"sessionId",
+				"session",
+			]);
+			const sessionId = getIdValue(sessionValue);
+			const sessionText =
+				typeof sessionValue === "string" && sessionValue.trim()
+					? sessionValue.trim()
+					: null;
+			const sessionKey =
+				sessionId !== null
+					? String(sessionId)
+					: (sessionText ?? `unknown-${index}`);
+
+			const lapNumber = getNumberValue(
+				getFirstValue(row, ["lapNumber", "lap_number", "lap", "lapNum"]),
+			);
+			const rawTimestamp = getFirstValue(row, [
+				"time",
+				"timestamp",
+				"date",
+				"createdAt",
+				"created_at",
+			]);
+			const timestampMs =
+				typeof rawTimestamp === "number" && Number.isFinite(rawTimestamp)
+					? rawTimestamp > 10_000_000_000
+						? rawTimestamp
+						: rawTimestamp > 0
+							? rawTimestamp * 1000
+							: null
+					: typeof rawTimestamp === "string" && rawTimestamp.trim()
+						? (() => {
+								const parsed = Date.parse(rawTimestamp);
+								return Number.isFinite(parsed) ? parsed : null;
+							})()
+						: null;
+
+			return {
+				sessionKey,
+				lapSeconds,
+				lapNumber:
+					lapNumber !== null ? Math.max(1, Math.round(lapNumber)) : null,
+				timestampMs,
+				index,
+			};
+		})
+		.filter((row): row is SessionLapRow => row !== null);
+
+const buildBestSessionChart = (params: {
+	data: unknown;
+	track: string;
+	car: string;
+}): ChartBestSession | null => {
+	const rows = extractSessionLapRows(params.data);
+	if (rows.length < 5) return null;
+
+	const grouped = new Map<string, SessionLapRow[]>();
+	for (const row of rows) {
+		const current = grouped.get(row.sessionKey);
+		if (current) current.push(row);
+		else grouped.set(row.sessionKey, [row]);
+	}
+
+	const candidateSessions = [...grouped.values()]
+		.filter((sessionRows) => sessionRows.length >= 5)
+		.map((sessionRows) => {
+			const ordered = [...sessionRows].sort((a, b) => {
+				if (a.lapNumber !== null && b.lapNumber !== null) {
+					if (a.lapNumber !== b.lapNumber) return a.lapNumber - b.lapNumber;
+				}
+				if (a.timestampMs !== null && b.timestampMs !== null) {
+					if (a.timestampMs !== b.timestampMs)
+						return a.timestampMs - b.timestampMs;
+				}
+				return a.index - b.index;
+			});
+			const lapPoints = ordered.map((item, index) => ({
+				lapNumber: item.lapNumber ?? index + 1,
+				lapSeconds: roundTo(item.lapSeconds, 3),
+			}));
+			const lapTimes = lapPoints.map((item) => item.lapSeconds);
+			const bestLapSeconds = Math.min(...lapTimes);
+			const slowestLapSeconds = Math.max(...lapTimes);
+			return {
+				lapPoints,
+				bestLapSeconds,
+				rangeSeconds: Math.max(0, slowestLapSeconds - bestLapSeconds),
+			};
+		})
+		.sort((a, b) => {
+			if (a.bestLapSeconds !== b.bestLapSeconds) {
+				return a.bestLapSeconds - b.bestLapSeconds;
+			}
+			if (a.rangeSeconds !== b.rangeSeconds)
+				return a.rangeSeconds - b.rangeSeconds;
+			return b.lapPoints.length - a.lapPoints.length;
+		});
+
+	const bestSession = candidateSessions[0];
+	if (!bestSession) return null;
+
+	return {
+		track: params.track,
+		car: params.car,
+		source: "session_laps",
+		bestLapSeconds: roundTo(bestSession.bestLapSeconds, 3),
+		rangeSeconds: roundTo(bestSession.rangeSeconds, 3),
+		lapCount: bestSession.lapPoints.length,
+		laps: bestSession.lapPoints,
+	};
 };
 
 const summaryUncached = async (
@@ -722,6 +960,7 @@ const summaryUncached = async (
 				id: number;
 				name: string;
 				timeOnTrackSeconds: number;
+				lapsDriven: number;
 				latestTimestamp: number;
 				latestIndex: number;
 			}
@@ -732,6 +971,7 @@ const summaryUncached = async (
 				id: number;
 				name: string;
 				timeOnTrackSeconds: number;
+				lapsDriven: number;
 				latestTimestamp: number;
 				latestIndex: number;
 			}
@@ -766,6 +1006,7 @@ const summaryUncached = async (
 					id: trackId,
 					name: trackName,
 					timeOnTrackSeconds: rowTime,
+					lapsDriven: 0,
 					latestTimestamp: validTimestamp,
 					latestIndex: rowIndex,
 				});
@@ -792,10 +1033,27 @@ const summaryUncached = async (
 					id: carId,
 					name: carName,
 					timeOnTrackSeconds: rowTime,
+					lapsDriven: 0,
 					latestTimestamp: validTimestamp,
 					latestIndex: rowIndex,
 				});
 			}
+		}
+
+		for (const row of nonOvalRaceQualiStatistics) {
+			const trackName =
+				row.trackId !== null
+					? (trackNameById.get(row.trackId) ?? row.track)
+					: row.track;
+			const carName =
+				row.carId !== null ? (carNameById.get(row.carId) ?? row.car) : row.car;
+			const lapsDriven = Math.max(0, row.lapsDriven ?? 0);
+			const trackKey = normalizeName(trackName);
+			const carKey = normalizeName(carName);
+			const track = trackTimeMap.get(trackKey);
+			if (track) track.lapsDriven += lapsDriven;
+			const car = carTimeMap.get(carKey);
+			if (car) car.lapsDriven += lapsDriven;
 		}
 
 		const recentTracks = [...trackTimeMap.values()]
@@ -813,12 +1071,15 @@ const summaryUncached = async (
 				name: track.name,
 				timeOnTrackSeconds: track.timeOnTrackSeconds,
 				variant: null,
-				timeSharePercentage:
-					totalTimeOnTrackSeconds > 0
-						? roundPercent(
-								(track.timeOnTrackSeconds / totalTimeOnTrackSeconds) * 100,
-							)
-						: null,
+				timeSharePercentage: computeSharePercentage(
+					track.timeOnTrackSeconds,
+					totalTimeOnTrackSeconds,
+				),
+				lapsDriven: roundTo(track.lapsDriven, 0),
+				lapSharePercentage: computeSharePercentage(
+					track.lapsDriven,
+					totalLapsDriven,
+				),
 			}));
 
 		const recentCars = [...carTimeMap.values()]
@@ -835,14 +1096,17 @@ const summaryUncached = async (
 				id: car.id,
 				name: car.name,
 				timeOnTrackSeconds: car.timeOnTrackSeconds,
-				timeSharePercentage:
-					totalTimeOnTrackSeconds > 0
-						? roundPercent(
-								(car.timeOnTrackSeconds / totalTimeOnTrackSeconds) * 100,
-							)
-						: null,
+				timeSharePercentage: computeSharePercentage(
+					car.timeOnTrackSeconds,
+					totalTimeOnTrackSeconds,
+				),
+				lapsDriven: roundTo(car.lapsDriven, 0),
+				lapSharePercentage: computeSharePercentage(
+					car.lapsDriven,
+					totalLapsDriven,
+				),
 			}));
-		const recentStatistics = nonOvalRaceQualiStatistics.slice(0, 12);
+		const recentStatistics = nonOvalRaceQualiStatistics.slice(0, 25);
 
 		const comboMap = new Map<
 			string,
@@ -1070,6 +1334,12 @@ const summaryUncached = async (
 			);
 		}
 		const comboLapComparisons = comboLapComparisonsResult.value;
+		const myLapsDataByComboKey = new Map<string, unknown>(
+			comboLapComparisons.map(({ combo, myLapsRes }) => [
+				`${combo.trackId}-${combo.carId}`,
+				myLapsRes.data,
+			]),
+		);
 
 		type ComboComparisonCandidate = {
 			combo: {
@@ -1300,13 +1570,16 @@ const summaryUncached = async (
 			})
 			.slice(0, 24);
 
-		const paceLadder = paceLadderSourceCombos
+		const paceLeaderboard = paceLadderSourceCombos
 			.map((combo) => {
 				const fastestLapSeconds = fastestLapByComboKey.get(combo.comboKey);
 				if (fastestLapSeconds === null || fastestLapSeconds === undefined) {
 					return null;
 				}
 				return {
+					comboKey: combo.comboKey,
+					trackId: combo.trackId,
+					carId: combo.carId,
 					track: combo.track,
 					car: combo.car,
 					avgLapSeconds: fastestLapSeconds,
@@ -1317,12 +1590,29 @@ const summaryUncached = async (
 				(
 					item,
 				): item is {
+					comboKey: string;
+					trackId: number;
+					carId: number;
 					track: string;
 					car: string;
 					avgLapSeconds: number;
 					laps: number;
 				} => item !== null,
 			)
+			.sort((a, b) => {
+				if (a.avgLapSeconds !== b.avgLapSeconds) {
+					return a.avgLapSeconds - b.avgLapSeconds;
+				}
+				return b.laps - a.laps;
+			});
+
+		const paceLadder = paceLeaderboard
+			.map((item) => ({
+				track: item.track,
+				car: item.car,
+				avgLapSeconds: item.avgLapSeconds,
+				laps: item.laps,
+			}))
 			.slice(0, PACE_LADDER_MAX_ITEMS);
 
 		const trackConfidence = [...trackAggMap.values()]
@@ -1354,17 +1644,57 @@ const summaryUncached = async (
 				return a.avgLapSeconds - b.avgLapSeconds;
 			})
 			.slice(0, PACE_LADDER_MAX_ITEMS);
-		const shouldSyncInsightListLengths =
-			paceLadder.length > 0 && trackConfidence.length > 0;
-		const sharedInsightListLength = shouldSyncInsightListLengths
-			? Math.min(paceLadder.length, trackConfidence.length)
-			: 0;
-		const syncedPaceLadder = shouldSyncInsightListLengths
-			? paceLadder.slice(0, sharedInsightListLength)
-			: paceLadder;
-		const syncedTrackConfidence = shouldSyncInsightListLengths
-			? trackConfidence.slice(0, sharedInsightListLength)
-			: trackConfidence;
+
+		const chartSessions: Array<ChartSession> = [];
+		for (const item of paceLeaderboard) {
+			if (chartSessions.length >= 6) break;
+			const ovalById = trackIsOvalById.get(item.trackId) === true;
+			if (ovalById || isLikelyOvalTrackName(item.track)) continue;
+			const chart = buildBestSessionChart({
+				data: myLapsDataByComboKey.get(item.comboKey) ?? [],
+				track: item.track,
+				car: item.car,
+			});
+			if (!chart) continue;
+			chartSessions.push({
+				id: `session-${item.trackId}-${item.carId}`,
+				title: `${item.track} · ${item.car}`,
+				track: chart.track,
+				car: chart.car,
+				source: chart.source,
+				bestLapSeconds: chart.bestLapSeconds,
+				rangeSeconds: chart.rangeSeconds,
+				lapCount: chart.lapCount,
+				laps: chart.laps,
+			});
+		}
+
+		const bestSession =
+			chartSessions.length > 0
+				? {
+						track: chartSessions[0].track,
+						car: chartSessions[0].car,
+						source: "session_laps" as const,
+						bestLapSeconds: chartSessions[0].bestLapSeconds,
+						rangeSeconds: chartSessions[0].rangeSeconds,
+						lapCount: chartSessions[0].lapCount,
+						laps: chartSessions[0].laps,
+					}
+				: null;
+		const fallbackTrend = buildFallbackTrendFromStatistics(recentStatistics);
+		if (fallbackTrend && chartSessions.length === 0) {
+			chartSessions.push({
+				id: "trend-fallback",
+				title: "Trend fallback",
+				track: fallbackTrend.track,
+				car: fallbackTrend.car,
+				source: fallbackTrend.source,
+				bestLapSeconds: fallbackTrend.bestLapSeconds,
+				rangeSeconds: fallbackTrend.rangeSeconds,
+				lapCount: fallbackTrend.lapCount,
+				laps: fallbackTrend.laps,
+			});
+		}
 
 		return Result.ok({
 			profile: parseProfile(meRes.data),
@@ -1388,11 +1718,16 @@ const summaryUncached = async (
 					recentTracks,
 					recentCars,
 					insights: {
+						chart: {
+							sessions: chartSessions,
+							bestSession,
+							fallbackTrend,
+						},
 						sessionTimeBreakdown,
 						secondsOffRecord,
 						cleanestCombo,
-						paceLadder: syncedPaceLadder,
-						trackConfidence: syncedTrackConfidence,
+						paceLadder,
+						trackConfidence,
 					},
 				},
 			},
