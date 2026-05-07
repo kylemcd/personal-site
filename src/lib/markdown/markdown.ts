@@ -5,6 +5,7 @@ import { Result, TaggedError } from "better-result";
 import yaml from "js-yaml";
 
 import { toComparableTimestampInCentral } from "@/lib/dates";
+import { toErrorDetails } from "@/lib/error-details";
 import { combineResults } from "@/lib/result";
 import { nodes } from "./nodes";
 
@@ -22,27 +23,16 @@ type MarkdownErrorDetails = {
 	readonly details?: string;
 };
 
-const toErrorDetails = (error: unknown): string => {
-	if (error instanceof Error && error.message.trim())
-		return error.message.trim();
-	if (typeof error === "string" && error.trim()) return error.trim();
-	try {
-		return JSON.stringify(error);
-	} catch {
-		return String(error);
-	}
-};
-
 class InvalidMarkdownError extends TaggedError(
 	"InvalidMarkdownError",
 )<MarkdownErrorDetails>() {
-	message = "Invalid markdown content provided.";
+	override message = "Invalid markdown content provided.";
 }
 
 class ParseMarkdownError extends TaggedError(
 	"ParseMarkdownError",
 )<MarkdownErrorDetails>() {
-	message = "Unable to parse the provided markdown content.";
+	override message = "Unable to parse the provided markdown content.";
 }
 
 type ToHtmlParams = {
@@ -70,7 +60,7 @@ const toHtml = ({
 class InvalidFrontmatterError extends TaggedError(
 	"InvalidFrontmatterError",
 )<MarkdownErrorDetails>() {
-	message = "Invalid frontmatter provided.";
+	override message = "Invalid frontmatter provided.";
 }
 
 type Frontmatter = Record<string, string>;
@@ -130,9 +120,9 @@ const toTableOfContents = (html: string): Array<TableOfContentsItem> => {
 	// Use regex to find all headings and their IDs
 	const headingRegex = /<h([1-6])[^>]*?id="([^"]*?)"[^>]*?>([^<]*?)<\/h[1-6]>/g;
 	const headings = Array.from(html.matchAll(headingRegex)).map((match) => ({
-		level: Number.parseInt(match[1], 10),
-		id: match[2],
-		text: match[3].trim(),
+		level: Number.parseInt(match[1]!, 10),
+		id: match[2]!,
+		text: match[3]!.trim(),
 	}));
 
 	// Convert to TableOfContentsItems
@@ -148,14 +138,14 @@ const toTableOfContents = (html: string): Array<TableOfContentsItem> => {
 	const stack: Array<TableOfContentsItem> = [];
 
 	items.forEach((item) => {
-		while (stack.length > 0 && stack[stack.length - 1].level >= item.level) {
+		while (stack.length > 0 && stack[stack.length - 1]!.level >= item.level) {
 			stack.pop();
 		}
 
 		if (stack.length === 0) {
 			result.push(item);
 		} else {
-			stack[stack.length - 1].children.push(item);
+			stack[stack.length - 1]!.children.push(item);
 		}
 
 		stack.push(item);
@@ -194,6 +184,7 @@ const fromPath = <F extends Frontmatter = Frontmatter>({
 		content: string;
 		tableOfContents: Array<TableOfContentsItem>;
 		readingTime: number;
+		hasMermaid: boolean;
 	},
 	InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
@@ -230,6 +221,7 @@ const fromPath = <F extends Frontmatter = Frontmatter>({
 		content: contentResult.value,
 		tableOfContents: toTableOfContents(contentResult.value),
 		readingTime: readingTimeResult.value,
+		hasMermaid: /^```mermaid\b/m.test(rawMarkdown),
 	});
 };
 

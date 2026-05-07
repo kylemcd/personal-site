@@ -1,12 +1,13 @@
 // vite.og.config.ts
-import { defineConfig } from "vite";
-import { fileURLToPath } from "node:url";
 
-// optional hard alias (belt & suspenders) in case tsconfigPaths isn’t picked up
+import { fileURLToPath } from "node:url";
+import { defineConfig } from "vite";
+
+// optional hard alias (belt & suspenders)
 const alias = { "@": fileURLToPath(new URL("./src", import.meta.url)) };
 
 export default defineConfig({
-	resolve: { alias, tsconfigPaths: true },
+	resolve: { alias },
 
 	// keep native bindings out of optimizeDeps so Node can load the .node file
 	optimizeDeps: {

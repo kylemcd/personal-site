@@ -1,1 +1,1 @@
-export { garage61 } from "./garage61";
+export { garage61, GARAGE61_SUMMARY_CACHE_KEY } from "./garage61";

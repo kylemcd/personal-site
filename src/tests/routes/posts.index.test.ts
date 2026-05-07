@@ -1,6 +1,6 @@
 import { Result, TaggedError } from "better-result";
 import { describe, expect, it, vi } from "vitest";
-import { getPostsWritingData } from "@/lib/posts/posts-data";
+import { getPostsWritingData } from "@/lib/posts/posts";
 
 class MarkdownTestError extends TaggedError("MarkdownTestError")<{
 	readonly message: string;

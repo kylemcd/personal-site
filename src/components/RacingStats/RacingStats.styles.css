@@ -23,15 +23,15 @@
 	font-variant-numeric: normal;
 }
 
-[data-position="1"] {
+.race-item-position[data-position="1"] {
 	background: var(--color-gold);
 }
 
-[data-position="2"] {
+.race-item-position[data-position="2"] {
 	background: var(--color-silver);
 }
 
-[data-position="3"] {
+.race-item-position[data-position="3"] {
 	background: var(--color-bronze);
 }
 

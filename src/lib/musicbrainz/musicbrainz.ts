@@ -1,7 +1,10 @@
 import { Result } from "better-result";
 
 import { env } from "@/lib/env";
+import { fetchJson } from "@/lib/fetch";
+import { hashString } from "@/lib/hash";
 import type { WrappedData } from "@/lib/lastfm/schema";
+import { mapAsyncConcurrent } from "@/lib/result";
 import { getOrComputeJson } from "@/lib/store";
 
 const MUSIC_BRAINZ_API_URL = "https://musicbrainz.org/ws/2";
@@ -41,47 +44,18 @@ const buildMusicBrainzUserAgent = (): string => {
 const quoteMusicBrainzQueryValue = (value: string): string =>
 	`"${value.replaceAll('"', "").trim()}"`;
 
-const hashString = (value: string): string => {
-	let hash = 2166136261;
-	for (let index = 0; index < value.length; index += 1) {
-		hash ^= value.charCodeAt(index);
-		hash +=
-			(hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
-	}
-	return (hash >>> 0).toString(36);
-};
-
 const getArtistKey = (artistName: string): string => artistName.toLowerCase();
 
-const fetchJsonWithTimeout = async <T>(url: string): Promise<T | null> => {
-	const controller = new AbortController();
-	const timeoutId = setTimeout(
-		() => controller.abort(),
-		MUSIC_BRAINZ_TIMEOUT_MS,
-	);
-	try {
-		const response = await fetch(url, {
-			headers: {
-				Accept: "application/json",
-				"User-Agent": buildMusicBrainzUserAgent(),
-			},
-			signal: controller.signal,
-		});
-		if (!response.ok) return null;
-		return (await response.json()) as T;
-	} catch {
-		return null;
-	} finally {
-		clearTimeout(timeoutId);
-	}
-};
-
 const fetchJsonFromUrl = async <T>(url: string): Promise<T | null> => {
-	const result = await Result.tryPromise({
-		try: () => fetchJsonWithTimeout<T>(url),
-		catch: () => null,
+	const result = await fetchJson<T>(url, {
+		headers: {
+			Accept: "application/json",
+			"User-Agent": buildMusicBrainzUserAgent(),
+		},
+		timeoutMs: MUSIC_BRAINZ_TIMEOUT_MS,
 	});
-	return Result.isOk(result) ? result.value : null;
+	if (Result.isError(result)) return null;
+	return result.value.data;
 };
 
 const pickCoverArtUrl = (
@@ -136,25 +110,6 @@ const emptyAssets = (wrapped: WrappedData): WrappedMusicBrainzAssets => ({
 	topArtists: wrapped.topArtists.map(() => null),
 });
 
-const mapConcurrent = async <A, B>(
-	items: ReadonlyArray<A>,
-	mapper: (item: A) => Promise<B>,
-	concurrency: number,
-): Promise<Array<B>> => {
-	const output: B[] = new Array(items.length);
-	let index = 0;
-	const workers = Array.from({ length: Math.max(1, concurrency) }, async () => {
-		while (true) {
-			const current = index;
-			index += 1;
-			if (current >= items.length) return;
-			output[current] = await mapper(items[current]);
-		}
-	});
-	await Promise.all(workers);
-	return output;
-};
-
 const resolveWrappedAssetsFromMusicBrainz = async (
 	wrapped: WrappedData,
 ): Promise<WrappedMusicBrainzAssets> => {
@@ -167,10 +122,10 @@ const resolveWrappedAssetsFromMusicBrainz = async (
 		ttlSeconds: MUSIC_BRAINZ_ASSETS_CACHE_TTL_SECONDS,
 		compute: async () =>
 			Result.ok({
-				topArtists: await mapConcurrent(
+				topArtists: await mapAsyncConcurrent(
 					wrapped.topArtists,
 					(artist) => resolveArtistArtFromMusicBrainz(artist.name),
-					MUSIC_BRAINZ_CONCURRENCY,
+					{ concurrency: MUSIC_BRAINZ_CONCURRENCY },
 				),
 			}),
 	});

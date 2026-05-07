@@ -95,9 +95,11 @@ const normalizeTags = (rawTags: string): string[] => {
 	return Array.from(deduped.values());
 };
 
+const PLACEHOLDER_CELLS = new Set(["—", "-", "n/a", "none", ""]);
+
 const normalizeLink = (rawLink: string): string | undefined => {
 	const trimmed = rawLink.trim();
-	if (!trimmed) {
+	if (!trimmed || PLACEHOLDER_CELLS.has(trimmed.toLowerCase())) {
 		return undefined;
 	}
 

@@ -9,6 +9,13 @@ export class FetchNetworkError extends TaggedError("FetchNetworkError")<{
 }>() {}
 
 /**
+ * The request timed out before a response was received.
+ */
+export class FetchTimeoutError extends TaggedError("FetchTimeoutError")<{
+	readonly timeoutMs: number;
+}>() {}
+
+/**
  * A non-2xx HTTP status was returned by the server.
  */
 export class FetchResponseError extends TaggedError("FetchResponseError")<{
@@ -62,19 +69,61 @@ export type FetchResponse<A> = {
  */
 export const fetchJson = async <A>(
 	input: RequestInfo | URL,
-	options?: RequestInit & { readonly schema?: z.ZodType<A> },
+	options?: RequestInit & {
+		readonly schema?: z.ZodType<A>;
+		readonly timeoutMs?: number;
+	},
 ): Promise<
 	Result<
 		FetchResponse<A>,
-		FetchNetworkError | FetchResponseError | JsonParseError | SchemaParseError
+		| FetchNetworkError
+		| FetchTimeoutError
+		| FetchResponseError
+		| JsonParseError
+		| SchemaParseError
 	>
 > => {
-	const { schema, ...init } = options ?? {};
+	const { schema, timeoutMs, ...init } = options ?? {};
+	const externalSignal = init.signal;
+	const controller = new AbortController();
+	let timeoutId: ReturnType<typeof setTimeout> | null = null;
+	let timedOut = false;
+	let onExternalAbort: (() => void) | null = null;
+
+	if (externalSignal) {
+		if (externalSignal.aborted) {
+			controller.abort(externalSignal.reason);
+		} else {
+			onExternalAbort = () => controller.abort(externalSignal.reason);
+			externalSignal.addEventListener("abort", onExternalAbort, {
+				once: true,
+			});
+		}
+	}
+	if (timeoutMs !== undefined) {
+		timeoutId = setTimeout(() => {
+			timedOut = true;
+			controller.abort();
+		}, timeoutMs);
+	}
 
 	const responseResult = await Result.tryPromise({
-		try: () => fetch(input, init),
-		catch: (error) => new FetchNetworkError({ error }),
+		try: () =>
+			fetch(input, {
+				...init,
+				signal: controller.signal,
+			}),
+		catch: (error) => {
+			if (timedOut && timeoutMs !== undefined) {
+				return new FetchTimeoutError({ timeoutMs });
+			}
+			return new FetchNetworkError({ error });
+		},
 	});
+	if (timeoutId) clearTimeout(timeoutId);
+	if (externalSignal && onExternalAbort) {
+		externalSignal.removeEventListener("abort", onExternalAbort);
+	}
 	if (Result.isError(responseResult)) return responseResult;
 	const response = responseResult.value;
 
@@ -123,6 +172,7 @@ export const fetchJson = async <A>(
 export type FetchParams<A> = {
 	readonly url: RequestInfo | URL;
 	readonly schema?: z.ZodType<A>;
+	readonly timeoutMs?: number;
 } & RequestInit;
 
 const withCache = <A>(
@@ -132,8 +182,8 @@ const withCache = <A>(
 	const { url, schema, ...init } = params;
 	return fetchJson<A>(url, {
 		...init,
-		cache,
-		schema,
+		...(cache !== undefined ? { cache } : {}),
+		...(schema !== undefined ? { schema } : {}),
 	});
 };
 

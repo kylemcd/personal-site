@@ -1,6 +1,7 @@
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { Footer } from "@/components/Footer";
 import { Navigation } from "@/components/Navigation";
+import { buildMeta } from "@/lib/meta";
 import "@/styles/global.css";
 
 function initializeTheme() {
@@ -26,45 +27,9 @@ const themeScript = `(${initializeTheme.toString()})();`;
 export const Route = createRootRoute({
 	head: () => ({
 		meta: [
-			{
-				charSet: "utf-8",
-			},
-			{
-				name: "viewport",
-				content: "width=device-width, initial-scale=1",
-			},
-			{
-				title: "Kyle McDonald",
-			},
-			{ property: "icon", content: "/images/avatar.png" },
-			{ property: "og:title", content: "Kyle McDonald" },
-			{
-				property: "og:description",
-				content:
-					"Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
-			},
-			{ property: "og:url", content: "https://kylemcd.com" },
-			{
-				property: "og:image",
-				content: "https://kylemcd.com/open-graph/home.png",
-			},
-			{ property: "og:image:type", content: "image/png" },
-			{ property: "og:image:width", content: "1200" },
-			{ property: "og:image:height", content: "630" },
-			{ property: "og:site_name", content: "Kyle McDonald" },
-			{ property: "og:locale", content: "en-US" },
-			{ property: "og:type", content: "website" },
-			{ name: "twitter:card", content: "summary_large_image" },
-			{ name: "twitter:title", content: "Kyle McDonald" },
-			{
-				name: "twitter:description",
-				content:
-					"Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
-			},
-			{
-				name: "twitter:image",
-				content: "https://kylemcd.com/open-graph/home.png",
-			},
+			{ charSet: "utf-8" },
+			{ name: "viewport", content: "width=device-width, initial-scale=1" },
+			...buildMeta({ title: "Kyle McDonald" }),
 		],
 	}),
 
@@ -91,7 +56,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				</div>
 				<Footer />
 				<Scripts />
-				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: I want to do this. */}
+				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: theme script must run before first paint to avoid flash */}
 				<script dangerouslySetInnerHTML={{ __html: themeScript }} />
 				{process.env.NODE_ENV === "production" && (
 					<script

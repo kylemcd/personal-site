@@ -1,17 +1,16 @@
 import "./MetricBar.styles.css";
+import { clampPercent } from "@/lib/format";
 
 type MetricBarProps = React.HTMLAttributes<HTMLDivElement> & {
 	value: number;
 	height?: number;
-	fillColorVar?: string;
+	fillColor?: string;
 };
-
-const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
 
 function MetricBar({
 	value,
 	height,
-	fillColorVar,
+	fillColor,
 	className,
 	style,
 	...rest
@@ -21,19 +20,28 @@ function MetricBar({
 	const mergedStyle: React.CSSProperties = {
 		...(style ?? {}),
 		...(typeof height === "number" ? { height: `${height}px` } : {}),
-		...(fillColorVar
-			? ({ "--metric-bar-fill-color": `var(${fillColorVar})` } as React.CSSProperties)
+		...(fillColor
+			? ({
+					"--metric-bar-fill-color": fillColor,
+				} as React.CSSProperties)
 			: {}),
 	};
 
-	const trackClasses = ["metric-bar-track", className].filter(Boolean).join(" ");
+	const trackClasses = ["metric-bar-track", className]
+		.filter(Boolean)
+		.join(" ");
 
 	return (
-		<div className={trackClasses} style={mergedStyle} aria-hidden="true" {...rest}>
+		<div
+			className={trackClasses}
+			style={mergedStyle}
+			aria-hidden="true"
+			{...rest}
+		>
 			<div className="metric-bar-fill" style={{ width: `${widthPercent}%` }} />
 		</div>
 	);
 }
 
-export { MetricBar };
 export type { MetricBarProps };
+export { MetricBar };

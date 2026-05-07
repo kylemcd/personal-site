@@ -30,14 +30,6 @@
 	letter-spacing: 0.02em;
 }
 
-.wrapped-listening-kpis .section-stat-item {
-	display: flex;
-	flex-direction: column;
-	gap: var(--spc-1);
-	min-width: 0;
-	flex: 1 1 auto;
-}
-
 .wrapped-kpi-value {
 	line-height: 1.15;
 	white-space: nowrap;
@@ -238,110 +230,6 @@
 
 .wrapped-list-rows-compact {
 	gap: var(--spc-2);
-}
-
-.wrapped-share-subtitle {
-	text-align: right;
-}
-
-.wrapped-list-rows .share-list-row {
-	gap: calc(var(--spc-1) + (var(--spc-px) * 2));
-}
-
-.wrapped-list-rows .share-list-head {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	align-items: start;
-	gap: var(--spc-2);
-}
-
-.wrapped-list-rows .share-list-subtitle {
-	text-align: right;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.wrapped-list-rows .share-list-progress {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	align-items: center;
-	gap: var(--spc-2);
-}
-
-.wrapped-list-rows .share-list-percent {
-	color: var(--color-listening-blue);
-}
-
-.wrapped-list-rows .metric-bar-track {
-	background: color-mix(in srgb, var(--color-ui-1) 70%, transparent);
-	height: calc(var(--spc-px) * 3);
-}
-
-.wrapped-list-rows .metric-bar-fill {
-	background: var(--color-listening-blue);
-}
-
-.wrapped-rank-row {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	gap: var(--spc-3);
-	align-items: start;
-}
-
-.wrapped-rank-main {
-	display: grid;
-	grid-template-columns: auto minmax(0, 1fr);
-	gap: var(--spc-3);
-	align-items: start;
-	min-width: 0;
-}
-
-.wrapped-rank-index {
-	min-width: 1.2em;
-	color: var(--color-text-2);
-}
-
-.wrapped-rank-copy {
-	display: flex;
-	flex-direction: column;
-	gap: calc(var(--spc-px) * 2);
-	min-width: 0;
-}
-
-.wrapped-rank-title,
-.wrapped-rank-subtitle {
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.wrapped-rank-metric {
-	white-space: nowrap;
-}
-
-.wrapped-rank-share {
-	color: var(--color-text-2);
-}
-
-.wrapped-artist-row {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	gap: var(--spc-2);
-	align-items: center;
-}
-
-.wrapped-artist-bar {
-	height: calc(var(--spc-px) * 3);
-	grid-column: 1 / -1;
-	background: color-mix(in srgb, var(--color-ui-1) 70%, transparent);
-	overflow: hidden;
-}
-
-.wrapped-artist-bar-fill {
-	height: 100%;
-	background: var(--color-listening-blue);
-	min-width: calc(var(--spc-px) * 2);
 }
 
 .wrapped-albums-panel {

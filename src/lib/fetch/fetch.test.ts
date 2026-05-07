@@ -2,7 +2,12 @@ import { Result } from "better-result";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { FetchResponseError, fetchJson, SchemaParseError } from "./fetch";
+import {
+	FetchResponseError,
+	FetchTimeoutError,
+	fetchJson,
+	SchemaParseError,
+} from "./fetch";
 
 afterEach(() => {
 	vi.restoreAllMocks();
@@ -64,6 +69,29 @@ describe("fetchJson", () => {
 		expect(Result.isError(result)).toBe(true);
 		if (Result.isError(result)) {
 			expect(result.error).toBeInstanceOf(SchemaParseError);
+		}
+	});
+
+	it("maps timeout to FetchTimeoutError", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(
+				(_input: RequestInfo | URL, init?: RequestInit) =>
+					new Promise<Response>((_resolve, reject) => {
+						init?.signal?.addEventListener("abort", () => {
+							reject(new DOMException("Aborted", "AbortError"));
+						});
+					}),
+			),
+		);
+
+		const result = await fetchJson("https://example.com", {
+			timeoutMs: 10,
+		});
+
+		expect(Result.isError(result)).toBe(true);
+		if (Result.isError(result)) {
+			expect(result.error).toBeInstanceOf(FetchTimeoutError);
 		}
 	});
 });

@@ -1,7 +1,3 @@
-import { Text } from "@/components/Text";
-import { SectionStatRow } from "@/components/SectionStatRow";
-import { StatBarList, type StatBarListRow } from "@/components/StatBarList";
-import type { NowPlayingAlbum, WrappedData } from "@/lib/lastfm/schema";
 import {
 	PolarAngleAxis,
 	PolarGrid,
@@ -9,9 +5,14 @@ import {
 	Radar,
 	RadarChart,
 	ResponsiveContainer,
-	Treemap,
 	Tooltip,
+	Treemap,
 } from "recharts";
+import { SectionStatRow } from "@/components/SectionStatRow";
+import { StatBarList, type StatBarListRow } from "@/components/StatBarList";
+import { Text } from "@/components/Text";
+import { formatDuration, formatPercentLabel } from "@/lib/format";
+import type { NowPlayingAlbum, WrappedData } from "@/lib/lastfm/schema";
 
 import "./WrappedListening.styles.css";
 
@@ -23,6 +24,8 @@ type WrappedListeningProps = {
 };
 
 type WaveformBar = {
+	id: string;
+	order: number;
 	height: number;
 	warm: boolean;
 };
@@ -59,22 +62,6 @@ type TreemapTooltipProps = {
 	payload?: ReadonlyArray<TreemapTooltipPayload>;
 };
 
-const formatDurationCompact = (seconds: number) => {
-	if (seconds <= 0) return "0m";
-	const days = Math.floor(seconds / 86400);
-	const hours = Math.floor((seconds % 86400) / 3600);
-	const minutes = Math.round((seconds % 3600) / 60);
-	if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-	if (hours > 0) return `${hours}h ${minutes}m`;
-	return `${minutes}m`;
-};
-
-const formatSharePercent = (value: number) => {
-	if (!Number.isFinite(value) || value <= 0) return "<1%";
-	if (value < 1) return "<1%";
-	return `${Math.round(value)}%`;
-};
-
 const splitGenreAxisLabel = (value: string): [string, string?] => {
 	const label = value.trim();
 	const maxSingleLine = 12;
@@ -98,7 +85,10 @@ const splitGenreAxisLabel = (value: string): [string, string?] => {
 		}
 	}
 
-	return [words.slice(0, bestIndex).join(" "), words.slice(bestIndex).join(" ")];
+	return [
+		words.slice(0, bestIndex).join(" "),
+		words.slice(bestIndex).join(" "),
+	];
 };
 
 const truncateTreemapLabel = (label: string, tileWidth: number) => {
@@ -173,7 +163,8 @@ const renderTreemapTooltip = ({ active, payload }: TreemapTooltipProps) => {
 		<div className="wrapped-treemap-tooltip">
 			<p className="wrapped-treemap-tooltip-name">{item.name}</p>
 			<p className="wrapped-treemap-tooltip-meta">
-				{item.plays} plays · {formatSharePercent(item.share)}
+				{item.plays} plays ·{" "}
+				{formatPercentLabel(item.share, { invalidLabel: "<1%" })}
 			</p>
 		</div>
 	);
@@ -189,9 +180,17 @@ const renderGenreAxisTick = ({
 	const fullLabel = String(rawValue);
 	const [lineOne, lineTwo] = splitGenreAxisLabel(fullLabel);
 	const tickX =
-		typeof x === "number" ? x : typeof x === "string" ? Number.parseFloat(x) : Number.NaN;
+		typeof x === "number"
+			? x
+			: typeof x === "string"
+				? Number.parseFloat(x)
+				: Number.NaN;
 	const tickY =
-		typeof y === "number" ? y : typeof y === "string" ? Number.parseFloat(y) : Number.NaN;
+		typeof y === "number"
+			? y
+			: typeof y === "string"
+				? Number.parseFloat(y)
+				: Number.NaN;
 	if (!Number.isFinite(tickX) || !Number.isFinite(tickY)) return null;
 	const safeTextAnchor: "start" | "middle" | "end" | "inherit" =
 		textAnchor === "start" ||
@@ -222,7 +221,10 @@ const renderGenreAxisTick = ({
 	);
 };
 
-const createWaveformBars = (seed: string, count: number): Array<WaveformBar> => {
+const createWaveformBars = (
+	seed: string,
+	count: number,
+): Array<WaveformBar> => {
 	let state = 0;
 	for (const character of seed) {
 		state = (state * 31 + character.charCodeAt(0)) >>> 0;
@@ -241,6 +243,8 @@ const createWaveformBars = (seed: string, count: number): Array<WaveformBar> => 
 		const height = Math.round(7 + pulse * 58);
 		const warmCutoff = Math.floor(count * 0.42);
 		bars.push({
+			id: `${state}-${index}`,
+			order: index,
 			height,
 			warm: index <= warmCutoff,
 		});
@@ -269,18 +273,23 @@ function WrappedListening({
 		.slice(0, 20);
 	const topArtistsTreemapHead = topArtistsTreemapBase.slice(0, 16);
 	const topArtistsTreemapTail = topArtistsTreemapBase.slice(16);
-	const topArtistsTreemapData: Array<TreemapArtistNode> = topArtistsTreemapHead.map(
-		(artist) => ({
+	const topArtistsTreemapData: Array<TreemapArtistNode> =
+		topArtistsTreemapHead.map((artist) => ({
 			name: artist.name,
 			plays: artist.plays,
 			share: artist.share,
-		}),
-	);
+		}));
 	if (topArtistsTreemapTail.length > 0) {
 		topArtistsTreemapData.push({
 			name: "Other",
-			plays: topArtistsTreemapTail.reduce((total, artist) => total + artist.plays, 0),
-			share: topArtistsTreemapTail.reduce((total, artist) => total + artist.share, 0),
+			plays: topArtistsTreemapTail.reduce(
+				(total, artist) => total + artist.plays,
+				0,
+			),
+			share: topArtistsTreemapTail.reduce(
+				(total, artist) => total + artist.share,
+				0,
+			),
 		});
 	}
 
@@ -303,7 +312,10 @@ function WrappedListening({
 	const sectionTitle = titleHref ? (
 		<a className="section-heading-link" href={titleHref}>
 			<span className="section-heading-label">Listening</span>
-			<i className="hn hn-angle-right section-heading-icon" aria-hidden="true" />
+			<i
+				className="hn hn-angle-right section-heading-icon"
+				aria-hidden="true"
+			/>
 		</a>
 	) : (
 		"Listening"
@@ -312,49 +324,74 @@ function WrappedListening({
 	const trackShareRows: Array<StatBarListRow> = topTracks.map((track) => ({
 		key: `${track.name}-${track.artist}-${track.plays}`,
 		title: (
-			<a href={track.url} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
+			<a
+				href={track.url}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="wrapped-inline-link"
+			>
 				{track.name}
 			</a>
 		),
 		subtitleRight: (
 			<>
-				<a href={track.artistUrl} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
+				<a
+					href={track.artistUrl}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="wrapped-inline-link"
+				>
 					{track.artist}
 				</a>{" "}
 				· {track.plays} plays
 			</>
 		),
 		percent: track.share,
-		percentLabel: formatSharePercent(track.share),
+		percentLabel: formatPercentLabel(track.share, { invalidLabel: "<1%" }),
 	}));
 	const artistShareRows: Array<StatBarListRow> = topArtists.map((artist) => ({
 		key: `${artist.name}-${artist.plays}`,
 		title: (
-			<a href={artist.url} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
+			<a
+				href={artist.url}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="wrapped-inline-link"
+			>
 				{artist.name}
 			</a>
 		),
 		subtitleRight: `${artist.plays} plays`,
 		percent: artist.share,
-		percentLabel: formatSharePercent(artist.share),
+		percentLabel: formatPercentLabel(artist.share, { invalidLabel: "<1%" }),
 	}));
 	const albumShareRows: Array<StatBarListRow> = topAlbums.map((album) => ({
 		key: `${album.name}-${album.artist}-${album.plays}`,
 		title: (
-			<a href={album.url} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
+			<a
+				href={album.url}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="wrapped-inline-link"
+			>
 				{album.name}
 			</a>
 		),
 		subtitleLeft: (
 			<>
-				<a href={album.artistUrl} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
+				<a
+					href={album.artistUrl}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="wrapped-inline-link"
+				>
 					{album.artist}
 				</a>{" "}
 				· {album.plays} plays
 			</>
 		),
 		percent: album.share,
-		percentLabel: formatSharePercent(album.share),
+		percentLabel: formatPercentLabel(album.share, { invalidLabel: "<1%" }),
 	}));
 
 	return (
@@ -385,7 +422,11 @@ function WrappedListening({
 						className="wrapped-live-cover-link"
 					>
 						{liveArtwork ? (
-							<img src={liveArtwork} alt={liveAlbum} className="wrapped-live-cover" />
+							<img
+								src={liveArtwork}
+								alt={liveAlbum}
+								className="wrapped-live-cover"
+							/>
 						) : (
 							<div className="wrapped-live-cover-fallback" aria-hidden="true">
 								<Text as="span" size="4" family="mono" color="2">
@@ -395,11 +436,22 @@ function WrappedListening({
 						)}
 					</a>
 					<div className="wrapped-live-copy">
-						<Text as="p" size="0" color="2" family="mono" className="wrapped-live-label">
+						<Text
+							as="p"
+							size="0"
+							color="2"
+							family="mono"
+							className="wrapped-live-label"
+						>
 							<span className="wrapped-live-dot" aria-hidden="true" />
 							Live
 						</Text>
-						<Text as="p" size={isRich ? "7" : "6"} weight="500" className="wrapped-live-track">
+						<Text
+							as="p"
+							size={isRich ? "7" : "6"}
+							weight="500"
+							className="wrapped-live-track"
+						>
 							<a
 								href={liveUrl}
 								target="_blank"
@@ -437,15 +489,18 @@ function WrappedListening({
 							)}
 						</Text>
 					</div>
-					<div className="wrapped-waveform wrapped-live-waveform" aria-hidden="true">
-						{waveformBars.map((bar, index) => (
+					<div
+						className="wrapped-waveform wrapped-live-waveform"
+						aria-hidden="true"
+					>
+						{waveformBars.map((bar) => (
 							<span
-								key={`wave-${index}`}
+								key={bar.id}
 								className={`wrapped-waveform-bar${bar.warm ? " is-warm" : ""}`}
 								style={{
 									height: `${bar.height}px`,
-									animationDelay: `${(index % 9) * 90}ms`,
-									animationDuration: `${1050 + (index % 7) * 85}ms`,
+									animationDelay: `${(bar.order % 9) * 90}ms`,
+									animationDuration: `${1050 + (bar.order % 7) * 85}ms`,
 								}}
 							/>
 						))}
@@ -459,7 +514,12 @@ function WrappedListening({
 					{
 						key: "plays",
 						label: (
-							<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
+							<Text
+								as="p"
+								size="0"
+								color="2"
+								className="wrapped-listening-kpi-label"
+							>
 								Plays
 							</Text>
 						),
@@ -472,7 +532,12 @@ function WrappedListening({
 					{
 						key: "listening-time",
 						label: (
-							<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
+							<Text
+								as="p"
+								size="0"
+								color="2"
+								className="wrapped-listening-kpi-label"
+							>
 								Listening time
 							</Text>
 						),
@@ -483,14 +548,19 @@ function WrappedListening({
 								family="mono"
 								className="wrapped-kpi-value wrapped-kpi-duration-value"
 							>
-								{formatDurationCompact(wrapped.totalListeningSeconds)}
+								{formatDuration(wrapped.totalListeningSeconds)}
 							</Text>
 						),
 					},
 					{
 						key: "avg-session",
 						label: (
-							<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
+							<Text
+								as="p"
+								size="0"
+								color="2"
+								className="wrapped-listening-kpi-label"
+							>
 								Avg session
 							</Text>
 						),
@@ -501,14 +571,19 @@ function WrappedListening({
 								family="mono"
 								className="wrapped-kpi-value wrapped-kpi-duration-value"
 							>
-								{formatDurationCompact(wrapped.averageSessionSeconds)}
+								{formatDuration(wrapped.averageSessionSeconds)}
 							</Text>
 						),
 					},
 					{
 						key: "artists",
 						label: (
-							<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
+							<Text
+								as="p"
+								size="0"
+								color="2"
+								className="wrapped-listening-kpi-label"
+							>
 								Artists
 							</Text>
 						),
@@ -524,7 +599,12 @@ function WrappedListening({
 			<div className="wrapped-repeat">
 				<div className="wrapped-repeat-copy wrapped-artist-treemap-block">
 					<div className="wrapped-artist-treemap">
-						<ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={1}>
+						<ResponsiveContainer
+							width="100%"
+							height={220}
+							minWidth={0}
+							minHeight={1}
+						>
 							<Treemap
 								data={topArtistsTreemapData}
 								dataKey="plays"
@@ -535,7 +615,11 @@ function WrappedListening({
 							>
 								<Tooltip
 									content={renderTreemapTooltip}
-									cursor={{ stroke: "var(--color-static-white)", strokeOpacity: 0.35, strokeWidth: 1 }}
+									cursor={{
+										stroke: "var(--color-static-white)",
+										strokeOpacity: 0.35,
+										strokeWidth: 1,
+									}}
 								/>
 							</Treemap>
 						</ResponsiveContainer>
@@ -543,17 +627,19 @@ function WrappedListening({
 				</div>
 				{topGenres.length > 2 ? (
 					<div className="wrapped-genre-radar">
-						<ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={1}>
+						<ResponsiveContainer
+							width="100%"
+							height={220}
+							minWidth={0}
+							minHeight={1}
+						>
 							<RadarChart
 								data={topGenres}
 								margin={{ top: 24, right: 36, bottom: 24, left: 36 }}
 								outerRadius="68%"
 							>
 								<PolarGrid stroke="var(--color-ui-2)" strokeOpacity={0.6} />
-								<PolarAngleAxis
-									dataKey="name"
-									tick={renderGenreAxisTick}
-								/>
+								<PolarAngleAxis dataKey="name" tick={renderGenreAxisTick} />
 								<PolarRadiusAxis
 									axisLine={false}
 									tick={false}
@@ -584,8 +670,9 @@ function WrappedListening({
 					</div>
 					<StatBarList
 						rows={trackShareRows}
-						barColorVar="--color-listening-blue"
-						percentColorVar="--color-listening-blue"
+						barColor="var(--color-listening-blue)"
+						percentColor="var(--color-listening-blue)"
+						variant="listening"
 						className="wrapped-list-rows"
 					/>
 				</div>
@@ -598,8 +685,9 @@ function WrappedListening({
 					</div>
 					<StatBarList
 						rows={artistShareRows}
-						barColorVar="--color-listening-blue"
-						percentColorVar="--color-listening-blue"
+						barColor="var(--color-listening-blue)"
+						percentColor="var(--color-listening-blue)"
+						variant="listening"
 						className="wrapped-list-rows"
 					/>
 				</div>
@@ -614,8 +702,9 @@ function WrappedListening({
 					</div>
 					<StatBarList
 						rows={albumShareRows}
-						barColorVar="--color-listening-blue"
-						percentColorVar="--color-listening-blue"
+						barColor="var(--color-listening-blue)"
+						percentColor="var(--color-listening-blue)"
+						variant="listening"
 						className="wrapped-list-rows"
 					/>
 				</div>

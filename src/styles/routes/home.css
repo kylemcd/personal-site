@@ -47,7 +47,10 @@
 	padding: 0;
 }
 
-.section-container-flush-right > .listening-stack > .listening-recent-section > h3 {
+.section-container-flush-right
+	> .listening-stack
+	> .listening-recent-section
+	> h3 {
 	margin-left: var(--spc-8);
 }
 

@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Result } from "better-result";
-import React from "react";
+import { useEffect } from "react";
 
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { TableOfContents } from "@/components/TableOfContents";
 import { Text } from "@/components/Text";
 import { formatDateInCentral } from "@/lib/dates";
 import { markdown } from "@/lib/markdown";
+import { buildMeta } from "@/lib/meta";
 import "@/styles/prism.css";
 import "@/styles/routes/posts.css";
 
@@ -30,7 +31,7 @@ const getPost = createServerFn({ method: "GET" })
 	});
 
 export const Route = createFileRoute("/posts/$slug")({
-	component: RouteComponent,
+	component: PostRoute,
 	loader: ({ params }) => getPost({ data: { slug: params.slug } }),
 	errorComponent: ErrorComponent,
 	head: ({ loaderData, params }) => {
@@ -41,52 +42,30 @@ export const Route = createFileRoute("/posts/$slug")({
 		const imageUrl = `https://kylemcd.com/open-graph/${params.slug}.png`;
 
 		return {
-			meta: [
-				{ title: fullTitle },
-				{ property: "og:title", content: postTitle ?? "Kyle McDonald" },
-				{
-					property: "og:description",
-					content:
-						"Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
-				},
-				{
-					property: "og:url",
-					content: `https://kylemcd.com/posts/${params.slug}`,
-				},
-				{ property: "og:image", content: imageUrl },
-				{ property: "og:image:type", content: "image/png" },
-				{ property: "og:image:width", content: "1200" },
-				{ property: "og:image:height", content: "630" },
-				{ property: "og:site_name", content: "Kyle McDonald" },
-				{ property: "og:locale", content: "en-US" },
-				{ property: "og:type", content: "article" },
-				{ name: "twitter:card", content: "summary_large_image" },
-				{ name: "twitter:title", content: postTitle ?? "Kyle McDonald" },
-				{
-					name: "twitter:description",
-					content:
-						"Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
-				},
-				{ name: "twitter:image", content: imageUrl },
-				{ name: "twitter:image:alt", content: postTitle ?? "Open graph image" },
-			],
+			meta: buildMeta({
+				title: fullTitle,
+				url: `https://kylemcd.com/posts/${params.slug}`,
+				image: imageUrl,
+				imageAlt: postTitle ?? "Open graph image",
+				ogType: "article",
+			}),
 		};
 	},
 });
 
-function RouteComponent() {
-	const { frontmatter, content, tableOfContents, readingTime } =
+function PostRoute() {
+	const { frontmatter, content, tableOfContents, readingTime, hasMermaid } =
 		Route.useLoaderData();
 
-	React.useEffect(() => {
-		if (content.includes(`class="mermaid"`)) {
+	useEffect(() => {
+		if (hasMermaid) {
 			(async () => {
 				const { default: mermaid } = await import("mermaid");
 				mermaid.initialize({ startOnLoad: true });
 				mermaid.run();
 			})();
 		}
-	}, [content]);
+	}, [hasMermaid]);
 
 	return (
 		<div className="post-layout">

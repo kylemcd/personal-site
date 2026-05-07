@@ -4,35 +4,34 @@ import { env } from "@/lib/env";
 import { fetchFresh } from "@/lib/fetch";
 import { enrichWrappedWithSpotifyArtistImages } from "@/lib/spotify";
 import { getOrComputeJson } from "@/lib/store";
+import { LASTFM_USERNAME } from "@/lib/config";
 
 import {
 	type Album,
 	type ListeningData,
 	type NowPlayingAlbum,
 	RecentTracksResponseSchema,
+	SimilarTagsResponseSchema,
 	type TopAlbumsResponse,
 	TopAlbumsResponseSchema,
-	SimilarTagsResponseSchema,
-	TopArtistTagsResponseSchema,
 	type TopArtistsResponse,
 	TopArtistsResponseSchema,
+	TopArtistTagsResponseSchema,
 	type TopTracksResponse,
 	TopTracksResponseSchema,
 	type Track,
 	type WrappedData,
 } from "./schema";
 
-class LastFmRecentAlbumsError extends TaggedError("LastFmRecentAlbumsError")<{
+class LastFmDataError extends TaggedError("LastFmDataError")<{
 	readonly error: unknown;
 }>() {
-	message = "Failed to fetch recent albums from Last.fm";
+	override message = "Failed to fetch recent albums from Last.fm";
 }
-
-const LASTFM_USERNAME = "kylemcd1";
 const LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
 const ALBUMS_LIMIT = 20;
 const MONTHLY_TOP_LIMIT = 200;
-const LASTFM_MONTHLY_TOP_CACHE_KEY = "lastfm:monthly-top:v3";
+export const LASTFM_MONTHLY_TOP_CACHE_KEY = "lastfm:monthly-top:v3";
 const LASTFM_MONTHLY_TOP_CACHE_TTL_SECONDS = 30 * 60; // 30 minutes
 const WRAPPED_TOP_COUNT = 10;
 const WRAPPED_GENRE_COUNT = 6;
@@ -144,7 +143,8 @@ const groupGenresByLastFmSimilarity = (params: {
 		if (component.length === 0) continue;
 		const canonical = component
 			.sort((a, b) => {
-				const scoreDelta = (genreScores.get(b) ?? 0) - (genreScores.get(a) ?? 0);
+				const scoreDelta =
+					(genreScores.get(b) ?? 0) - (genreScores.get(a) ?? 0);
 				if (scoreDelta !== 0) return scoreDelta;
 				return a.localeCompare(b);
 			})
@@ -163,7 +163,9 @@ const groupGenresByLastFmSimilarity = (params: {
 
 const buildTopGenres = (params: {
 	topArtists: ReadonlyArray<TopArtistsResponse["topartists"]["artist"][number]>;
-	artistTopTags: Readonly<Record<string, Array<{ name: string; count: number }>>>;
+	artistTopTags: Readonly<
+		Record<string, Array<{ name: string; count: number }>>
+	>;
 	similarGenreTags: Readonly<Record<string, Array<string>>>;
 }): Array<{ name: string; share: number }> => {
 	const { topArtists, artistTopTags, similarGenreTags } = params;
@@ -477,7 +479,7 @@ const getMonthlySessionStats = (params: {
 
 	for (let i = 1; i < monthTrackTimes.length; i += 1) {
 		const gapSeconds = Math.floor(
-			(monthTrackTimes[i] - monthTrackTimes[i - 1]) / 1000,
+			(monthTrackTimes[i]! - monthTrackTimes[i - 1]!) / 1000,
 		);
 		if (gapSeconds <= SESSION_BREAK_SECONDS) {
 			currentSessionCount += 1;
@@ -579,7 +581,7 @@ const buildFunFacts = (params: {
 	const orderedFacts =
 		firstKyleMentionIndex > 0
 			? [
-					facts[firstKyleMentionIndex],
+					facts[firstKyleMentionIndex]!,
 					...facts.slice(0, firstKyleMentionIndex),
 					...facts.slice(firstKyleMentionIndex + 1),
 				]
@@ -588,6 +590,7 @@ const buildFunFacts = (params: {
 	if (orderedFacts.length === 0) return orderedFacts;
 
 	const [firstFact, ...restFacts] = orderedFacts;
+	if (firstFact === undefined) return restFacts.filter((f): f is string => f !== undefined);
 	const normalizedFirstFact = firstFact
 		.replace(/^This month,\s+he\b/i, "This month, Kyle")
 		.replace(/^This month,\s+his\b/i, "This month, Kyle's")
@@ -603,7 +606,9 @@ const extractWrappedData = (params: {
 	topTracks: ReadonlyArray<TopTracksResponse["toptracks"]["track"][number]>;
 	topArtists: ReadonlyArray<TopArtistsResponse["topartists"]["artist"][number]>;
 	topAlbums: ReadonlyArray<TopAlbumsResponse["topalbums"]["album"][number]>;
-	artistTopTags: Readonly<Record<string, Array<{ name: string; count: number }>>>;
+	artistTopTags: Readonly<
+		Record<string, Array<{ name: string; count: number }>>
+	>;
 	similarGenreTags: Readonly<Record<string, Array<string>>>;
 	recentTracks: ReadonlyArray<Track>;
 	nowMs: number;
@@ -621,8 +626,8 @@ const extractWrappedData = (params: {
 	if (topTracks.length === 0 || topArtistsRaw.length === 0) return null;
 	const recentTrackArt = buildRecentTrackArtMap(recentTracks);
 
-	const topTrackRaw = topTracks[0];
-	const topArtistRaw = topArtistsRaw[0];
+	const topTrackRaw = topTracks[0]!;
+	const topArtistRaw = topArtistsRaw[0]!;
 	const topArtistPlays = parsePlayCount(topArtistRaw.playcount);
 	const topTrackPlays = parsePlayCount(topTrackRaw.playcount);
 	const totalScrobbles = topTracks.reduce(
@@ -767,7 +772,9 @@ type CachedMonthlyTopData = {
 
 const fetchArtistTopTags = async (
 	artist: string,
-): Promise<Result<Array<{ name: string; count: number }>, LastFmRecentAlbumsError>> => {
+): Promise<
+	Result<Array<{ name: string; count: number }>, LastFmDataError>
+> => {
 	const params = new URLSearchParams({
 		...getBaseParams(),
 		method: "artist.gettoptags",
@@ -780,7 +787,7 @@ const fetchArtistTopTags = async (
 		schema: TopArtistTagsResponseSchema,
 	});
 	if (Result.isError(res)) {
-		return Result.err(new LastFmRecentAlbumsError({ error: res.error }));
+		return Result.err(new LastFmDataError({ error: res.error }));
 	}
 	const tags = res.value.data.toptags.tag
 		.map((tag) => ({
@@ -796,7 +803,7 @@ const fetchArtistTopTags = async (
 
 const fetchSimilarGenreTags = async (
 	tag: string,
-): Promise<Result<Array<string>, LastFmRecentAlbumsError>> => {
+): Promise<Result<Array<string>, LastFmDataError>> => {
 	const params = new URLSearchParams({
 		...getBaseParams(),
 		method: "tag.getsimilar",
@@ -808,7 +815,7 @@ const fetchSimilarGenreTags = async (
 		schema: SimilarTagsResponseSchema,
 	});
 	if (Result.isError(res)) {
-		return Result.err(new LastFmRecentAlbumsError({ error: res.error }));
+		return Result.err(new LastFmDataError({ error: res.error }));
 	}
 	return Result.ok(
 		res.value.data.similartags.tag
@@ -839,7 +846,7 @@ const monthlyTopData = () => {
 		limit: String(MONTHLY_TOP_LIMIT),
 	});
 
-	return getOrComputeJson<CachedMonthlyTopData, LastFmRecentAlbumsError>({
+	return getOrComputeJson<CachedMonthlyTopData, LastFmDataError>({
 		key: LASTFM_MONTHLY_TOP_CACHE_KEY,
 		ttlSeconds: LASTFM_MONTHLY_TOP_CACHE_TTL_SECONDS,
 		compute: async () => {
@@ -863,17 +870,17 @@ const monthlyTopData = () => {
 
 			if (Result.isError(topTracksRes)) {
 				return Result.err(
-					new LastFmRecentAlbumsError({ error: topTracksRes.error }),
+					new LastFmDataError({ error: topTracksRes.error }),
 				);
 			}
 			if (Result.isError(topArtistsRes)) {
 				return Result.err(
-					new LastFmRecentAlbumsError({ error: topArtistsRes.error }),
+					new LastFmDataError({ error: topArtistsRes.error }),
 				);
 			}
 			if (Result.isError(topAlbumsRes)) {
 				return Result.err(
-					new LastFmRecentAlbumsError({ error: topAlbumsRes.error }),
+					new LastFmDataError({ error: topAlbumsRes.error }),
 				);
 			}
 
@@ -887,8 +894,10 @@ const monthlyTopData = () => {
 					result: await fetchArtistTopTags(artist),
 				})),
 			);
-			const artistTopTags: Record<string, Array<{ name: string; count: number }>> =
-				{};
+			const artistTopTags: Record<
+				string,
+				Array<{ name: string; count: number }>
+			> = {};
 			for (const tagResult of tagResults) {
 				if (Result.isError(tagResult.result)) continue;
 				artistTopTags[tagResult.artist.toLowerCase()] = tagResult.result.value;
@@ -940,7 +949,7 @@ const monthlyTopData = () => {
 };
 
 const recentActivity = async (): Promise<
-	Result<ListeningData, LastFmRecentAlbumsError>
+	Result<ListeningData, LastFmDataError>
 > => {
 	const recentTracksParams = new URLSearchParams({
 		...getBaseParams(),
@@ -959,12 +968,12 @@ const recentActivity = async (): Promise<
 
 	if (Result.isError(recentTracksRes)) {
 		return Result.err(
-			new LastFmRecentAlbumsError({ error: recentTracksRes.error }),
+			new LastFmDataError({ error: recentTracksRes.error }),
 		);
 	}
 	if (Result.isError(monthlyTopRes)) {
 		return Result.err(
-			new LastFmRecentAlbumsError({ error: monthlyTopRes.error }),
+			new LastFmDataError({ error: monthlyTopRes.error }),
 		);
 	}
 

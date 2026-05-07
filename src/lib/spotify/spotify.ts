@@ -1,7 +1,16 @@
 import { Result, TaggedError } from "better-result";
 
 import { env } from "@/lib/env";
+import {
+	FetchNetworkError,
+	FetchResponseError,
+	FetchTimeoutError,
+	fetchJson,
+	JsonParseError,
+} from "@/lib/fetch";
+import { hashString } from "@/lib/hash";
 import type { WrappedData } from "@/lib/lastfm/schema";
+import { mapAsyncConcurrent } from "@/lib/result";
 import { getOrComputeJson } from "@/lib/store";
 
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -51,22 +60,28 @@ class SpotifyParseError extends TaggedError("SpotifyParseError")<{
 const hasSpotifyCredentials = (): boolean =>
 	Boolean(env.SPOTIFY_CLIENT_ID && env.SPOTIFY_CLIENT_SECRET);
 
-const hashString = (value: string): string => {
-	let hash = 2166136261;
-	for (let index = 0; index < value.length; index += 1) {
-		hash ^= value.charCodeAt(index);
-		hash +=
-			(hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
-	}
-	return (hash >>> 0).toString(36);
-};
-
 const encodeBasicAuth = (value: string): string => {
 	if (typeof btoa === "function") return btoa(value);
 	return Buffer.from(value).toString("base64");
 };
 
 const toSpotifyError = (url: string, error: unknown) => {
+	if (error instanceof FetchTimeoutError) {
+		return new SpotifyTimeoutError({ url, timeoutMs: SPOTIFY_TIMEOUT_MS });
+	}
+	if (error instanceof FetchResponseError) {
+		return new SpotifyHttpError({
+			url,
+			status: error.status,
+			statusText: error.statusText,
+		});
+	}
+	if (error instanceof JsonParseError) {
+		return new SpotifyParseError({ url, error: error.error });
+	}
+	if (error instanceof FetchNetworkError) {
+		return new SpotifyRequestError({ url, error: error.error });
+	}
 	if (
 		error instanceof SpotifyRequestError ||
 		error instanceof SpotifyTimeoutError ||
@@ -89,47 +104,15 @@ const fetchJsonWithTimeout = async <T>(
 		| SpotifyHttpError
 		| SpotifyParseError
 	>
-> =>
-	Result.tryPromise({
-		try: async () => {
-			const controller = new AbortController();
-			const timeoutId = setTimeout(
-				() => controller.abort(),
-				SPOTIFY_TIMEOUT_MS,
-			);
-
-			try {
-				const response = await fetch(url, {
-					...init,
-					signal: controller.signal,
-				});
-				if (!response.ok) {
-					throw new SpotifyHttpError({
-						url,
-						status: response.status,
-						statusText: response.statusText,
-					});
-				}
-				try {
-					return (await response.json()) as T;
-				} catch (error) {
-					throw new SpotifyParseError({ url, error });
-				}
-			} catch (error) {
-				if (
-					typeof DOMException !== "undefined" &&
-					error instanceof DOMException &&
-					error.name === "AbortError"
-				) {
-					throw new SpotifyTimeoutError({ url, timeoutMs: SPOTIFY_TIMEOUT_MS });
-				}
-				throw toSpotifyError(url, error);
-			} finally {
-				clearTimeout(timeoutId);
-			}
-		},
-		catch: (error) => toSpotifyError(url, error),
+> => {
+	const response = await fetchJson<T>(url, {
+		...init,
+		timeoutMs: SPOTIFY_TIMEOUT_MS,
 	});
+	if (Result.isError(response))
+		return Result.err(toSpotifyError(url, response.error));
+	return Result.ok(response.value.data);
+};
 
 const getSpotifyAccessToken = async (): Promise<
 	Result<string | null, never>
@@ -212,25 +195,6 @@ const getArtistImageCacheKey = (wrapped: WrappedData): string => {
 const emptyArtistImages = (wrapped: WrappedData): Array<string | null> =>
 	wrapped.topArtists.map(() => null);
 
-const mapConcurrent = async <A, B>(
-	items: ReadonlyArray<A>,
-	mapper: (item: A) => Promise<B>,
-	concurrency: number,
-): Promise<Array<B>> => {
-	const output: B[] = new Array(items.length);
-	let index = 0;
-	const workers = Array.from({ length: Math.max(1, concurrency) }, async () => {
-		while (true) {
-			const current = index;
-			index += 1;
-			if (current >= items.length) return;
-			output[current] = await mapper(items[current]);
-		}
-	});
-	await Promise.all(workers);
-	return output;
-};
-
 const resolveWrappedArtistImagesFromSpotify = async (
 	wrapped: WrappedData,
 ): Promise<Result<Array<string | null>, never>> => {
@@ -241,13 +205,13 @@ const resolveWrappedArtistImagesFromSpotify = async (
 		ttlSeconds: SPOTIFY_ARTIST_IMAGE_TTL_SECONDS,
 		compute: async () =>
 			Result.ok(
-				await mapConcurrent(
+				await mapAsyncConcurrent(
 					wrapped.topArtists,
 					async (artist) => {
 						const imageResult = await getSpotifyArtistImage(artist.name);
 						return Result.isOk(imageResult) ? imageResult.value : null;
 					},
-					SPOTIFY_CONCURRENCY,
+					{ concurrency: SPOTIFY_CONCURRENCY },
 				),
 			),
 	});

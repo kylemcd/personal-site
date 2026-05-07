@@ -1,3 +1,2 @@
-export { goodreads } from "./goodreads";
-export type { GoodreadsItem } from "./schema";
-export { GoodreadsItemSchema } from "./schema";
+export { goodreads, GOODREADS_SHELF_CACHE_KEY } from "./goodreads";
+export type { Book } from "./schema";

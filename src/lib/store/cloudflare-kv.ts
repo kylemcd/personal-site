@@ -1,9 +1,9 @@
 import { env as cloudflareEnv } from "cloudflare:workers";
 import { getGlobalStartContext } from "@tanstack/react-start";
-import { Result } from "better-result";
-
+import { Result, TaggedError } from "better-result";
 import { env } from "@/lib/env";
-import { toError } from "@/lib/result";
+import { toErrorDetails } from "@/lib/error-details";
+import { asRecord } from "@/lib/record";
 
 type KvNamespaceLike = {
 	get: (key: string, type: "text") => Promise<string | null>;
@@ -30,6 +30,13 @@ type JsonCacheOptions = {
 	key: string;
 	ttlSeconds?: number;
 };
+
+class KvPutError extends TaggedError("KvPutError")<{
+	readonly error: unknown;
+	readonly key: string;
+}>() {
+	override message = "Failed to write to KV store";
+}
 
 type JsonGetOrComputeOptions<A, E> = {
 	key: string;
@@ -64,11 +71,6 @@ const normalizeCacheVersion = (value: unknown): string | null => {
 	const lowered = trimmed.toLowerCase();
 	if (lowered === "undefined" || lowered === "null") return null;
 	return trimmed;
-};
-
-const asRecord = (value: unknown): Record<string, unknown> | null => {
-	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-	return value as Record<string, unknown>;
 };
 
 const getCacheVersion = (): string => {
@@ -167,10 +169,15 @@ const writeToMemory = <A>(
 	value: A,
 	ttlSeconds: number | undefined,
 ): void => {
-	void ttlSeconds;
+	const expiresAt =
+		typeof ttlSeconds === "number" &&
+		Number.isFinite(ttlSeconds) &&
+		ttlSeconds > 0
+			? Date.now() + ttlSeconds * 1000
+			: null;
 	inMemoryStore.set(key, {
 		value: JSON.stringify(value),
-		expiresAt: null,
+		expiresAt,
 	});
 };
 
@@ -206,135 +213,11 @@ const parseEnvelope = <A>(raw: string): CacheEnvelope<A> | null => {
 	}
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-	typeof value === "object" && value !== null && !Array.isArray(value);
-
-const isResponseLike = (
-	value: Record<string, unknown>,
-): value is Record<string, unknown> & {
-	status: number;
-	statusText?: string;
-	url?: string;
-} => typeof value.status === "number";
-
-const collectErrorFragments = (
-	value: unknown,
-	fragments: string[],
-	seen: WeakSet<object>,
-	depth = 0,
-): void => {
-	if (depth > 6 || value === null || value === undefined) return;
-	if (typeof value === "string") {
-		if (value.trim()) fragments.push(value.trim());
-		return;
-	}
-	if (typeof value === "number" || typeof value === "boolean") {
-		fragments.push(String(value));
-		return;
-	}
-
-	const nestedKeys: ReadonlyArray<string> = [
-		"error",
-		"cause",
-		"reason",
-		"response",
-		"left",
-		"right",
-		"failure",
-		"defect",
-	] as const;
-
-	if (value instanceof Error) {
-		const message = value.message?.trim();
-		if (message) {
-			fragments.push(`${value.name}: ${message}`);
-		} else {
-			fragments.push(value.name);
-		}
-
-		const nestedCause = (value as Error & { cause?: unknown }).cause;
-		if (nestedCause !== undefined) {
-			collectErrorFragments(nestedCause, fragments, seen, depth + 1);
-		}
-
-		if (isRecord(value)) {
-			if (seen.has(value)) return;
-			seen.add(value);
-			for (const key of nestedKeys) {
-				if (key in value) {
-					collectErrorFragments(value[key], fragments, seen, depth + 1);
-				}
-			}
-			for (const key of [
-				"details",
-				"detail",
-				"bodySnippet",
-				"responseBody",
-				"providerBody",
-			] as const) {
-				const candidate = value[key];
-				if (typeof candidate === "string" && candidate.trim()) {
-					fragments.push(candidate.trim());
-				}
-			}
-		}
-		return;
-	}
-
-	if (!isRecord(value)) return;
-	if (seen.has(value)) return;
-	seen.add(value);
-
-	if (typeof value._tag === "string" && value._tag.trim()) {
-		fragments.push(value._tag.trim());
-	}
-
-	if (isResponseLike(value)) {
-		const statusText =
-			typeof value.statusText === "string" ? value.statusText.trim() : "";
-		const url = typeof value.url === "string" ? value.url.trim() : "";
-		fragments.push(
-			`HTTP ${value.status}${statusText ? ` ${statusText}` : ""}${url ? ` (${url})` : ""}`,
-		);
-	}
-
-	for (const key of nestedKeys) {
-		if (key in value) {
-			collectErrorFragments(value[key], fragments, seen, depth + 1);
-		}
-	}
-
-	const message = value.message;
-	if (typeof message === "string" && message.trim()) {
-		fragments.push(message.trim());
-	}
-
-	for (const key of [
-		"details",
-		"detail",
-		"bodySnippet",
-		"responseBody",
-		"providerBody",
-	] as const) {
-		const candidate = value[key];
-		if (typeof candidate === "string" && candidate.trim()) {
-			fragments.push(candidate.trim());
-		}
-	}
-};
-
 const statusErrorSummary = (cause: unknown): string => {
-	const fragments: string[] = [];
-	collectErrorFragments(cause, fragments, new WeakSet<object>());
-	const summary = [...new Set(fragments.filter(Boolean))].join(" | ").trim();
-	if (summary) {
-		return summary.length > 2000 ? `${summary.slice(0, 2000)}...` : summary;
-	}
-	try {
-		return JSON.stringify(cause);
-	} catch {
-		return String(cause);
-	}
+	return toErrorDetails(cause, {
+		collectFragments: true,
+		maxLength: 2000,
+	});
 };
 
 const namespace = resolveKvNamespace();
@@ -385,7 +268,7 @@ const putJson = async <A>({
 	key,
 	value,
 	ttlSeconds,
-}: JsonCacheOptions & { value: A }): Promise<Result<void, never>> => {
+}: JsonCacheOptions & { value: A }): Promise<Result<void, KvPutError>> => {
 	const scopedKey = toScopedKey(key);
 	const envelope: CacheEnvelope<typeof value> = {
 		__cacheEnvelope: CACHE_ENVELOPE_VERSION,
@@ -402,14 +285,10 @@ const putJson = async <A>({
 
 	try {
 		await namespace.put(scopedKey, JSON.stringify(envelope));
+		return Result.ok();
 	} catch (error) {
-		console.error("[kv] put failed", {
-			key: scopedKey,
-			error: toError(error),
-		});
+		return Result.err(new KvPutError({ error, key: scopedKey }));
 	}
-
-	return Result.ok();
 };
 
 const getJson = async <A>({
@@ -475,11 +354,14 @@ const getOrComputeJson = async <A, E>({
 		const valueResult = await computeWithStatus(key, compute);
 		if (Result.isError(valueResult)) return valueResult;
 
-		await putJson({
+		const putResult = await putJson({
 			key,
 			value: valueResult.value,
 			ttlSeconds,
 		});
+		if (Result.isError(putResult)) {
+			console.error("[kv] put failed after compute", putResult.error);
+		}
 		return valueResult;
 	}
 
@@ -496,11 +378,14 @@ const getOrComputeJson = async <A, E>({
 		return Result.ok(cached.value);
 	}
 
-	await putJson({
+	const putResult = await putJson({
 		key,
 		value: refreshedResult.value,
 		ttlSeconds,
 	});
+	if (Result.isError(putResult)) {
+		console.error("[kv] put failed after refresh", putResult.error);
+	}
 
 	return refreshedResult;
 };
@@ -513,12 +398,12 @@ const refreshJson = async <A, E>({
 	const valueResult = await computeWithStatus(key, compute);
 	if (Result.isError(valueResult)) return valueResult;
 
-	await putJson({ key, value: valueResult.value, ttlSeconds });
+	const putResult = await putJson({ key, value: valueResult.value, ttlSeconds });
+	if (Result.isError(putResult)) {
+		console.error("[kv] put failed after refresh", putResult.error);
+	}
 	return valueResult;
 };
 
-const withCloudflareKvStore = async <A, E>(
-	effect: () => Promise<Result<A, E>>,
-): Promise<Result<A, E>> => effect();
-
-export { getJson, getOrComputeJson, refreshJson, withCloudflareKvStore };
+export { getJson, getOrComputeJson, refreshJson };
+export type { KvPutError };

@@ -1,21 +1,12 @@
 import { Result } from "better-result";
 
+import { toErrorDetails } from "@/lib/error-details";
+
 export type ResultValue<A, E> = Result<A, E>;
 export type AsyncResult<A, E> = Promise<Result<A, E>>;
 
-const errorMessage = (error: unknown): string => {
-	if (error instanceof Error && error.message.trim())
-		return error.message.trim();
-	if (typeof error === "string" && error.trim()) return error.trim();
-	try {
-		return JSON.stringify(error);
-	} catch {
-		return String(error);
-	}
-};
-
 export const toError = (error: unknown): Error =>
-	error instanceof Error ? error : new Error(errorMessage(error));
+	error instanceof Error ? error : new Error(toErrorDetails(error));
 
 export const trySync = <A, E>(
 	thunk: () => A,
@@ -51,19 +42,6 @@ export const combineResults = <A, E>(
 	return Result.ok(values);
 };
 
-export const combineResultMap = <T extends Record<string, unknown>, E>(
-	map: { [K in keyof T]: Result<T[K], E> },
-): Result<T, E> => {
-	const entries: Array<[string, unknown]> = [];
-	for (const [key, result] of Object.entries(map) as Array<
-		[keyof T & string, Result<T[keyof T], E>]
-	>) {
-		if (Result.isError(result)) return Result.err(result.error);
-		entries.push([key, result.value]);
-	}
-	return Result.ok(Object.fromEntries(entries) as T);
-};
-
 export const combineAsyncResults = async <A, E>(
 	results: ReadonlyArray<Promise<Result<A, E>>>,
 ): Promise<Result<ReadonlyArray<A>, E>> =>
@@ -86,7 +64,7 @@ export const forEachAsyncResult = async <A, B, E>(
 			index += 1;
 			if (current >= items.length) return;
 
-			const result = await fn(items[current]);
+			const result = await fn(items[current]!);
 			if (Result.isError(result)) {
 				firstError = result.error;
 				return;
@@ -101,23 +79,16 @@ export const forEachAsyncResult = async <A, B, E>(
 	return Result.ok(output);
 };
 
-export const tapAsyncError = async <A, E>(
-	result: Promise<Result<A, E>>,
-	onError: (error: E) => Promise<void> | void,
-): Promise<Result<A, E>> => {
-	const resolved = await result;
-	if (Result.isError(resolved)) {
-		await onError(resolved.error);
-	}
-	return resolved;
+export const mapAsyncConcurrent = async <A, B>(
+	items: ReadonlyArray<A>,
+	mapper: (item: A) => Promise<B>,
+	options?: { concurrency?: number },
+): Promise<Array<B>> => {
+	const mapped = await forEachAsyncResult(
+		items,
+		async (item) => Result.ok(await mapper(item)),
+		options,
+	);
+	return Result.isOk(mapped) ? [...mapped.value] : [];
 };
 
-export const logIfError = <A, E>(
-	result: Result<A, E>,
-	context: string,
-): Result<A, E> => {
-	if (Result.isError(result)) {
-		console.error(context, result.error);
-	}
-	return result;
-};

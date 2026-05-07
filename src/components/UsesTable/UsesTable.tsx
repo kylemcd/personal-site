@@ -35,14 +35,6 @@ type TagPillStyle = CSSProperties &
 const isExternalLink = (link: string): boolean =>
 	/^https?:\/\//i.test(link) || link.startsWith("//");
 
-const openUseLink = (link: string): void => {
-	if (isExternalLink(link)) {
-		window.open(link, "_blank", "noopener,noreferrer");
-		return;
-	}
-
-	window.location.assign(link);
-};
 
 const buildTagOptions = (items: ReadonlyArray<UseItem>): TagOption[] => {
 	const optionMap = new Map<string, string>();
@@ -167,7 +159,7 @@ function UsesTable({ items }: UsesTableProps) {
 				</Text>
 				<div className="uses-controls-right">
 					<div className="uses-search">
-						<label htmlFor="uses-search" className="uses-sr-only">
+						<label htmlFor="uses-search" className="sr-only">
 							Search
 						</label>
 						<Input
@@ -180,7 +172,7 @@ function UsesTable({ items }: UsesTableProps) {
 					</div>
 
 					<div className="uses-tag-filter">
-						<label htmlFor="uses-tag-filter-trigger" className="uses-sr-only">
+						<label htmlFor="uses-tag-filter-trigger" className="sr-only">
 							Tags
 						</label>
 						<Select.Root<string, true>
@@ -262,38 +254,31 @@ function UsesTable({ items }: UsesTableProps) {
 								<tr
 									key={`${item.order}-${item.name}`}
 									className={
-										item.link && item.link !== "—"
-											? "uses-table-row-linkable"
-											: undefined
+										item.link ? "uses-table-row-linkable" : undefined
 									}
-									onClick={
-										item.link && item.link !== "—"
-											? () => openUseLink(item.link as string)
-											: undefined
-									}
-									onKeyDown={
-										item.link
-											? (event) => {
-													if (
-														(event.key !== "Enter" && event.key !== " ") ||
-														item.link === "—"
-													) {
-														return;
-													}
-
-													event.preventDefault();
-													openUseLink(item.link as string);
-												}
-											: undefined
-									}
-									tabIndex={item.link ? 0 : undefined}
-									role={item.link ? "link" : undefined}
-									aria-label={item.link ? `Open ${item.name}` : undefined}
 								>
 									<td>
-										<Text as="p" size="0" weight="500">
-											{item.name}
-										</Text>
+										{item.link ? (
+											<a
+												className="uses-row-link"
+												href={item.link}
+												target={isExternalLink(item.link) ? "_blank" : undefined}
+												rel={
+													isExternalLink(item.link)
+														? "noopener noreferrer"
+														: undefined
+												}
+												aria-label={`Open ${item.name}`}
+											>
+												<Text as="p" size="0" weight="500">
+													{item.name}
+												</Text>
+											</a>
+										) : (
+											<Text as="p" size="0" weight="500">
+												{item.name}
+											</Text>
+										)}
 									</td>
 									<td>
 										<Text as="p" size="0" color="2">

@@ -46,7 +46,7 @@ const TableOfContentsListItem = ({
 
 			// If we have a previous heading, check if it should be active
 			if (currentIndex > 0) {
-				const prevHeading = allHeadings[currentIndex - 1];
+				const prevHeading = allHeadings[currentIndex - 1]!;
 				const prevRect = prevHeading.getBoundingClientRect();
 				if (prevRect.top <= THRESHOLD) {
 					setActiveId(prevHeading.id);
@@ -118,9 +118,7 @@ function TableOfContents({ items }: TableOfContentsProps) {
 		if (!(clampContainer instanceof HTMLElement)) return;
 		if (!(postContainer instanceof HTMLElement)) return;
 
-		const BORDER_OFFSET = 0;
 		const TOP_ALIGNMENT_OFFSET = -1;
-		const BOTTOM_ALIGNMENT_OFFSET = 0;
 		const fixedTop =
 			container.getBoundingClientRect().top + TOP_ALIGNMENT_OFFSET;
 
@@ -128,7 +126,7 @@ function TableOfContents({ items }: TableOfContentsProps) {
 			const tocHeight = container.getBoundingClientRect().height;
 			const layoutRect = clampContainer.getBoundingClientRect();
 			const containerRect = postContainer.getBoundingClientRect();
-			const maxBottom = layoutRect.bottom - BORDER_OFFSET;
+			const maxBottom = layoutRect.bottom;
 			const wouldOverflowBottom = fixedTop + tocHeight > maxBottom;
 
 			if (!wouldOverflowBottom) {
@@ -140,11 +138,7 @@ function TableOfContents({ items }: TableOfContentsProps) {
 			const containerTopDoc = window.scrollY + containerRect.top;
 			const absoluteTop = Math.max(
 				0,
-				layoutBottomDoc -
-					tocHeight -
-					BORDER_OFFSET -
-					containerTopDoc +
-					BOTTOM_ALIGNMENT_OFFSET,
+				layoutBottomDoc - tocHeight - containerTopDoc,
 			);
 
 			setContainerStyle({ position: "absolute", top: `${absoluteTop}px` });

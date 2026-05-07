@@ -16,20 +16,28 @@ type StatBarListRow = {
 
 type StatBarListProps = {
 	rows: Array<StatBarListRow>;
-	barColorVar?: string;
-	percentColorVar?: string;
+	barColor?: string;
+	percentColor?: string;
 	titleSize?: TextSize;
+	variant?: "default" | "listening" | "racing";
 } & React.HTMLAttributes<HTMLDivElement>;
 
 function StatBarList({
 	rows,
-	barColorVar,
-	percentColorVar,
+	barColor,
+	percentColor,
 	titleSize = "0",
+	variant = "default",
 	className,
 	...rest
 }: StatBarListProps) {
-	const listClasses = ["share-list", className].filter(Boolean).join(" ");
+	const listClasses = [
+		"share-list",
+		variant === "default" ? null : `share-list-${variant}`,
+		className,
+	]
+		.filter(Boolean)
+		.join(" ");
 
 	return (
 		<div className={listClasses} {...rest}>
@@ -51,15 +59,15 @@ function StatBarList({
 						</Text>
 					) : null}
 					<div className="share-list-progress">
-						<MetricBar value={row.percent} fillColorVar={barColorVar} />
+						<MetricBar value={row.percent} {...(barColor !== undefined ? { fillColor: barColor } : {})} />
 						<Text
 							as="p"
 							size="0"
 							family="mono"
 							className="share-list-percent"
 							style={
-								percentColorVar
-									? ({ color: `var(${percentColorVar})` } as React.CSSProperties)
+								percentColor
+									? ({ color: percentColor } as React.CSSProperties)
 									: undefined
 							}
 						>
@@ -72,5 +80,5 @@ function StatBarList({
 	);
 }
 
-export { StatBarList };
 export type { StatBarListProps, StatBarListRow };
+export { StatBarList };

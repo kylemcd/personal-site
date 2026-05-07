@@ -7,7 +7,7 @@ import { ErrorComponent } from "@/components/ErrorComponent";
 import { Text } from "@/components/Text";
 import { WrappedListening } from "@/components/WrappedListening";
 import { lastfm } from "@/lib/lastfm";
-import "@/styles/routes/home.css";
+import { buildMeta } from "@/lib/meta";
 import "@/styles/routes/listening.css";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
@@ -22,7 +22,11 @@ export const Route = createFileRoute("/listening/")({
 	loader: () => getData(),
 	errorComponent: ErrorComponent,
 	head: () => ({
-		meta: [{ title: "Listening - Kyle McDonald" }],
+		meta: buildMeta({
+			title: "Listening - Kyle McDonald",
+			url: "https://kylemcd.com/listening",
+			image: "https://kylemcd.com/open-graph/listening.png",
+		}),
 	}),
 });
 
@@ -36,7 +40,13 @@ function ListeningRoute() {
 	);
 
 	if (!hasListeningContent || !listening) {
-		return null;
+		return (
+			<div className="section-container">
+				<Text as="p" size="1" color="2">
+					No listening data available right now.
+				</Text>
+			</div>
+		);
 	}
 
 	return (

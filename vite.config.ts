@@ -1,16 +1,15 @@
-import { defineConfig } from "vite";
+import { fileURLToPath } from "node:url";
+import { cloudflare } from "@cloudflare/vite-plugin";
+import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
-import { cloudflare } from "@cloudflare/vite-plugin";
+import { defineConfig } from "vite";
 
 const config = defineConfig(() => {
 	const isTest = process.env.VITEST === "true";
+	const alias = { "@": fileURLToPath(new URL("./src", import.meta.url)) };
 
 	return {
-		resolve: {
-			tsconfigPaths: true,
-		},
 		plugins: [
 			!isTest &&
 				cloudflare({
@@ -21,6 +20,7 @@ const config = defineConfig(() => {
 			tanstackStart(),
 			viteReact(),
 		].filter(Boolean),
+		resolve: { alias },
 	};
 });
 

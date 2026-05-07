@@ -1,11 +1,11 @@
 import { Result, TaggedError } from "better-result";
 import { XMLParser } from "fast-xml-parser";
 
-import type { Book } from "@/lib/books/schema";
+import type { Book } from "./schema";
+import { GOODREADS_USER_ID } from "@/lib/config";
+import { toErrorDetails } from "@/lib/error-details";
 import { getJson, refreshJson } from "@/lib/store";
-
-const GOODREADS_USER_ID = "149477581-kyle-mcdonald";
-const GOODREADS_SHELF_CACHE_KEY = "goodreads:shelf:v1";
+export const GOODREADS_SHELF_CACHE_KEY = "goodreads:shelf:v1";
 const GOODREADS_SHELF_CACHE_TTL_SECONDS = 30 * 60;
 
 type ShelfData = {
@@ -21,13 +21,13 @@ class FetchGoodreadsError extends TaggedError("FetchGoodreadsError")<{
 	readonly statusText?: string;
 	readonly url?: string;
 }>() {
-	message = "Failed to fetch Goodreads books";
+	override message = "Failed to fetch Goodreads books";
 }
 
 class ParseGoodreadsError extends TaggedError("ParseGoodreadsError")<{
 	readonly error: unknown;
 }>() {
-	message = "Failed to parse Goodreads RSS";
+	override message = "Failed to parse Goodreads RSS";
 }
 
 type GoodreadsShelf = "read" | "currently-reading" | "to-read";
@@ -45,17 +45,6 @@ type RawGoodreadsItem = {
 	isbn?: string;
 	average_rating?: string;
 	book_published?: string;
-};
-
-const errorDetails = (error: unknown): string => {
-	if (error instanceof Error && error.message.trim())
-		return error.message.trim();
-	if (typeof error === "string" && error.trim()) return error.trim();
-	try {
-		return JSON.stringify(error);
-	} catch {
-		return String(error);
-	}
 };
 
 const parseRssToBooks = (
@@ -163,7 +152,7 @@ const getBooks = async ({
 		catch: (error) =>
 			new FetchGoodreadsError({
 				error,
-				details: errorDetails(error),
+				details: toErrorDetails(error),
 				url,
 			}),
 	});
@@ -198,7 +187,7 @@ const getBooks = async ({
 		catch: (error) =>
 			new FetchGoodreadsError({
 				error,
-				details: errorDetails(error),
+				details: toErrorDetails(error),
 				url,
 			}),
 	});
@@ -210,27 +199,18 @@ const getBooks = async ({
 	return Result.ok(parsedBooksResult.value.slice(0, limit));
 };
 
-const shelf = async (): Promise<Result<ShelfData, never>> => {
+const shelf = async (): Promise<
+	Result<ShelfData, FetchGoodreadsError | ParseGoodreadsError>
+> => {
 	const cachedResult = await getJson<ShelfData>({
 		key: GOODREADS_SHELF_CACHE_KEY,
 	});
-	if (Result.isOk(cachedResult)) {
-		if (cachedResult.value) {
-			return Result.ok(cachedResult.value);
-		}
-
-		// Cache miss: warm and return fresh shelf data.
-		const refreshed = await refreshShelf();
-		if (Result.isOk(refreshed)) {
-			return Result.ok(refreshed.value);
-		}
-
-		return Result.ok({ reading: [], finished: [], next: [] });
+	if (Result.isOk(cachedResult) && cachedResult.value) {
+		return Result.ok(cachedResult.value);
 	}
 
-	// `getJson` currently returns `Result<_, never>`, but keeping a defensive
-	// fallback branch avoids unsafe assumptions if its error contract changes.
-	return Result.ok({ reading: [], finished: [], next: [] });
+	// Cache miss: warm and return fresh shelf data.
+	return refreshShelf();
 };
 
 const fetchShelfData = async (): Promise<
@@ -258,7 +238,6 @@ const refreshShelf = () =>
 	});
 
 export const goodreads = {
-	getBooks,
 	shelf,
 	refreshShelf,
 };

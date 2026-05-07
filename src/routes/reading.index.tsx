@@ -6,10 +6,13 @@ import { Bookshelf } from "@/components/Bookshelf";
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { Text } from "@/components/Text";
 import { goodreads } from "@/lib/goodreads";
-import "@/styles/routes/home.css";
+import { buildMeta } from "@/lib/meta";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
 	const booksResult = await goodreads.shelf();
+	if (Result.isError(booksResult)) {
+		console.error("Goodreads shelf failed:", booksResult.error);
+	}
 	const books = Result.isOk(booksResult)
 		? booksResult.value
 		: { reading: [], finished: [], next: [] };
@@ -22,7 +25,11 @@ export const Route = createFileRoute("/reading/")({
 	loader: () => getData(),
 	errorComponent: ErrorComponent,
 	head: () => ({
-		meta: [{ title: "Reading - Kyle McDonald" }],
+		meta: buildMeta({
+			title: "Reading - Kyle McDonald",
+			url: "https://kylemcd.com/reading",
+			image: "https://kylemcd.com/open-graph/reading.png",
+		}),
 	}),
 });
 
@@ -32,7 +39,13 @@ function ReadingRoute() {
 	const hasFinished = (books?.finished?.length ?? 0) > 0;
 
 	if (!hasReading && !hasFinished) {
-		return null;
+		return (
+			<div className="section-container">
+				<Text as="p" size="1" color="2">
+					No reading data available right now.
+				</Text>
+			</div>
+		);
 	}
 
 	return (

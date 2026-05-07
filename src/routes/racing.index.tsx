@@ -4,8 +4,9 @@ import { Result } from "better-result";
 
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { Garage61 } from "@/components/Garage61";
+import { Text } from "@/components/Text";
 import { garage61 } from "@/lib/garage61";
-import "@/styles/routes/home.css";
+import { buildMeta } from "@/lib/meta";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
 	const racingResult = await garage61.summary();
@@ -21,7 +22,11 @@ export const Route = createFileRoute("/racing/")({
 	loader: () => getData(),
 	errorComponent: ErrorComponent,
 	head: () => ({
-		meta: [{ title: "Racing - Kyle McDonald" }],
+		meta: buildMeta({
+			title: "Racing - Kyle McDonald",
+			url: "https://kylemcd.com/racing",
+			image: "https://kylemcd.com/open-graph/racing.png",
+		}),
 	}),
 });
 
@@ -34,7 +39,13 @@ function RacingRoute() {
 	);
 
 	if (!racing || !hasRacingOverview) {
-		return null;
+		return (
+			<div className="section-container">
+				<Text as="p" size="1" color="2">
+					No racing data available right now.
+				</Text>
+			</div>
+		);
 	}
 
 	return (

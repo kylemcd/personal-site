@@ -8,10 +8,15 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
-
-import { Text } from "@/components/Text";
 import { SectionStatRow } from "@/components/SectionStatRow";
 import { StatBarList, type StatBarListRow } from "@/components/StatBarList";
+import { Text } from "@/components/Text";
+import {
+	clampPercent,
+	formatDuration,
+	formatLapTime,
+	formatPercentLabel,
+} from "@/lib/format";
 import type { Garage61Summary } from "@/lib/garage61/schema";
 
 import "./Garage61.styles.css";
@@ -47,36 +52,6 @@ type HoveredChartPoint = {
 	lapSeconds: number;
 	x: number;
 	y: number;
-};
-
-const clampPercent = (value: number | null) => {
-	if (value === null) return 0;
-	return Math.max(0, Math.min(100, value));
-};
-
-const formatPercentLabel = (value: number | null | undefined) => {
-	if (value === null || value === undefined || !Number.isFinite(value)) {
-		return "n/a";
-	}
-	if (value <= 0) return "<1%";
-	if (value < 1) return "<1%";
-	return `${Math.round(value)}%`;
-};
-
-const formatDuration = (seconds: number) => {
-	if (seconds <= 0) return "0m";
-	const days = Math.floor(seconds / 86400);
-	const hours = Math.floor((seconds % 86400) / 3600);
-	const minutes = Math.round((seconds % 3600) / 60);
-	if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-	if (hours > 0) return `${hours}h ${minutes}m`;
-	return `${minutes}m`;
-};
-
-const formatLapTime = (seconds: number) => {
-	const minutes = Math.floor(seconds / 60);
-	const remainder = seconds - minutes * 60;
-	return `${minutes}:${remainder.toFixed(3).padStart(6, "0")}`;
 };
 
 const formatLapTimeTenthScale = (seconds: number) => {
@@ -183,7 +158,7 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 	const sessionTimeBreakdown = overview.insights.sessionTimeBreakdown;
 	const hasRecent =
 		overview.recentTracks.length > 0 || overview.recentCars.length > 0;
-	if (!hasRecent && overview.totalTimeOnTrackSeconds <= 0) return null;
+	const shouldRender = hasRecent || overview.totalTimeOnTrackSeconds > 0;
 
 	const fastestLaps = [...overview.insights.paceLadder]
 		.sort((a, b) => a.avgLapSeconds - b.avgLapSeconds)
@@ -223,6 +198,7 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 	);
 	useEffect(() => {
 		if (chartSessions.length === 0) {
+			setHoveredPoint(null);
 			setActiveChartId("");
 			return;
 		}
@@ -230,12 +206,12 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 			(session) => session.id === activeChartId,
 		);
 		if (!stillExists) {
+			setHoveredPoint(null);
 			setActiveChartId(chartSessions[0]?.id ?? "");
 		}
 	}, [chartSessions, activeChartId]);
-	useEffect(() => {
-		setHoveredPoint(null);
-	}, [activeChartId]);
+
+	if (!shouldRender) return null;
 
 	const chart =
 		chartSessions.find((session) => session.id === activeChartId) ??
@@ -274,19 +250,22 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 			: (chart?.rangeSeconds ?? 0);
 	const chartDisplayedLapCount =
 		chartRows.length > 0 ? chartRows.length : (chart?.lapCount ?? 0);
-	const chartYAxisMin = chartYTicks.length > 0 ? (chartYTicks[0] ?? null) : null;
+	const chartYAxisMin =
+		chartYTicks.length > 0 ? (chartYTicks[0] ?? null) : null;
 	const chartYAxisMax =
 		chartYTicks.length > 0 ? (chartYTicks.at(-1) ?? null) : null;
 	const fastestLapLabel = chart
 		? `fastest ${formatLapTime(chart.bestLapSeconds)}`
 		: "";
-	const cleanestTrackRows: Array<StatBarListRow> = cleanestTracks.map((track) => ({
-		key: `clean-${track.track}`,
-		title: track.track,
-		subtitleRight: `${getCleanLapRatio(track)} laps`,
-		percent: clampPercent(track.cleanPercentage),
-		percentLabel: formatPercentLabel(track.cleanPercentage),
-	}));
+	const cleanestTrackRows: Array<StatBarListRow> = cleanestTracks.map(
+		(track) => ({
+			key: `clean-${track.track}`,
+			title: track.track,
+			subtitleRight: `${getCleanLapRatio(track)} laps`,
+			percent: clampPercent(track.cleanPercentage),
+			percentLabel: formatPercentLabel(track.cleanPercentage),
+		}),
+	);
 	const recentTrackRows: Array<StatBarListRow> = recentTracks.map((track) => ({
 		key: `track-${track.id}-${track.name}`,
 		title: track.name,
@@ -315,7 +294,8 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 				: typeof y === "string"
 					? Number.parseFloat(y)
 					: Number.NaN;
-		if (!Number.isFinite(numericValue) || !Number.isFinite(parsedY)) return null;
+		if (!Number.isFinite(numericValue) || !Number.isFinite(parsedY))
+			return null;
 		return (
 			<text
 				x={0}
@@ -350,20 +330,18 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 			const approxCharWidth = 6.4;
 			const labelWidth =
 				Math.ceil(fastestLapLabel.length * approxCharWidth) + labelPadX * 2;
-			const placeLabelLeft = payload.lapNumber / Math.max(1, chartRows.length) > 0.72;
+			const placeLabelLeft =
+				payload.lapNumber / Math.max(1, chartRows.length) > 0.72;
 			const labelY = Math.max(12, cy - 10);
 			const labelX = placeLabelLeft ? cx - (labelWidth + 14) : cx + 14;
-			const labelTextX = placeLabelLeft ? labelX + labelWidth - labelPadX : labelX + labelPadX;
+			const labelTextX = placeLabelLeft
+				? labelX + labelWidth - labelPadX
+				: labelX + labelPadX;
 			const labelTextAnchor = placeLabelLeft ? "end" : "start";
 			return (
+				/* biome-ignore lint/a11y/noStaticElementInteractions: Recharts custom SVG dots use group hover handlers for chart tooltip behavior. */
 				<g onMouseEnter={onEnter} onMouseLeave={onLeave}>
-					<circle
-						cx={cx}
-						cy={cy}
-						r={11}
-						fill="transparent"
-						stroke="none"
-					/>
+					<circle cx={cx} cy={cy} r={11} fill="transparent" stroke="none" />
 					<circle
 						cx={cx}
 						cy={cy}
@@ -404,14 +382,9 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 			);
 		}
 		return (
+			/* biome-ignore lint/a11y/noStaticElementInteractions: Recharts custom SVG dots use group hover handlers for chart tooltip behavior. */
 			<g onMouseEnter={onEnter} onMouseLeave={onLeave}>
-				<circle
-					cx={cx}
-					cy={cy}
-					r={9}
-					fill="transparent"
-					stroke="none"
-				/>
+				<circle cx={cx} cy={cy} r={9} fill="transparent" stroke="none" />
 				<circle
 					cx={cx}
 					cy={cy}
@@ -477,12 +450,22 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 							</Text>
 						),
 						value: (
-							<Text as="p" size="6" family="mono" className="g61-racing-kpi-value">
+							<Text
+								as="p"
+								size="6"
+								family="mono"
+								className="g61-racing-kpi-value"
+							>
 								{formatPercentLabel(overview.cleanLapPercentage)}
 							</Text>
 						),
 						subline: (
-							<Text as="p" size="0" color="2" className="g61-racing-kpi-subline">
+							<Text
+								as="p"
+								size="0"
+								color="2"
+								className="g61-racing-kpi-subline"
+							>
 								Incident-free
 							</Text>
 						),
@@ -495,9 +478,16 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 							</Text>
 						),
 						value: (
-							<Text as="p" size="6" family="mono" className="g61-racing-kpi-value">
+							<Text
+								as="p"
+								size="6"
+								family="mono"
+								className="g61-racing-kpi-value"
+							>
 								{overview.insights.cleanestCombo
-									? formatPercentLabel(overview.insights.cleanestCombo.cleanPercentage)
+									? formatPercentLabel(
+											overview.insights.cleanestCombo.cleanPercentage,
+										)
 									: "n/a"}
 							</Text>
 						),
@@ -520,7 +510,12 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 							</Text>
 						),
 						value: (
-							<Text as="p" size="6" family="mono" className="g61-racing-kpi-value">
+							<Text
+								as="p"
+								size="6"
+								family="mono"
+								className="g61-racing-kpi-value"
+							>
 								{sessionTimeBreakdown
 									? formatPercentLabel(sessionTimeBreakdown.practicePercentage)
 									: "n/a"}
@@ -548,7 +543,12 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 											? `Practice ${formatDuration(sessionTimeBreakdown.practiceTimeOnTrackSeconds)}`
 											: "Practice n/a"}
 									</Text>
-									<Text as="p" size="0" family="mono" className="g61-racing-red">
+									<Text
+										as="p"
+										size="0"
+										family="mono"
+										className="g61-racing-red"
+									>
 										{sessionTimeBreakdown
 											? `Racing ${formatDuration(sessionTimeBreakdown.racingTimeOnTrackSeconds)}`
 											: "Racing n/a"}
@@ -593,7 +593,10 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 											role="tab"
 											aria-selected={session.id === activeChartId}
 											className={`g61-racing-chart-tab${session.id === activeChartId ? " is-active" : ""}`}
-											onClick={() => setActiveChartId(session.id)}
+											onClick={() => {
+												setHoveredPoint(null);
+												setActiveChartId(session.id);
+											}}
 										>
 											{`S${index + 1}`}
 										</button>
@@ -642,7 +645,7 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 								</span>
 							</div>
 						)}
-						<ResponsiveContainer width="100%" height="100%">
+						<ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
 							<LineChart
 								data={chartRows}
 								margin={{ top: 18, right: 16, left: 0, bottom: 34 }}
@@ -761,8 +764,9 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 					</div>
 					<StatBarList
 						rows={cleanestTrackRows}
-						barColorVar="--color-racing-red"
-						percentColorVar="--color-racing-red"
+						barColor="var(--color-racing-red)"
+						percentColor="var(--color-racing-red)"
+						variant="racing"
 						className="g61-racing-table-rows"
 					/>
 				</div>
@@ -777,8 +781,9 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 					</div>
 					<StatBarList
 						rows={recentTrackRows}
-						barColorVar="--color-racing-red"
-						percentColorVar="--color-racing-red"
+						barColor="var(--color-racing-red)"
+						percentColor="var(--color-racing-red)"
+						variant="racing"
 					/>
 				</div>
 
@@ -790,8 +795,9 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 					</div>
 					<StatBarList
 						rows={recentCarRows}
-						barColorVar="--color-racing-red"
-						percentColorVar="--color-racing-red"
+						barColor="var(--color-racing-red)"
+						percentColor="var(--color-racing-red)"
+						variant="racing"
 					/>
 				</div>
 			</div>

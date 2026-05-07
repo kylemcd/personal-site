@@ -8,10 +8,23 @@
 	"files": {
 		"ignoreUnknown": false,
 		"includes": [
-			"**/src/**/*",
-			"**/.vscode/**/*",
-			"**/index.html",
-			"**/vite.config.js",
+			"**/*.js",
+			"**/*.cjs",
+			"**/*.mjs",
+			"**/*.jsx",
+			"**/*.ts",
+			"**/*.cts",
+			"**/*.mts",
+			"**/*.tsx",
+			"**/*.json",
+			"**/*.jsonc",
+			"**/*.css",
+			"**/*.html",
+			"!**/dist",
+			"!**/.vinxi",
+			"!**/.wrangler",
+			"!**/coverage",
+			"!**/worker-configuration.d.ts",
 			"!**/src/routeTree.gen.ts"
 		]
 	},

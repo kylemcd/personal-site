@@ -85,9 +85,9 @@ const toComparableTimestampInCentral = (date: string): number => {
 	if (dateOnly) {
 		const [, year, month, day] = dateOnly;
 		return toCentralTimestamp({
-			year: asNumber(year),
-			month: asNumber(month),
-			day: asNumber(day),
+			year: asNumber(year!),
+			month: asNumber(month!),
+			day: asNumber(day!),
 			hour: 0,
 			minute: 0,
 			second: 0,
@@ -98,11 +98,11 @@ const toComparableTimestampInCentral = (date: string): number => {
 	if (dateTime) {
 		const [, year, month, day, hour, minute, second = "0"] = dateTime;
 		return toCentralTimestamp({
-			year: asNumber(year),
-			month: asNumber(month),
-			day: asNumber(day),
-			hour: asNumber(hour),
-			minute: asNumber(minute),
+			year: asNumber(year!),
+			month: asNumber(month!),
+			day: asNumber(day!),
+			hour: asNumber(hour!),
+			minute: asNumber(minute!),
 			second: asNumber(second),
 		});
 	}

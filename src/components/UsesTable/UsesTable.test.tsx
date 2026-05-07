@@ -35,16 +35,14 @@ describe("UsesTable", () => {
 		).not.toBeNull();
 	});
 
-	it("opens row links when clicking a linked row", () => {
-		const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+	it("renders a link for linked rows with correct href and target", () => {
 		render(<UsesTable items={ITEMS} />);
 
-		fireEvent.click(screen.getByText("MacBook Pro"));
+		const link = screen.getByRole("link", { name: "Open MacBook Pro" });
 
-		expect(openSpy).toHaveBeenCalledWith(
-			"https://www.apple.com/macbook-pro/",
-			"_blank",
-			"noopener,noreferrer",
-		);
+		expect(link).not.toBeNull();
+		expect(link.getAttribute("href")).toBe("https://www.apple.com/macbook-pro/");
+		expect(link.getAttribute("target")).toBe("_blank");
+		expect(link.getAttribute("rel")).toBe("noopener noreferrer");
 	});
 });

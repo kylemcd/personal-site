@@ -1,1 +1,11 @@
-export { fetchCache, fetchFresh, fetchRevalidate } from "./fetch";
+export {
+	FetchNetworkError,
+	FetchResponseError,
+	FetchTimeoutError,
+	fetchCache,
+	fetchFresh,
+	fetchJson,
+	fetchRevalidate,
+	JsonParseError,
+	SchemaParseError,
+} from "./fetch";

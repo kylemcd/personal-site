@@ -16,6 +16,7 @@ import { garage61 } from "@/lib/garage61";
 import { goodreads } from "@/lib/goodreads";
 import { lastfm } from "@/lib/lastfm";
 import { markdown } from "@/lib/markdown";
+import { buildMeta } from "@/lib/meta";
 import "@/styles/routes/home.css";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
@@ -33,6 +34,12 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 		: { reading: [], finished: [], next: [] };
 	const racing = Result.isOk(racingRes) ? racingRes.value : null;
 
+	if (Result.isError(listeningRes)) {
+		console.error("Last.fm recentActivity failed:", listeningRes.error);
+	}
+	if (Result.isError(booksRes)) {
+		console.error("Goodreads shelf failed:", booksRes.error);
+	}
 	if (Result.isError(racingRes)) {
 		console.error("Garage61 summary failed:", racingRes.error);
 	}
@@ -46,45 +53,15 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const Route = createFileRoute("/")({
-	component: Home,
+	component: HomeRoute,
 	loader: () => getData(),
 	errorComponent: ErrorComponent,
 	head: () => ({
-		meta: [
-			{ title: "Kyle McDonald" },
-			{ property: "og:title", content: "Kyle McDonald" },
-			{
-				property: "og:description",
-				content:
-					"Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
-			},
-			{ property: "og:url", content: "https://kylemcd.com" },
-			{
-				property: "og:image",
-				content: "https://kylemcd.com/open-graph/home.png",
-			},
-			{ property: "og:image:type", content: "image/png" },
-			{ property: "og:image:width", content: "1200" },
-			{ property: "og:image:height", content: "630" },
-			{ property: "og:site_name", content: "Kyle McDonald" },
-			{ property: "og:locale", content: "en-US" },
-			{ property: "og:type", content: "website" },
-			{ name: "twitter:card", content: "summary_large_image" },
-			{ name: "twitter:title", content: "Kyle McDonald" },
-			{
-				name: "twitter:description",
-				content:
-					"Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.",
-			},
-			{
-				name: "twitter:image",
-				content: "https://kylemcd.com/open-graph/home.png",
-			},
-		],
+		meta: buildMeta({ title: "Kyle McDonald" }),
 	}),
 });
 
-function Home() {
+function HomeRoute() {
 	const { listening, writing, books, racing } = Route.useLoaderData();
 	const hasListeningContent = Boolean(
 		listening &&

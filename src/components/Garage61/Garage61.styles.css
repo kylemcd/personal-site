@@ -22,14 +22,6 @@
 	letter-spacing: 0.02em;
 }
 
-.g61-racing-kpis .section-stat-item {
-	display: flex;
-	flex-direction: column;
-	gap: var(--spc-1);
-	min-width: 0;
-	flex: 1 1 auto;
-}
-
 .g61-racing-kpi-value {
 	line-height: 1.15;
 	max-width: 100%;
@@ -261,64 +253,6 @@
 	line-height: 1;
 }
 
-.g61-racing .share-list-row {
-	display: flex;
-	flex-direction: column;
-	gap: var(--spc-2);
-}
-
-.g61-racing .share-list-head {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	gap: var(--spc-3);
-	align-items: start;
-}
-
-.g61-racing .share-list-subtitle {
-	text-align: right;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.g61-racing .share-list-progress {
-	display: flex;
-	align-items: center;
-	gap: var(--spc-2);
-}
-
-.g61-racing .share-list-percent {
-	color: var(--color-racing-red);
-}
-
-.g61-racing .metric-bar-track {
-	background: color-mix(in srgb, var(--color-ui-1) 68%, transparent);
-	height: var(--spc-1);
-}
-
-.g61-racing .metric-bar-fill {
-	background: var(--color-racing-red);
-}
-
-.g61-racing-recent-row {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) 220px;
-	gap: var(--spc-3);
-	align-items: center;
-}
-
-.g61-racing-recent-name {
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-@media (max-width: 1200px) {
-	.g61-racing-recent-row {
-		grid-template-columns: minmax(0, 1fr) 180px;
-	}
-}
-
 @media (max-width: 900px) {
 	.g61-racing-kpis,
 	.g61-racing-tables,
@@ -334,10 +268,6 @@
 		white-space: normal;
 	}
 
-	.g61-racing-recent-row {
-		grid-template-columns: 1fr;
-		gap: var(--spc-1);
-	}
 }
 
 @media (max-width: 640px) {

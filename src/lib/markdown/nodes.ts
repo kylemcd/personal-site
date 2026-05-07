@@ -48,7 +48,7 @@ export const nodes = {
 			}
 
 			/* ───────────────────────── prism block ─────────────────────────── */
-			const grammar = Prism.languages[language] ?? Prism.languages.text;
+			const grammar = (Prism.languages[language] ?? Prism.languages.text) as import("prismjs").Grammar;
 			const html = prismTokensToMarkdocTags(Prism.tokenize(content, grammar));
 
 			return new Tag("pre", { class: `language-${language}` }, [

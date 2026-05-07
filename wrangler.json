@@ -1,60 +1,60 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kylemcd-com",
-  "compatibility_date": "2025-09-02",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "./worker.ts",
-  "routes": [
-    { "pattern": "kpm.sh", "custom_domain": true },
-    { "pattern": "www.kpm.sh", "custom_domain": true },
-    { "pattern": "kylemcd.com", "custom_domain": true },
-    { "pattern": "www.kylemcd.com", "custom_domain": true }
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "APP_STORE",
-      "id": "80244ef92fd3460587eca71c1c482b07",
-      "remote": true
-    }
-  ],
-  "send_email": [
-    {
-      "name": "EMAIL"
-    }
-  ],
-  "workflows": [
-    {
-      "binding": "GARAGE61_REFRESH_WORKFLOW",
-      "name": "refresh-garage61",
-      "class_name": "RefreshGarage61Workflow"
-    },
-    {
-      "binding": "GOODREADS_REFRESH_WORKFLOW",
-      "name": "refresh-goodreads",
-      "class_name": "RefreshGoodreadsWorkflow"
-    },
-    {
-      "binding": "LASTFM_REFRESH_WORKFLOW",
-      "name": "refresh-lastfm",
-      "class_name": "RefreshLastFmWorkflow"
-    },
-    {
-      "binding": "STALE_MONITOR_WORKFLOW",
-      "name": "stale-data-monitor",
-      "class_name": "StaleDataMonitorWorkflow"
-    }
-  ],
-  "triggers": {
-    "crons": ["0,30 * * * *"]
-  },
-  "limits": {
-    "cpu_ms": 300000,
-    "subrequests": 50000
-  },
-  "observability": {
-    "logs": {
-      "enabled": false,
-      "invocation_logs": false
-    }
-  }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "kylemcd-com",
+	"compatibility_date": "2025-09-02",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./worker.ts",
+	"routes": [
+		{ "pattern": "kpm.sh", "custom_domain": true },
+		{ "pattern": "www.kpm.sh", "custom_domain": true },
+		{ "pattern": "kylemcd.com", "custom_domain": true },
+		{ "pattern": "www.kylemcd.com", "custom_domain": true }
+	],
+	"kv_namespaces": [
+		{
+			"binding": "APP_STORE",
+			"id": "80244ef92fd3460587eca71c1c482b07",
+			"remote": true
+		}
+	],
+	"send_email": [
+		{
+			"name": "EMAIL"
+		}
+	],
+	"workflows": [
+		{
+			"binding": "GARAGE61_REFRESH_WORKFLOW",
+			"name": "refresh-garage61",
+			"class_name": "RefreshGarage61Workflow"
+		},
+		{
+			"binding": "GOODREADS_REFRESH_WORKFLOW",
+			"name": "refresh-goodreads",
+			"class_name": "RefreshGoodreadsWorkflow"
+		},
+		{
+			"binding": "LASTFM_REFRESH_WORKFLOW",
+			"name": "refresh-lastfm",
+			"class_name": "RefreshLastFmWorkflow"
+		},
+		{
+			"binding": "STALE_MONITOR_WORKFLOW",
+			"name": "stale-data-monitor",
+			"class_name": "StaleDataMonitorWorkflow"
+		}
+	],
+	"triggers": {
+		"crons": ["0,30 * * * *"]
+	},
+	"limits": {
+		"cpu_ms": 300000,
+		"subrequests": 50000
+	},
+	"observability": {
+		"logs": {
+			"enabled": true,
+			"invocation_logs": true
+		}
+	}
 }

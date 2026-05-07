@@ -91,4 +91,30 @@ describe("cloudflare-kv result cache", () => {
 			expect(result.value).toBe(123);
 		}
 	});
+
+	it("expires memory entries when ttlSeconds elapses", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+		try {
+			const { getJson, refreshJson } = await import("./cloudflare-kv");
+			const key = keyFor("memory-ttl-expiry");
+
+			const refreshed = await refreshJson<number, TestComputeError>({
+				key,
+				ttlSeconds: 1,
+				compute: async () => Result.ok(42),
+			});
+			expect(Result.isOk(refreshed)).toBe(true);
+
+			vi.advanceTimersByTime(1100);
+
+			const fetched = await getJson<number>({ key });
+			expect(Result.isOk(fetched)).toBe(true);
+			if (Result.isOk(fetched)) {
+				expect(fetched.value).toBeNull();
+			}
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 });

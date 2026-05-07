@@ -1,5 +1,9 @@
 import { WorkflowEntrypoint } from "cloudflare:workers";
 
+import { GARAGE61_SUMMARY_CACHE_KEY } from "@/lib/garage61";
+import { GOODREADS_SHELF_CACHE_KEY } from "@/lib/goodreads";
+import { LASTFM_MONTHLY_TOP_CACHE_KEY } from "@/lib/lastfm";
+
 export type StaleMonitorParams = {
 	triggeredAt: string;
 };
@@ -26,9 +30,9 @@ type MonitoredKey = {
 const DEFAULT_CACHE_VERSION = "v1";
 const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
 const MONITORED_KEYS: ReadonlyArray<MonitoredKey> = [
-	{ key: "garage61:summary:v6", label: "Garage61 summary" },
-	{ key: "goodreads:shelf:v1", label: "Goodreads shelf" },
-	{ key: "lastfm:monthly-top:v1", label: "Last.fm monthly top" },
+	{ key: GARAGE61_SUMMARY_CACHE_KEY, label: "Garage61 summary" },
+	{ key: GOODREADS_SHELF_CACHE_KEY, label: "Goodreads shelf" },
+	{ key: LASTFM_MONTHLY_TOP_CACHE_KEY, label: "Last.fm monthly top" },
 ];
 
 const asRecord = (value: unknown): Record<string, unknown> | null => {
@@ -66,15 +70,22 @@ const parseEnvelope = (raw: string): CacheEnvelope | null => {
 	}
 };
 
-const getReadKeys = (cacheVersion: string | undefined, key: string): string[] => {
+const getReadKeys = (
+	cacheVersion: string | undefined,
+	key: string,
+): string[] => {
 	const scoped = `${normalizeCacheVersion(cacheVersion)}:${key}`;
 	const defaultScoped = `${DEFAULT_CACHE_VERSION}:${key}`;
 	return [...new Set([scoped, defaultScoped, key])];
 };
 
-const getAlertStateKey = (cacheVersion: string | undefined, key: string): string =>
+const getAlertStateKey = (
+	cacheVersion: string | undefined,
+	key: string,
+): string =>
 	`monitor:stale-alert:${normalizeCacheVersion(cacheVersion)}:${key}`;
-const getLookupStatusKey = (key: string): string => `monitor:lookup-status:${key}`;
+const getLookupStatusKey = (key: string): string =>
+	`monitor:lookup-status:${key}`;
 
 const sendCloudflareEmail = async (
 	email: SendEmail,
@@ -91,7 +102,10 @@ const sendCloudflareEmail = async (
 	});
 };
 
-const kvGet = async (store: KVNamespace, key: string): Promise<string | null> => {
+const kvGet = async (
+	store: KVNamespace,
+	key: string,
+): Promise<string | null> => {
 	try {
 		return await store.get(key, "text");
 	} catch {
@@ -196,8 +210,10 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 	StaleMonitorWorkflowEnv,
 	StaleMonitorParams
 > {
-	async run(event: Readonly<{ payload: Readonly<StaleMonitorParams> }>, step: unknown) {
-		void event;
+	override async run(
+		_event: Readonly<{ payload: Readonly<StaleMonitorParams> }>,
+		step: unknown,
+	) {
 		const steps = step as {
 			do: <T>(name: string, callback: () => Promise<T>) => Promise<T>;
 		};
@@ -229,7 +245,10 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 				}
 
 				let lookupStatus: LookupStatus | null = null;
-				for (const statusKey of getReadKeys(cacheVersion, getLookupStatusKey(item.key))) {
+				for (const statusKey of getReadKeys(
+					cacheVersion,
+					getLookupStatusKey(item.key),
+				)) {
 					const raw = await kvGet(store, statusKey);
 					lookupStatus = parseLookupStatus(raw);
 					if (lookupStatus) break;
@@ -257,7 +276,11 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 								`Last error: ${lookupStatus?.lastError ?? "n/a"}`,
 							].join("\n"),
 						);
-						await kvPut(store, alertStateKey, JSON.stringify({ sentAt: nowMs }));
+						await kvPut(
+							store,
+							alertStateKey,
+							JSON.stringify({ sentAt: nowMs }),
+						);
 						emailSent = true;
 					}
 					return {
@@ -311,11 +334,14 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 				}
 
 				if (!canSendEmail) {
-					console.warn("[monitor] stale data detected but email not configured", {
-						key: item.key,
-						label: item.label,
-						staleForMs,
-					});
+					console.warn(
+						"[monitor] stale data detected but email not configured",
+						{
+							key: item.key,
+							label: item.label,
+							staleForMs,
+						},
+					);
 					return {
 						key: item.key,
 						label: item.label,
@@ -332,11 +358,14 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 				}
 
 				if (!email) {
-					console.warn("[monitor] stale data detected but EMAIL binding is missing", {
-						key: item.key,
-						label: item.label,
-						staleForMs,
-					});
+					console.warn(
+						"[monitor] stale data detected but EMAIL binding is missing",
+						{
+							key: item.key,
+							label: item.label,
+							staleForMs,
+						},
+					);
 					return {
 						key: item.key,
 						label: item.label,

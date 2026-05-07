@@ -1,2 +1,2 @@
-export { MetricBar } from "./MetricBar";
 export type { MetricBarProps } from "./MetricBar";
+export { MetricBar } from "./MetricBar";

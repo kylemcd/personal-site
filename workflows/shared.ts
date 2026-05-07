@@ -1,14 +1,24 @@
+import { WorkflowEntrypoint } from "cloudflare:workers";
+import { Result } from "better-result";
+
+export type RefreshWorkflowParams = { triggeredAt: string };
+
+type StepResult =
+	| { status: "success"; details: Record<string, unknown>; payload: unknown }
+	| { status: "skipped"; reason: string };
+
+type BaseEnv = { APP_STORE?: KVNamespace; KV_CACHE_VERSION?: string };
+
 export type WorkflowStepRunner = {
 	do: <T>(name: string, callback: () => Promise<T>) => Promise<T>;
 };
 
-export const applyBaseRuntimeEnv = (env: {
-	APP_STORE?: KVNamespace;
-	KV_CACHE_VERSION?: string;
-}) => {
+export const applyBaseRuntimeEnv = (env: BaseEnv) => {
 	(globalThis as Record<string, unknown>).APP_STORE = env.APP_STORE;
-	(globalThis as Record<string, unknown>).KV_CACHE_VERSION = env.KV_CACHE_VERSION;
-	process.env.KV_CACHE_VERSION = env.KV_CACHE_VERSION ?? process.env.KV_CACHE_VERSION;
+	(globalThis as Record<string, unknown>).KV_CACHE_VERSION =
+		env.KV_CACHE_VERSION;
+	process.env.KV_CACHE_VERSION =
+		env.KV_CACHE_VERSION ?? process.env.KV_CACHE_VERSION;
 };
 
 export const isConfigured = (value: string | undefined): boolean =>
@@ -41,13 +51,13 @@ export const toErrorSummary = (error: unknown): string => {
 					message: value.message,
 					stack: value.stack,
 				};
-					for (const prop of Object.getOwnPropertyNames(value)) {
-						if (!(prop in serialized)) {
-							serialized[prop] = (value as unknown as Record<string, unknown>)[
-								prop
-							];
-						}
+				for (const prop of Object.getOwnPropertyNames(value)) {
+					if (!(prop in serialized)) {
+						serialized[prop] = (value as unknown as Record<string, unknown>)[
+							prop
+						];
 					}
+				}
 				return serialized;
 			}
 			if (typeof value === "object" && value !== null) {
@@ -60,3 +70,51 @@ export const toErrorSummary = (error: unknown): string => {
 		return String(error);
 	}
 };
+
+export function makeRefreshWorkflow<Env extends BaseEnv>(config: {
+	stepName: string;
+	apiKeyEnvVar?: string;
+	applyEnv?: (env: Env) => void;
+	refresh: () => Promise<Result<unknown, unknown>>;
+	buildDetails: (value: unknown) => Record<string, unknown>;
+}) {
+	return class extends WorkflowEntrypoint<Env, RefreshWorkflowParams> {
+		override async run(
+			_event: Readonly<{ payload: Readonly<RefreshWorkflowParams> }>,
+			step: unknown,
+		) {
+			applyBaseRuntimeEnv(this.env);
+			config.applyEnv?.(this.env);
+			const steps = step as WorkflowStepRunner;
+
+			await steps.do(config.stepName, async () => {
+				if (
+					config.apiKeyEnvVar &&
+					!isConfigured(process.env[config.apiKeyEnvVar])
+				) {
+					emitNonFatalError(
+						`[refresh] ${config.apiKeyEnvVar} missing; skipping ${config.stepName}`,
+					);
+					return {
+						status: "skipped",
+						reason: `${config.apiKeyEnvVar} missing`,
+					} satisfies StepResult;
+				}
+
+				const dataResult = await config.refresh();
+				if (Result.isError(dataResult)) {
+					return throwWorkflowError(
+						`[refresh] ${config.stepName} failed: ${toErrorSummary(dataResult.error)}`,
+						dataResult.error,
+					);
+				}
+
+				return {
+					status: "success" as const,
+					details: config.buildDetails(dataResult.value),
+					payload: dataResult.value,
+				};
+			});
+		}
+	};
+}

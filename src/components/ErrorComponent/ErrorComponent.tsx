@@ -1,14 +1,12 @@
-type ErrorComponentProps = {
-	error: unknown;
-};
-
-function ErrorComponent({ error }: ErrorComponentProps) {
-	const e = error as Error & { cause?: unknown };
+function ErrorComponent({ error }: { error: unknown }) {
+	const message =
+		error instanceof Error ? error.message : "An unexpected error occurred";
+	const cause = error instanceof Error ? error.cause : undefined;
 
 	return (
-		<div style={{ color: "red" }}>
-			<h1>{e.message}</h1>
-			{e.cause ? <pre>{JSON.stringify(e.cause, null, 2)}</pre> : null}
+		<div role="alert" style={{ color: "red" }}>
+			<h1>{message}</h1>
+			{cause ? <pre>{JSON.stringify(cause, null, 2)}</pre> : null}
 		</div>
 	);
 }

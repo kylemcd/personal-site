@@ -1,19 +1,8 @@
-import { WorkflowEntrypoint } from "cloudflare:workers";
-import { Result } from "better-result";
+import { lastfm, LASTFM_MONTHLY_TOP_CACHE_KEY } from "@/lib/lastfm";
 
-import { lastfm } from "@/lib/lastfm";
-import {
-	applyBaseRuntimeEnv,
-	emitNonFatalError,
-	isConfigured,
-	throwWorkflowError,
-	toErrorSummary,
-	type WorkflowStepRunner,
-} from "./shared";
+import { makeRefreshWorkflow, type RefreshWorkflowParams } from "./shared";
 
-export type RefreshWorkflowParams = {
-	triggeredAt: string;
-};
+export type { RefreshWorkflowParams };
 
 export type RefreshLastFmWorkflowEnv = {
 	APP_STORE?: KVNamespace;
@@ -21,57 +10,25 @@ export type RefreshLastFmWorkflowEnv = {
 	LASTFM_API_KEY?: string;
 };
 
-type StepResult =
-	| { status: "success"; details: Record<string, unknown>; payload: unknown }
-	| { status: "skipped"; reason: string };
-
-const applyRuntimeEnv = (env: RefreshLastFmWorkflowEnv) => {
-	applyBaseRuntimeEnv(env);
-	process.env.LASTFM_API_KEY = env.LASTFM_API_KEY ?? process.env.LASTFM_API_KEY;
-};
-
-export class RefreshLastFmWorkflow extends WorkflowEntrypoint<
-	RefreshLastFmWorkflowEnv,
-	RefreshWorkflowParams
-> {
-	async run(
-		event: Readonly<{ payload: Readonly<RefreshWorkflowParams> }>,
-		step: unknown,
-	) {
-		void event;
-		applyRuntimeEnv(this.env);
-		const steps = step as WorkflowStepRunner;
-
-		await steps.do("refresh-lastfm", async () => {
-			if (!isConfigured(this.env.LASTFM_API_KEY)) {
-				emitNonFatalError(
-					"[refresh] LASTFM_API_KEY missing; skipping Last.fm refresh",
-				);
-				return {
-					status: "skipped",
-					reason: "LASTFM_API_KEY missing",
-				} satisfies StepResult;
-			}
-
-			const dataResult = await lastfm.refreshMonthlyTop();
-			if (Result.isError(dataResult)) {
-				return throwWorkflowError(
-					`[refresh] lastfm failed: ${toErrorSummary(dataResult.error)}`,
-					dataResult.error,
-				);
-			}
-			const data = dataResult.value;
-
-			return {
-				status: "success" as const,
-				details: {
-					cacheKey: "lastfm:monthly-top:v1",
-					topTracks: data.topTracks.length,
-					topArtists: data.topArtists.length,
-					topAlbums: data.topAlbums.length,
-				},
-				payload: data,
-			};
-		});
-	}
-}
+export const RefreshLastFmWorkflow = makeRefreshWorkflow<RefreshLastFmWorkflowEnv>({
+	stepName: "refresh-lastfm",
+	apiKeyEnvVar: "LASTFM_API_KEY",
+	applyEnv: (env) => {
+		process.env.LASTFM_API_KEY =
+			env.LASTFM_API_KEY ?? process.env.LASTFM_API_KEY;
+	},
+	refresh: lastfm.refreshMonthlyTop as () => Promise<import("better-result").Result<unknown, unknown>>,
+	buildDetails: (value) => {
+		const data = value as {
+			topTracks: unknown[];
+			topArtists: unknown[];
+			topAlbums: unknown[];
+		};
+		return {
+			cacheKey: LASTFM_MONTHLY_TOP_CACHE_KEY,
+			topTracks: data.topTracks.length,
+			topArtists: data.topArtists.length,
+			topAlbums: data.topAlbums.length,
+		};
+	},
+});

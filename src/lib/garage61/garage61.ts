@@ -2,20 +2,33 @@ import { Result, TaggedError } from "better-result";
 
 import { env } from "@/lib/env";
 import { fetchFresh } from "@/lib/fetch";
+import { fnv1a32 } from "@/lib/hash";
 import { forEachAsyncResult } from "@/lib/result";
 import { getJson, refreshJson } from "@/lib/store";
 
 import type { Garage61Summary } from "./schema";
+import {
+	asRecord,
+	buildBestSessionChart,
+	buildFallbackTrendFromStatistics,
+	computeSharePercentage,
+	getArrayCandidate,
+	getFirstValue,
+	getIdValue,
+	getNumberValue,
+	roundPercent,
+	roundTo,
+} from "./shared";
 
 class Garage61Error extends TaggedError("Garage61Error")<{
 	readonly error: unknown;
 }>() {
-	message = "Failed to fetch data from Garage61";
+	override message = "Failed to fetch data from Garage61";
 }
 
 const GARAGE61_API_URL = "https://garage61.net/api/v1";
 const GARAGE61_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v10";
+export const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v10";
 const GARAGE61_SUMMARY_CACHE_FALLBACK_KEYS = [
 	"garage61:summary:v9",
 	"garage61:summary:v8",
@@ -76,7 +89,7 @@ const fetchGarage61 = async <A>(
 
 	const key = getCacheKey({
 		url: params.url,
-		method: params.method,
+		...(params.method !== undefined ? { method: params.method } : {}),
 	});
 	const cachedEntry = garage61CachedRequests.get(key);
 	if (cachedEntry) {
@@ -85,11 +98,10 @@ const fetchGarage61 = async <A>(
 		>;
 	}
 
-	const request = withTimeout(
-		fetchFresh<A>(params),
-		GARAGE61_REQUEST_TIMEOUT_MS,
-		() => new Error(`Garage61 request timed out: ${String(params.url)}`),
-	);
+	const request = fetchFresh<A>({
+		...params,
+		timeoutMs: GARAGE61_REQUEST_TIMEOUT_MS,
+	});
 
 	garage61CachedRequests.set(key, {
 		expiresAt: now + GARAGE61_CACHE_TTL_MS,
@@ -240,31 +252,6 @@ const laps = (
 	});
 };
 
-const getArrayCandidate = (value: unknown): ReadonlyArray<unknown> => {
-	if (Array.isArray(value)) return value;
-	if (!value || typeof value !== "object") return [];
-
-	const candidateKeys = [
-		"data",
-		"results",
-		"items",
-		"laps",
-		"sessions",
-		"tracks",
-	];
-	for (const key of candidateKeys) {
-		const candidate = (value as Record<string, unknown>)[key];
-		if (Array.isArray(candidate)) return candidate;
-	}
-
-	return [];
-};
-
-const asRecord = (value: unknown): Record<string, unknown> | null => {
-	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-	return value as Record<string, unknown>;
-};
-
 const parseProfile = (value: unknown): Garage61Summary["profile"] => {
 	const record = asRecord(value);
 	if (!record) return { id: 0, name: "Kyle" };
@@ -278,6 +265,8 @@ const parseProfile = (value: unknown): Garage61Summary["profile"] => {
 	]);
 	const imageRaw = getFirstValue(record, ["image", "avatar", "picture"]);
 
+	const image =
+		typeof imageRaw === "string" && imageRaw.trim() ? imageRaw : undefined;
 	return {
 		id:
 			typeof idRaw === "number"
@@ -285,8 +274,7 @@ const parseProfile = (value: unknown): Garage61Summary["profile"] => {
 				: Number.parseInt(String(idRaw ?? 0), 10) || 0,
 		name:
 			typeof nameRaw === "string" && nameRaw.trim() ? nameRaw.trim() : "Kyle",
-		image:
-			typeof imageRaw === "string" && imageRaw.trim() ? imageRaw : undefined,
+		...(image !== undefined ? { image } : {}),
 	};
 };
 
@@ -300,16 +288,6 @@ const isRaceOrQualiSession = (sessionType: string | null): boolean => {
 	return false;
 };
 
-const getFirstValue = (
-	record: Record<string, unknown>,
-	keys: ReadonlyArray<string>,
-): unknown => {
-	for (const key of keys) {
-		if (key in record) return record[key];
-	}
-	return undefined;
-};
-
 const getTextValue = (value: unknown): string | null => {
 	if (typeof value === "string" && value.trim()) return value.trim();
 	const record = asRecord(value);
@@ -318,26 +296,6 @@ const getTextValue = (value: unknown): string | null => {
 	return typeof candidate === "string" && candidate.trim()
 		? candidate.trim()
 		: null;
-};
-
-const getNumberValue = (value: unknown): number | null => {
-	if (typeof value === "number" && Number.isFinite(value)) return value;
-	if (typeof value === "string" && value.trim()) {
-		const parsed = Number.parseFloat(value);
-		return Number.isFinite(parsed) ? parsed : null;
-	}
-	return null;
-};
-
-const getIdValue = (value: unknown): number | null => {
-	if (typeof value === "number" && Number.isFinite(value)) return value;
-	const record = asRecord(value);
-	if (record && typeof record.id === "number") return record.id;
-	if (typeof value === "string" && value.trim()) {
-		const parsed = Number.parseInt(value, 10);
-		return Number.isFinite(parsed) ? parsed : null;
-	}
-	return null;
 };
 
 const getDriverKey = (value: unknown): string | null => {
@@ -495,26 +453,8 @@ const isLikelyOvalTrackName = (trackName: string): boolean =>
 
 const stableNameId = (kind: "track" | "car", name: string): number => {
 	const key = `${kind}:${normalizeName(name)}`;
-	let hash = 2166136261;
-	for (let i = 0; i < key.length; i++) {
-		hash ^= key.charCodeAt(i);
-		hash = Math.imul(hash, 16777619);
-	}
-	const normalized = hash >>> 0;
+	const normalized = fnv1a32(key);
 	return normalized === 0 ? -1 : -normalized;
-};
-
-const roundPercent = (value: number): number => Math.round(value * 10) / 10;
-const roundTo = (value: number, decimals = 2): number => {
-	const p = 10 ** decimals;
-	return Math.round(value * p) / p;
-};
-const computeSharePercentage = (
-	value: number,
-	total: number,
-): number | null => {
-	if (total <= 0) return null;
-	return roundPercent((Math.max(0, value) / total) * 100);
 };
 
 const median = (values: ReadonlyArray<number>): number => {
@@ -522,8 +462,8 @@ const median = (values: ReadonlyArray<number>): number => {
 	const sorted = [...values].sort((a, b) => a - b);
 	const mid = Math.floor(sorted.length / 2);
 	return sorted.length % 2 === 0
-		? (sorted[mid - 1] + sorted[mid]) / 2
-		: sorted[mid];
+		? ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2
+		: (sorted[mid] ?? 0);
 };
 
 const filteredWeightedAverage = (
@@ -560,223 +500,8 @@ const filteredWeightedAverage = (
 	return safe.reduce((sum, s) => sum + s.avgLapSeconds * s.laps, 0) / totalLaps;
 };
 
-type ChartLapPoint = { lapNumber: number; lapSeconds: number };
-type ChartBestSession = NonNullable<
-	Garage61Summary["derived"]["overview"]["insights"]["chart"]["bestSession"]
->;
-type ChartFallbackTrend = NonNullable<
-	Garage61Summary["derived"]["overview"]["insights"]["chart"]["fallbackTrend"]
->;
 type ChartSession =
 	Garage61Summary["derived"]["overview"]["insights"]["chart"]["sessions"][number];
-
-const toChartLapPoints = (laps: ReadonlyArray<number>): Array<ChartLapPoint> =>
-	laps.map((lapSeconds, index) => ({
-		lapNumber: index + 1,
-		lapSeconds: roundTo(lapSeconds, 3),
-	}));
-
-const buildFallbackTrendFromStatistics = (
-	rows: ReadonlyArray<Garage61Summary["derived"]["recentStatistics"][number]>,
-): ChartFallbackTrend | null => {
-	const series = rows
-		.map((row) => {
-			const lapsDriven = row.lapsDriven ?? 0;
-			const timeOnTrack = row.timeOnTrack ?? 0;
-			if (lapsDriven <= 0 || timeOnTrack <= 0) return null;
-			return {
-				day: row.day ? Date.parse(row.day) : Number.NaN,
-				track: row.track,
-				car: row.car,
-				lapSeconds: timeOnTrack / lapsDriven,
-				lapsDriven,
-			};
-		})
-		.filter(
-			(
-				value,
-			): value is {
-				day: number;
-				track: string;
-				car: string;
-				lapSeconds: number;
-				lapsDriven: number;
-			} => value !== null,
-		)
-		.sort((a, b) => a.day - b.day)
-		.slice(-25);
-	if (series.length < 2) return null;
-
-	const lapSeries = toChartLapPoints(series.map((item) => item.lapSeconds));
-	const lapTimes = lapSeries.map((item) => item.lapSeconds);
-	const bestLapSeconds = Math.min(...lapTimes);
-	const slowestLapSeconds = Math.max(...lapTimes);
-	const bestItem = series.reduce((best, current) =>
-		current.lapSeconds < best.lapSeconds ? current : best,
-	);
-	const track = bestItem.track;
-	const car = bestItem.car;
-
-	return {
-		track,
-		car,
-		source: "trend_fallback",
-		bestLapSeconds: roundTo(bestLapSeconds, 3),
-		rangeSeconds: roundTo(Math.max(0, slowestLapSeconds - bestLapSeconds), 3),
-		lapCount: lapSeries.length,
-		laps: lapSeries,
-	};
-};
-
-type SessionLapRow = {
-	sessionKey: string;
-	lapSeconds: number;
-	lapNumber: number | null;
-	timestampMs: number | null;
-	index: number;
-};
-
-const extractSessionLapRows = (data: unknown): ReadonlyArray<SessionLapRow> =>
-	getArrayCandidate(asRecord(data)?.items ?? data)
-		.map((row, index) => ({ row: asRecord(row), index }))
-		.filter(
-			(value): value is { row: Record<string, unknown>; index: number } =>
-				value.row !== null,
-		)
-		.map(({ row, index }): SessionLapRow | null => {
-			const lapSeconds = getNumberValue(
-				getFirstValue(row, ["lapTime", "lap_time", "lt"]),
-			);
-			if (lapSeconds === null || lapSeconds <= 0) return null;
-			const clean = getFirstValue(row, ["clean"]);
-			const incomplete = getFirstValue(row, ["incomplete"]);
-			const missing = getFirstValue(row, ["missing"]);
-			const offtrack = getFirstValue(row, ["offtrack"]);
-			if (
-				clean === false ||
-				incomplete === true ||
-				missing === true ||
-				offtrack === true
-			) {
-				return null;
-			}
-
-			const sessionValue = getFirstValue(row, [
-				"subsession_id",
-				"subsessionId",
-				"subsession",
-				"session_id",
-				"sessionId",
-				"session",
-			]);
-			const sessionId = getIdValue(sessionValue);
-			const sessionText =
-				typeof sessionValue === "string" && sessionValue.trim()
-					? sessionValue.trim()
-					: null;
-			const sessionKey =
-				sessionId !== null
-					? String(sessionId)
-					: (sessionText ?? `unknown-${index}`);
-
-			const lapNumber = getNumberValue(
-				getFirstValue(row, ["lapNumber", "lap_number", "lap", "lapNum"]),
-			);
-			const rawTimestamp = getFirstValue(row, [
-				"time",
-				"timestamp",
-				"date",
-				"createdAt",
-				"created_at",
-			]);
-			const timestampMs =
-				typeof rawTimestamp === "number" && Number.isFinite(rawTimestamp)
-					? rawTimestamp > 10_000_000_000
-						? rawTimestamp
-						: rawTimestamp > 0
-							? rawTimestamp * 1000
-							: null
-					: typeof rawTimestamp === "string" && rawTimestamp.trim()
-						? (() => {
-								const parsed = Date.parse(rawTimestamp);
-								return Number.isFinite(parsed) ? parsed : null;
-							})()
-						: null;
-
-			return {
-				sessionKey,
-				lapSeconds,
-				lapNumber:
-					lapNumber !== null ? Math.max(1, Math.round(lapNumber)) : null,
-				timestampMs,
-				index,
-			};
-		})
-		.filter((row): row is SessionLapRow => row !== null);
-
-const buildBestSessionChart = (params: {
-	data: unknown;
-	track: string;
-	car: string;
-}): ChartBestSession | null => {
-	const rows = extractSessionLapRows(params.data);
-	if (rows.length < 5) return null;
-
-	const grouped = new Map<string, SessionLapRow[]>();
-	for (const row of rows) {
-		const current = grouped.get(row.sessionKey);
-		if (current) current.push(row);
-		else grouped.set(row.sessionKey, [row]);
-	}
-
-	const candidateSessions = [...grouped.values()]
-		.filter((sessionRows) => sessionRows.length >= 5)
-		.map((sessionRows) => {
-			const ordered = [...sessionRows].sort((a, b) => {
-				if (a.lapNumber !== null && b.lapNumber !== null) {
-					if (a.lapNumber !== b.lapNumber) return a.lapNumber - b.lapNumber;
-				}
-				if (a.timestampMs !== null && b.timestampMs !== null) {
-					if (a.timestampMs !== b.timestampMs)
-						return a.timestampMs - b.timestampMs;
-				}
-				return a.index - b.index;
-			});
-			const lapPoints = ordered.map((item, index) => ({
-				lapNumber: item.lapNumber ?? index + 1,
-				lapSeconds: roundTo(item.lapSeconds, 3),
-			}));
-			const lapTimes = lapPoints.map((item) => item.lapSeconds);
-			const bestLapSeconds = Math.min(...lapTimes);
-			const slowestLapSeconds = Math.max(...lapTimes);
-			return {
-				lapPoints,
-				bestLapSeconds,
-				rangeSeconds: Math.max(0, slowestLapSeconds - bestLapSeconds),
-			};
-		})
-		.sort((a, b) => {
-			if (a.bestLapSeconds !== b.bestLapSeconds) {
-				return a.bestLapSeconds - b.bestLapSeconds;
-			}
-			if (a.rangeSeconds !== b.rangeSeconds)
-				return a.rangeSeconds - b.rangeSeconds;
-			return b.lapPoints.length - a.lapPoints.length;
-		});
-
-	const bestSession = candidateSessions[0];
-	if (!bestSession) return null;
-
-	return {
-		track: params.track,
-		car: params.car,
-		source: "session_laps",
-		bestLapSeconds: roundTo(bestSession.bestLapSeconds, 3),
-		rangeSeconds: roundTo(bestSession.rangeSeconds, 3),
-		lapCount: bestSession.lapPoints.length,
-		laps: bestSession.lapPoints,
-	};
-};
 
 const summaryUncached = async (
 	garage61ApiKey: string,
@@ -1654,6 +1379,7 @@ const summaryUncached = async (
 				data: myLapsDataByComboKey.get(item.comboKey) ?? [],
 				track: item.track,
 				car: item.car,
+				minimumLapCount: 5,
 			});
 			if (!chart) continue;
 			chartSessions.push({
@@ -1669,16 +1395,17 @@ const summaryUncached = async (
 			});
 		}
 
+		const firstChartSession = chartSessions[0];
 		const bestSession =
-			chartSessions.length > 0
+			firstChartSession != null
 				? {
-						track: chartSessions[0].track,
-						car: chartSessions[0].car,
+						track: firstChartSession.track,
+						car: firstChartSession.car,
 						source: "session_laps" as const,
-						bestLapSeconds: chartSessions[0].bestLapSeconds,
-						rangeSeconds: chartSessions[0].rangeSeconds,
-						lapCount: chartSessions[0].lapCount,
-						laps: chartSessions[0].laps,
+						bestLapSeconds: firstChartSession.bestLapSeconds,
+						rangeSeconds: firstChartSession.rangeSeconds,
+						lapCount: firstChartSession.lapCount,
+						laps: firstChartSession.laps,
 					}
 				: null;
 		const fallbackTrend = buildFallbackTrendFromStatistics(recentStatistics);
@@ -1737,7 +1464,7 @@ const summaryUncached = async (
 	}
 };
 
-const summary = async (): Promise<Result<Garage61Summary, never>> => {
+const summary = async (): Promise<Result<Garage61Summary, Garage61Error>> => {
 	const latestCachedResult = await getJson<Garage61Summary>({
 		key: GARAGE61_SUMMARY_CACHE_KEY,
 	});
@@ -1750,6 +1477,7 @@ const summary = async (): Promise<Result<Garage61Summary, never>> => {
 		return Result.ok(normalizeSummary(refreshedResult.value));
 	}
 
+	// Refresh failed — try stale fallback cache keys before giving up.
 	for (const cacheKey of GARAGE61_SUMMARY_CACHE_FALLBACK_KEYS) {
 		const cachedResult = await getJson<Garage61Summary>({
 			key: cacheKey,
@@ -1759,7 +1487,7 @@ const summary = async (): Promise<Result<Garage61Summary, never>> => {
 		}
 	}
 
-	return Result.ok(emptySummary());
+	return refreshedResult;
 };
 
 const refreshSummary = async (): Promise<

@@ -2,6 +2,7 @@ import { Result, TaggedError } from "better-result";
 
 import { env } from "@/lib/env";
 import { fetchFresh } from "@/lib/fetch";
+import { IRACING_CUSTOMER_ID } from "@/lib/config";
 
 import {
 	IRacingAuthSchema,
@@ -15,7 +16,7 @@ import {
 class IRacingAuthError extends TaggedError("IRacingAuthError")<{
 	readonly error: unknown;
 }>() {
-	message = "Failed to authenticate with iRacing";
+	override message = "Failed to authenticate with iRacing";
 }
 
 const authenticate = async (): Promise<
@@ -48,19 +49,19 @@ const authenticate = async (): Promise<
 class IRacingRecentRacesError extends TaggedError("IRacingRecentRacesError")<{
 	readonly error: unknown;
 }>() {
-	message = "Failed to fetch recent races";
+	override message = "Failed to fetch recent races";
 }
 
 class IRacingSummaryError extends TaggedError("IRacingSummaryError")<{
 	readonly error: unknown;
 }>() {
-	message = "Failed to fetch summary";
+	override message = "Failed to fetch summary";
 }
 
 class IRacingCarsError extends TaggedError("IRacingCarsError")<{
 	readonly error: unknown;
 }>() {
-	message = "Failed to fetch cars";
+	override message = "Failed to fetch cars";
 }
 
 type IRacingLookupParams = {
@@ -108,7 +109,7 @@ const recentRaces = async ({
 > => {
 	const lookup = await fetchFresh({
 		schema: LinkLookupSchema,
-		url: "https://members-ng.iracing.com/data/stats/member_recent_races?cust_id=1008852",
+		url: `https://members-ng.iracing.com/data/stats/member_recent_races?cust_id=${IRACING_CUSTOMER_ID}`,
 		method: "GET",
 		headers: {
 			Cookie: cookies,
@@ -160,14 +161,17 @@ const summary = async (): Promise<
 		return Result.err(new IRacingSummaryError({ error: carsData.error }));
 	}
 
-	return Result.ok({
-		races: recentRacesData.value.map((race) => ({
+	const racesWithCar = recentRacesData.value
+		.map((race) => ({
 			...race,
-			car: carsData.value.find(
-				(car) => car.car_id === race.car_id,
-			) as IRacingCarType,
-		})),
-	});
+			car: carsData.value.find((car) => car.car_id === race.car_id),
+		}))
+		.filter(
+			(race): race is typeof race & { car: IRacingCarType } =>
+				race.car !== undefined,
+		);
+
+	return Result.ok({ races: racesWithCar });
 };
 
 const iracing = {

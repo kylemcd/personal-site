@@ -48,11 +48,11 @@ function Navigation() {
 
 	const onThemeChange = (theme: "light" | "dark") => {
 		document.documentElement.setAttribute("data-appearance", theme);
-		void window.cookieStore?.set({
-			name: "theme",
-			value: theme,
-			path: "/",
-		});
+		if (window.cookieStore) {
+			void window.cookieStore.set({ name: "theme", value: theme, path: "/" });
+		} else {
+			document.cookie = `theme=${theme}; path=/; max-age=31536000; SameSite=Lax`;
+		}
 	};
 
 	const closeMenu = () => setOpen(false);
@@ -103,13 +103,11 @@ function Navigation() {
 						aria-label={open ? "Close menu" : "Open menu"}
 						data-open={open}
 					>
-						<span className="navigation-sr-only">
-							{open ? "Close menu" : "Open menu"}
-						</span>
+						<span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
 						<i className="hn hn-angle-left" aria-hidden="true" />
 					</button>
 					<fieldset className="navigation-theme-switcher navigation-top-theme-switcher">
-						<legend className="navigation-sr-only">Theme</legend>
+						<legend className="sr-only">Theme</legend>
 						<button
 							type="button"
 							className="navigation-theme-switcher-button"
@@ -117,7 +115,7 @@ function Navigation() {
 							data-theme="light"
 							aria-label="Switch to light theme"
 						>
-							<span className="navigation-sr-only">Light</span>
+							<span className="sr-only">Light</span>
 							<i className="hn hn-sun" aria-hidden="true" />
 						</button>
 						<button
@@ -127,7 +125,7 @@ function Navigation() {
 							data-theme="dark"
 							aria-label="Switch to dark theme"
 						>
-							<span className="navigation-sr-only">Dark</span>
+							<span className="sr-only">Dark</span>
 							<i className="hn hn-moon" aria-hidden="true" />
 						</button>
 					</fieldset>
@@ -144,7 +142,7 @@ function Navigation() {
 					className="navigation-overlay-dismiss"
 					onClick={closeMenu}
 				>
-					<span className="navigation-sr-only">Close navigation menu</span>
+					<span className="sr-only">Close navigation menu</span>
 				</button>
 				<div className="navigation-overlay-frame">
 					<div className="navigation-overlay-panel">
@@ -175,7 +173,7 @@ function Navigation() {
 											rel={link.external ? "noopener noreferrer" : undefined}
 										>
 											<i className={link.iconClassName} aria-hidden="true" />
-											<span className="navigation-sr-only">{link.label}</span>
+											<span className="sr-only">{link.label}</span>
 										</a>
 									))}
 								</div>

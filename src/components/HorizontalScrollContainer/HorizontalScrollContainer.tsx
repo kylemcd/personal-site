@@ -11,7 +11,7 @@ function HorizontalScrollContainer({
 	...props
 }: HorizontalScrollContainerProps) {
 	const itemsRef = useRef<HTMLDivElement>(null);
-	const [showLeftGradient, setShowLeftGradient] = useState(false);
+	const [hasScrolledRight, setShowLeftGradient] = useState(false);
 
 	useEffect(() => {
 		const element = itemsRef.current;
@@ -38,7 +38,7 @@ function HorizontalScrollContainer({
 
 	return (
 		<div
-			className={`horizontal-scroll-container${showLeftGradient ? " is-scrolled-right" : ""}`}
+			className={`horizontal-scroll-container${hasScrolledRight ? " is-scrolled-right" : ""}`}
 		>
 			<div
 				{...props}

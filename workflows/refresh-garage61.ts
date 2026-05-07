@@ -1,19 +1,8 @@
-import { WorkflowEntrypoint } from "cloudflare:workers";
-import { Result } from "better-result";
+import { garage61, GARAGE61_SUMMARY_CACHE_KEY } from "@/lib/garage61";
 
-import { garage61 } from "@/lib/garage61";
-import {
-	applyBaseRuntimeEnv,
-	emitNonFatalError,
-	isConfigured,
-	throwWorkflowError,
-	toErrorSummary,
-	type WorkflowStepRunner,
-} from "./shared";
+import { makeRefreshWorkflow, type RefreshWorkflowParams } from "./shared";
 
-export type RefreshWorkflowParams = {
-	triggeredAt: string;
-};
+export type { RefreshWorkflowParams };
 
 export type RefreshGarage61WorkflowEnv = {
 	APP_STORE?: KVNamespace;
@@ -21,59 +10,28 @@ export type RefreshGarage61WorkflowEnv = {
 	GARAGE61_API_KEY?: string;
 };
 
-type StepResult =
-	| { status: "success"; details: Record<string, unknown>; payload: unknown }
-	| { status: "skipped"; reason: string };
-
-const applyRuntimeEnv = (env: RefreshGarage61WorkflowEnv) => {
-	applyBaseRuntimeEnv(env);
-	process.env.GARAGE61_API_KEY =
-		env.GARAGE61_API_KEY ?? process.env.GARAGE61_API_KEY;
-};
-
-export class RefreshGarage61Workflow extends WorkflowEntrypoint<
-	RefreshGarage61WorkflowEnv,
-	RefreshWorkflowParams
-> {
-	async run(
-		event: Readonly<{ payload: Readonly<RefreshWorkflowParams> }>,
-		step: unknown,
-	) {
-		void event;
-		applyRuntimeEnv(this.env);
-		const steps = step as WorkflowStepRunner;
-
-		await steps.do("refresh-garage61", async () => {
-			if (!isConfigured(this.env.GARAGE61_API_KEY)) {
-				emitNonFatalError(
-					"[refresh] GARAGE61_API_KEY missing; skipping Garage61 refresh",
-				);
-				return {
-					status: "skipped",
-					reason: "GARAGE61_API_KEY missing",
-				} satisfies StepResult;
-			}
-
-			const summaryResult = await garage61.refreshSummary();
-			if (Result.isError(summaryResult)) {
-				return throwWorkflowError(
-					`[refresh] garage61 failed: ${toErrorSummary(summaryResult.error)}`,
-					summaryResult.error,
-				);
-			}
-			const summary = summaryResult.value;
-
-			return {
-				status: "success" as const,
-				details: {
-					cacheKey: "garage61:summary:v6",
-					sessionCount: summary.derived.sessionCount,
-					trackCount: summary.derived.trackCount,
-					recentTracks: summary.derived.overview.recentTracks.length,
-					recentCars: summary.derived.overview.recentCars.length,
-				},
-				payload: summary,
+export const RefreshGarage61Workflow = makeRefreshWorkflow<RefreshGarage61WorkflowEnv>({
+	stepName: "refresh-garage61",
+	apiKeyEnvVar: "GARAGE61_API_KEY",
+	applyEnv: (env) => {
+		process.env.GARAGE61_API_KEY =
+			env.GARAGE61_API_KEY ?? process.env.GARAGE61_API_KEY;
+	},
+	refresh: garage61.refreshSummary as () => Promise<import("better-result").Result<unknown, unknown>>,
+	buildDetails: (value) => {
+		const summary = value as {
+			derived: {
+				sessionCount: number;
+				trackCount: number;
+				overview: { recentTracks: unknown[]; recentCars: unknown[] };
 			};
-		});
-	}
-}
+		};
+		return {
+			cacheKey: GARAGE61_SUMMARY_CACHE_KEY,
+			sessionCount: summary.derived.sessionCount,
+			trackCount: summary.derived.trackCount,
+			recentTracks: summary.derived.overview.recentTracks.length,
+			recentCars: summary.derived.overview.recentCars.length,
+		};
+	},
+});

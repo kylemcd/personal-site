@@ -37,3 +37,42 @@
 	min-width: 3ch;
 	text-align: right;
 }
+
+.share-list-listening .share-list-head {
+	align-items: start;
+}
+
+.share-list-listening .share-list-subtitle {
+	text-align: right;
+}
+
+.share-list-listening .share-list-progress {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--spc-2);
+}
+
+.share-list-listening .metric-bar-track {
+	background: color-mix(in srgb, var(--color-ui-1) 70%, transparent);
+	height: calc(var(--spc-px) * 3);
+}
+
+.share-list-racing .share-list-row {
+	gap: var(--spc-2);
+}
+
+.share-list-racing .share-list-head {
+	gap: var(--spc-3);
+	align-items: start;
+}
+
+.share-list-racing .share-list-subtitle {
+	text-align: right;
+}
+
+.share-list-racing .share-list-progress {
+	display: flex;
+	align-items: center;
+	gap: var(--spc-2);
+}

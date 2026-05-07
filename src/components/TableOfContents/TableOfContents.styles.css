@@ -48,10 +48,6 @@
 	text-decoration: underline;
 }
 
-[data-toc-item-active="true"] {
-	color: red;
-}
-
 .table-of-contents a {
 	display: inline-block;
 	text-decoration: none;
