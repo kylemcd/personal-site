@@ -73,11 +73,30 @@ const formatSharePercent = (value: number) => {
 	return `${Math.round(value)}%`;
 };
 
-const formatGenreAxisLabel = (value: string) => {
+const splitGenreAxisLabel = (value: string): [string, string?] => {
 	const label = value.trim();
-	const maxChars = 12;
-	if (label.length <= maxChars) return label;
-	return `${label.slice(0, maxChars - 1)}…`;
+	const maxSingleLine = 12;
+	if (label.length <= maxSingleLine) return [label];
+
+	const words = label.split(/\s+/).filter(Boolean);
+	if (words.length <= 1) {
+		const midpoint = Math.ceil(label.length / 2);
+		return [label.slice(0, midpoint), label.slice(midpoint)];
+	}
+
+	let bestIndex = 1;
+	let bestDelta = Number.POSITIVE_INFINITY;
+	for (let index = 1; index < words.length; index += 1) {
+		const left = words.slice(0, index).join(" ");
+		const right = words.slice(index).join(" ");
+		const delta = Math.abs(left.length - right.length);
+		if (delta < bestDelta) {
+			bestDelta = delta;
+			bestIndex = index;
+		}
+	}
+
+	return [words.slice(0, bestIndex).join(" "), words.slice(bestIndex).join(" ")];
 };
 
 const truncateTreemapLabel = (label: string, tileWidth: number) => {
@@ -165,7 +184,7 @@ const renderGenreAxisTick = ({
 }: RadarAngleTickProps) => {
 	const rawValue = payload?.value ?? "";
 	const fullLabel = String(rawValue);
-	const shortLabel = formatGenreAxisLabel(fullLabel);
+	const [lineOne, lineTwo] = splitGenreAxisLabel(fullLabel);
 	const tickX =
 		typeof x === "number" ? x : typeof x === "string" ? Number.parseFloat(x) : Number.NaN;
 	const tickY =
@@ -187,10 +206,15 @@ const renderGenreAxisTick = ({
 			fontSize={11}
 			fontFamily="var(--font-family-mono)"
 			dominantBaseline="middle"
-			style={{ cursor: shortLabel !== fullLabel ? "help" : "default" }}
 		>
-			{shortLabel}
-			{shortLabel !== fullLabel ? <title>{fullLabel}</title> : null}
+			<tspan x={tickX} dy={lineTwo ? "-0.35em" : "0"}>
+				{lineOne}
+			</tspan>
+			{lineTwo ? (
+				<tspan x={tickX} dy="1.15em">
+					{lineTwo}
+				</tspan>
+			) : null}
 		</text>
 	);
 };
@@ -239,9 +263,9 @@ function WrappedListening({
 	const topGenres = (wrapped.topGenres ?? []).slice(0, 6);
 	const topArtistsTreemapBase = wrapped.topArtists
 		.filter((artist) => artist.plays > 0)
-		.slice(0, 10);
-	const topArtistsTreemapHead = topArtistsTreemapBase.slice(0, 6);
-	const topArtistsTreemapTail = topArtistsTreemapBase.slice(6);
+		.slice(0, 20);
+	const topArtistsTreemapHead = topArtistsTreemapBase.slice(0, 16);
+	const topArtistsTreemapTail = topArtistsTreemapBase.slice(16);
 	const topArtistsTreemapData: Array<TreemapArtistNode> = topArtistsTreemapHead.map(
 		(artist) => ({
 			name: artist.name,
@@ -426,7 +450,7 @@ function WrappedListening({
 			<div className="wrapped-repeat">
 				<div className="wrapped-repeat-copy wrapped-artist-treemap-block">
 					<div className="wrapped-artist-treemap">
-						<ResponsiveContainer width="100%" height={220}>
+						<ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={1}>
 							<Treemap
 								data={topArtistsTreemapData}
 								dataKey="plays"
@@ -445,7 +469,7 @@ function WrappedListening({
 				</div>
 				{topGenres.length > 2 ? (
 					<div className="wrapped-genre-radar">
-						<ResponsiveContainer width="100%" height={220}>
+						<ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={1}>
 							<RadarChart
 								data={topGenres}
 								margin={{ top: 24, right: 36, bottom: 24, left: 36 }}

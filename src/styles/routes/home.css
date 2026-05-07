@@ -48,7 +48,7 @@
 }
 
 .section-container-flush-right > .listening-stack > .listening-recent-section > h3 {
-	margin-left: var(--spc-6);
+	margin-left: var(--spc-8);
 }
 
 .section-container-flush-right
@@ -57,7 +57,7 @@
 	> .horizontal-scroll-container
 	> .horizontal-scroll-container-items
 	> *:first-child {
-	margin-left: var(--spc-6);
+	margin-left: var(--spc-8);
 }
 
 /* Same left inset for Garage61 nested horizontal rows */
@@ -123,7 +123,7 @@
 		> .listening-stack
 		> .listening-recent-section
 		> h3 {
-		margin-left: var(--spc-5);
+		margin-left: var(--spc-8);
 	}
 
 	.section-container-flush-right
@@ -132,6 +132,6 @@
 		> .horizontal-scroll-container
 		> .horizontal-scroll-container-items
 		> *:first-child {
-		margin-left: var(--spc-5);
+		margin-left: var(--spc-8);
 	}
 }

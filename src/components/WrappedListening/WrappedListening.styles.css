@@ -2,7 +2,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--spc-6);
-	padding: 0 var(--spc-6);
+	padding: 0 var(--spc-8);
 }
 
 .wrapped-listening-redesign-rich {
@@ -401,7 +401,7 @@
 
 @media (max-width: 640px) {
 	.wrapped-listening-redesign {
-		padding: 0 var(--spc-5);
+		padding: 0 var(--spc-8);
 		gap: var(--spc-5);
 	}
 

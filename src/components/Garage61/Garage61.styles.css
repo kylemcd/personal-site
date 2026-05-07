@@ -2,7 +2,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--spc-5);
-	padding: 0 var(--spc-6);
+	padding: 0 var(--spc-8);
 }
 
 .g61-racing-top {
@@ -96,7 +96,7 @@
 	display: flex;
 	justify-content: space-between;
 	gap: var(--spc-3);
-	align-items: flex-start;
+	align-items: flex-end;
 }
 
 .g61-racing-chart-combo {
@@ -141,6 +141,7 @@
 .g61-racing-chart-meta {
 	white-space: nowrap;
 	margin-top: 2px;
+	text-align: right;
 }
 
 .g61-racing-chart {
@@ -339,15 +340,6 @@
 }
 
 @media (max-width: 900px) {
-	.g61-racing {
-		padding: 0 var(--spc-5);
-	}
-
-	.g61-racing-top {
-		flex-direction: column;
-		gap: var(--spc-1);
-	}
-
 	.g61-racing-kpis,
 	.g61-racing-tables,
 	.g61-racing-recent-lists {
@@ -376,7 +368,7 @@
 
 @media (max-width: 640px) {
 	.g61-racing {
-		padding: 0 var(--spc-4);
+		padding: 0 var(--spc-8);
 		gap: var(--spc-5);
 	}
 
