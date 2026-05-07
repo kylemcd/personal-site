@@ -18,24 +18,16 @@
 	letter-spacing: 0.08em;
 }
 
-.g61-racing-kpis {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: space-evenly;
-	gap: clamp(var(--spc-3), 2.2vw, var(--spc-6));
-	align-items: start;
+.g61-racing-kpi-label {
+	letter-spacing: 0.02em;
 }
 
-.g61-racing-kpi-card {
+.g61-racing-kpis .section-stat-item {
 	display: flex;
 	flex-direction: column;
 	gap: var(--spc-1);
 	min-width: 0;
 	flex: 1 1 auto;
-}
-
-.g61-racing-kpi-label {
-	letter-spacing: 0.02em;
 }
 
 .g61-racing-kpi-value {
@@ -51,7 +43,7 @@
 .g61-racing-kpi-stack {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: calc(var(--spc-px) * 2);
 }
 
 .g61-racing-red {
@@ -100,36 +92,36 @@
 }
 
 .g61-racing-chart-combo {
-	margin-top: 2px;
+	margin-top: calc(var(--spc-px) * 2);
 }
 
 .g61-racing-chart-subline {
-	margin-top: 2px;
+	margin-top: calc(var(--spc-px) * 2);
 }
 
 .g61-racing-chart-side {
 	display: flex;
 	flex-direction: column;
 	align-items: flex-end;
-	gap: 4px;
+	gap: var(--spc-1);
 }
 
 .g61-racing-chart-tabs {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: calc(var(--spc-1) + (var(--spc-px) * 2));
 	margin-top: 0;
-	margin-bottom: 6px;
+	margin-bottom: calc(var(--spc-1) + (var(--spc-px) * 2));
 }
 
 .g61-racing-chart-tab {
-	border: 1px solid var(--color-ui-2);
+	border: var(--spc-px) solid var(--color-ui-2);
 	background: var(--color-bg-1);
 	color: var(--color-text-2);
 	font-family: var(--font-family-mono);
 	font-size: 0.7rem;
 	line-height: 1;
-	padding: 2px 5px;
+	padding: calc(var(--spc-px) * 2) calc(var(--spc-1) + var(--spc-px));
 	cursor: pointer;
 }
 
@@ -140,7 +132,7 @@
 
 .g61-racing-chart-meta {
 	white-space: nowrap;
-	margin-top: 2px;
+	margin-top: calc(var(--spc-px) * 2);
 	text-align: right;
 }
 
@@ -181,12 +173,12 @@
 
 .g61-racing-chart-tooltip {
 	background-color: var(--color-bg-1);
-	border: 1px solid var(--color-ui-2);
+	border: var(--spc-px) solid var(--color-ui-2);
 	border-radius: 0;
-	padding: 2px 6px;
+	padding: calc(var(--spc-px) * 2) calc(var(--spc-1) + (var(--spc-px) * 2));
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	gap: calc(var(--spc-1) + (var(--spc-px) * 2));
 	color: var(--color-text-1);
 	font-family: var(--font-family-mono);
 	font-size: 11px;
@@ -259,29 +251,8 @@
 	display: flex;
 	flex-direction: column;
 	align-items: flex-end;
-	gap: 2px;
+	gap: calc(var(--spc-px) * 2);
 	justify-self: end;
-	min-width: 0;
-}
-
-.g61-racing-clean-row {
-	display: flex;
-	flex-direction: column;
-	gap: var(--spc-2);
-}
-
-.g61-racing-clean-head {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	gap: var(--spc-3);
-	align-items: start;
-}
-
-.g61-racing-metric-side {
-	display: flex;
-	flex-direction: column;
-	align-items: flex-end;
-	gap: 2px;
 	min-width: 0;
 }
 
@@ -290,34 +261,43 @@
 	line-height: 1;
 }
 
-.g61-racing-clean-progress {
+.g61-racing .share-list-row {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spc-2);
+}
+
+.g61-racing .share-list-head {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: var(--spc-3);
+	align-items: start;
+}
+
+.g61-racing .share-list-subtitle {
+	text-align: right;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.g61-racing .share-list-progress {
 	display: flex;
 	align-items: center;
 	gap: var(--spc-2);
 }
 
-.g61-racing-progress-percent {
-	white-space: nowrap;
-	line-height: 1;
-	font-variant-numeric: tabular-nums;
-	min-width: 3ch;
-	text-align: right;
+.g61-racing .share-list-percent {
 	color: var(--color-racing-red);
 }
 
-.g61-racing-clean-bar,
-.g61-racing-recent-bar {
-	height: 4px;
-	width: 100%;
+.g61-racing .metric-bar-track {
 	background: color-mix(in srgb, var(--color-ui-1) 68%, transparent);
-	overflow: hidden;
+	height: var(--spc-1);
 }
 
-.g61-racing-clean-bar-fill,
-.g61-racing-recent-bar-fill {
-	height: 100%;
+.g61-racing .metric-bar-fill {
 	background: var(--color-racing-red);
-	min-width: 2px;
 }
 
 .g61-racing-recent-row {
@@ -344,12 +324,6 @@
 	.g61-racing-tables,
 	.g61-racing-recent-lists {
 		grid-template-columns: 1fr;
-	}
-
-	.g61-racing-kpis {
-		flex-direction: column;
-		align-items: stretch;
-		justify-content: flex-start;
 	}
 
 	.g61-racing-chart {

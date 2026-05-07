@@ -1,0 +1,39 @@
+.share-list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spc-3);
+}
+
+.share-list-row {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spc-1) + (var(--spc-px) * 2));
+}
+
+.share-list-head {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: baseline;
+	gap: var(--spc-2);
+}
+
+.share-list-subtitle {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.share-list-progress {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--spc-2);
+}
+
+.share-list-percent {
+	white-space: nowrap;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+	min-width: 3ch;
+	text-align: right;
+}

@@ -1,0 +1,28 @@
+.section-stat-row {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-evenly;
+	gap: clamp(var(--spc-3), 2.2vw, var(--spc-6));
+	align-items: start;
+}
+
+.section-stat-item {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spc-1);
+	min-width: 0;
+	flex: 1 1 auto;
+}
+
+.section-stat-row[data-align="center"] [data-slot="item"] {
+	align-items: center;
+}
+
+@media (max-width: 1100px) {
+	.section-stat-row {
+		flex-direction: column;
+		align-items: stretch;
+		justify-content: flex-start;
+		gap: var(--spc-3);
+	}
+}

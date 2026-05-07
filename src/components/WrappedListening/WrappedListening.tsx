@@ -1,4 +1,6 @@
 import { Text } from "@/components/Text";
+import { SectionStatRow } from "@/components/SectionStatRow";
+import { StatBarList, type StatBarListRow } from "@/components/StatBarList";
 import type { NowPlayingAlbum, WrappedData } from "@/lib/lastfm/schema";
 import {
 	PolarAngleAxis,
@@ -169,9 +171,10 @@ const renderTreemapTooltip = ({ active, payload }: TreemapTooltipProps) => {
 	if (!item) return null;
 	return (
 		<div className="wrapped-treemap-tooltip">
-			<p>{item.name}</p>
-			<p>{item.plays} plays</p>
-			<p>{formatSharePercent(item.share)}</p>
+			<p className="wrapped-treemap-tooltip-name">{item.name}</p>
+			<p className="wrapped-treemap-tooltip-meta">
+				{item.plays} plays · {formatSharePercent(item.share)}
+			</p>
 		</div>
 	);
 };
@@ -306,6 +309,54 @@ function WrappedListening({
 		"Listening"
 	);
 
+	const trackShareRows: Array<StatBarListRow> = topTracks.map((track) => ({
+		key: `${track.name}-${track.artist}-${track.plays}`,
+		title: (
+			<a href={track.url} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
+				{track.name}
+			</a>
+		),
+		subtitleRight: (
+			<>
+				<a href={track.artistUrl} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
+					{track.artist}
+				</a>{" "}
+				· {track.plays} plays
+			</>
+		),
+		percent: track.share,
+		percentLabel: formatSharePercent(track.share),
+	}));
+	const artistShareRows: Array<StatBarListRow> = topArtists.map((artist) => ({
+		key: `${artist.name}-${artist.plays}`,
+		title: (
+			<a href={artist.url} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
+				{artist.name}
+			</a>
+		),
+		subtitleRight: `${artist.plays} plays`,
+		percent: artist.share,
+		percentLabel: formatSharePercent(artist.share),
+	}));
+	const albumShareRows: Array<StatBarListRow> = topAlbums.map((album) => ({
+		key: `${album.name}-${album.artist}-${album.plays}`,
+		title: (
+			<a href={album.url} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
+				{album.name}
+			</a>
+		),
+		subtitleLeft: (
+			<>
+				<a href={album.artistUrl} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
+					{album.artist}
+				</a>{" "}
+				· {album.plays} plays
+			</>
+		),
+		percent: album.share,
+		percentLabel: formatSharePercent(album.share),
+	}));
+
 	return (
 		<div
 			className={`wrapped-listening-redesign${isRich ? " wrapped-listening-redesign-rich" : ""}`}
@@ -402,50 +453,73 @@ function WrappedListening({
 				</div>
 			) : null}
 
-			<div className="wrapped-listening-kpis">
-				<div className="wrapped-listening-kpi">
-					<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
-						Plays
-					</Text>
-					<Text as="p" size="6" family="mono" className="wrapped-kpi-value">
-						{wrapped.totalScrobbles}
-					</Text>
-				</div>
-				<div className="wrapped-listening-kpi">
-					<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
-						Listening time
-					</Text>
-					<Text
-						as="p"
-						size="6"
-						family="mono"
-						className="wrapped-kpi-value wrapped-kpi-duration-value"
-					>
-						{formatDurationCompact(wrapped.totalListeningSeconds)}
-					</Text>
-				</div>
-				<div className="wrapped-listening-kpi">
-					<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
-						Avg session
-					</Text>
-					<Text
-						as="p"
-						size="6"
-						family="mono"
-						className="wrapped-kpi-value wrapped-kpi-duration-value"
-					>
-						{formatDurationCompact(wrapped.averageSessionSeconds)}
-					</Text>
-				</div>
-				<div className="wrapped-listening-kpi">
-					<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
-						Artists
-					</Text>
-					<Text as="p" size="6" family="mono" className="wrapped-kpi-value">
-						{wrapped.uniqueArtists}
-					</Text>
-				</div>
-			</div>
+			<SectionStatRow
+				className="wrapped-listening-kpis"
+				items={[
+					{
+						key: "plays",
+						label: (
+							<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
+								Plays
+							</Text>
+						),
+						value: (
+							<Text as="p" size="6" family="mono" className="wrapped-kpi-value">
+								{wrapped.totalScrobbles}
+							</Text>
+						),
+					},
+					{
+						key: "listening-time",
+						label: (
+							<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
+								Listening time
+							</Text>
+						),
+						value: (
+							<Text
+								as="p"
+								size="6"
+								family="mono"
+								className="wrapped-kpi-value wrapped-kpi-duration-value"
+							>
+								{formatDurationCompact(wrapped.totalListeningSeconds)}
+							</Text>
+						),
+					},
+					{
+						key: "avg-session",
+						label: (
+							<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
+								Avg session
+							</Text>
+						),
+						value: (
+							<Text
+								as="p"
+								size="6"
+								family="mono"
+								className="wrapped-kpi-value wrapped-kpi-duration-value"
+							>
+								{formatDurationCompact(wrapped.averageSessionSeconds)}
+							</Text>
+						),
+					},
+					{
+						key: "artists",
+						label: (
+							<Text as="p" size="0" color="2" className="wrapped-listening-kpi-label">
+								Artists
+							</Text>
+						),
+						value: (
+							<Text as="p" size="6" family="mono" className="wrapped-kpi-value">
+								{wrapped.uniqueArtists}
+							</Text>
+						),
+					},
+				]}
+			/>
 
 			<div className="wrapped-repeat">
 				<div className="wrapped-repeat-copy wrapped-artist-treemap-block">
@@ -508,36 +582,12 @@ function WrappedListening({
 							Top tracks
 						</Text>
 					</div>
-					<div className="wrapped-list-rows">
-						{topTracks.map((track) => (
-							<div className="wrapped-share-row" key={`${track.name}-${track.artist}-${track.plays}`}>
-								<div className="wrapped-share-head">
-									<Text as="p" size="0" weight="500" className="wrapped-rank-title">
-										<a href={track.url} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
-											{track.name}
-										</a>
-									</Text>
-									<Text as="p" size="0" color="2" className="wrapped-share-subtitle">
-										<a href={track.artistUrl} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
-											{track.artist}
-										</a>{" "}
-										· {track.plays} plays
-									</Text>
-								</div>
-								<div className="wrapped-share-progress">
-									<div className="wrapped-share-bar" aria-hidden="true">
-										<div
-											className="wrapped-share-bar-fill"
-											style={{ width: `${Math.max(2, track.share)}%` }}
-										/>
-									</div>
-									<Text as="p" size="0" family="mono" className="wrapped-share-percent">
-										{formatSharePercent(track.share)}
-									</Text>
-								</div>
-							</div>
-						))}
-					</div>
+					<StatBarList
+						rows={trackShareRows}
+						barColorVar="--color-listening-blue"
+						percentColorVar="--color-listening-blue"
+						className="wrapped-list-rows"
+					/>
 				</div>
 
 				<div className="wrapped-list-panel">
@@ -546,33 +596,12 @@ function WrappedListening({
 							Top artists
 						</Text>
 					</div>
-					<div className="wrapped-list-rows">
-						{topArtists.map((artist) => (
-							<div className="wrapped-share-row" key={`${artist.name}-${artist.plays}`}>
-								<div className="wrapped-share-head">
-									<Text as="p" size="0" weight="500" className="wrapped-rank-title">
-										<a href={artist.url} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
-											{artist.name}
-										</a>
-									</Text>
-									<Text as="p" size="0" color="2" className="wrapped-share-subtitle">
-										{artist.plays} plays
-									</Text>
-								</div>
-								<div className="wrapped-share-progress">
-									<div className="wrapped-share-bar" aria-hidden="true">
-										<div
-											className="wrapped-share-bar-fill"
-											style={{ width: `${Math.max(2, artist.share)}%` }}
-										/>
-									</div>
-									<Text as="p" size="0" family="mono" className="wrapped-share-percent">
-										{formatSharePercent(artist.share)}
-									</Text>
-								</div>
-							</div>
-						))}
-					</div>
+					<StatBarList
+						rows={artistShareRows}
+						barColorVar="--color-listening-blue"
+						percentColorVar="--color-listening-blue"
+						className="wrapped-list-rows"
+					/>
 				</div>
 			</div>
 
@@ -583,36 +612,12 @@ function WrappedListening({
 							Top albums
 						</Text>
 					</div>
-					<div className="wrapped-list-rows">
-						{topAlbums.map((album) => (
-							<div className="wrapped-share-row" key={`${album.name}-${album.artist}-${album.plays}`}>
-								<div className="wrapped-share-head">
-									<Text as="p" size="0" weight="500" className="wrapped-rank-title">
-										<a href={album.url} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
-											{album.name}
-										</a>
-									</Text>
-									<Text as="p" size="0" color="2" className="wrapped-share-subtitle">
-										<a href={album.artistUrl} target="_blank" rel="noopener noreferrer" className="wrapped-inline-link">
-											{album.artist}
-										</a>{" "}
-										· {album.plays} plays
-									</Text>
-								</div>
-								<div className="wrapped-share-progress">
-									<div className="wrapped-share-bar" aria-hidden="true">
-										<div
-											className="wrapped-share-bar-fill"
-											style={{ width: `${Math.max(2, album.share)}%` }}
-										/>
-									</div>
-									<Text as="p" size="0" family="mono" className="wrapped-share-percent">
-										{formatSharePercent(album.share)}
-									</Text>
-								</div>
-							</div>
-						))}
-					</div>
+					<StatBarList
+						rows={albumShareRows}
+						barColorVar="--color-listening-blue"
+						percentColorVar="--color-listening-blue"
+						className="wrapped-list-rows"
+					/>
 				</div>
 			) : null}
 		</div>

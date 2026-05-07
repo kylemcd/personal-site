@@ -10,6 +10,8 @@ import {
 } from "recharts";
 
 import { Text } from "@/components/Text";
+import { SectionStatRow } from "@/components/SectionStatRow";
+import { StatBarList, type StatBarListRow } from "@/components/StatBarList";
 import type { Garage61Summary } from "@/lib/garage61/schema";
 
 import "./Garage61.styles.css";
@@ -278,6 +280,27 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 	const fastestLapLabel = chart
 		? `fastest ${formatLapTime(chart.bestLapSeconds)}`
 		: "";
+	const cleanestTrackRows: Array<StatBarListRow> = cleanestTracks.map((track) => ({
+		key: `clean-${track.track}`,
+		title: track.track,
+		subtitleRight: `${getCleanLapRatio(track)} laps`,
+		percent: clampPercent(track.cleanPercentage),
+		percentLabel: formatPercentLabel(track.cleanPercentage),
+	}));
+	const recentTrackRows: Array<StatBarListRow> = recentTracks.map((track) => ({
+		key: `track-${track.id}-${track.name}`,
+		title: track.name,
+		subtitleRight: formatDuration(track.timeOnTrackSeconds),
+		percent: clampPercent(track.lapSharePercentage ?? 0),
+		percentLabel: formatPercentLabel(track.lapSharePercentage),
+	}));
+	const recentCarRows: Array<StatBarListRow> = recentCars.map((car) => ({
+		key: `car-${car.id}-${car.name}`,
+		title: car.name,
+		subtitleRight: formatDuration(car.timeOnTrackSeconds),
+		percent: clampPercent(car.lapSharePercentage ?? 0),
+		percentLabel: formatPercentLabel(car.lapSharePercentage),
+	}));
 	const renderChartYAxisTick = ({ y, payload }: ChartAxisTickProps) => {
 		const value = payload?.value;
 		const numericValue =
@@ -425,96 +448,117 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 				</Text>
 			</div>
 
-			<div className="g61-racing-kpis">
-				<div className="g61-racing-kpi-card">
-					<Text as="p" size="0" color="2" className="g61-racing-kpi-label">
-						Time on track
-					</Text>
-					<Text
-						as="p"
-						size="6"
-						family="mono"
-						className="g61-racing-kpi-value g61-racing-kpi-time-value"
-					>
-						{formatDuration(overview.totalTimeOnTrackSeconds)}
-					</Text>
-				</div>
-
-				<div className="g61-racing-kpi-card">
-					<Text as="p" size="0" color="2" className="g61-racing-kpi-label">
-						Clean laps
-					</Text>
-					<Text
-						as="p"
-						size="6"
-						family="mono"
-						className="g61-racing-kpi-value"
-					>
-						{formatPercentLabel(overview.cleanLapPercentage)}
-					</Text>
-					<Text as="p" size="0" color="2" className="g61-racing-kpi-subline">
-						Incident-free
-					</Text>
-				</div>
-
-				<div className="g61-racing-kpi-card">
-					<Text as="p" size="0" color="2" className="g61-racing-kpi-label">
-						Cleanest combo
-					</Text>
-					<Text as="p" size="6" family="mono" className="g61-racing-kpi-value">
-						{overview.insights.cleanestCombo
-							? formatPercentLabel(overview.insights.cleanestCombo.cleanPercentage)
-							: "n/a"}
-					</Text>
-					{overview.insights.cleanestCombo && (
-						<div className="g61-racing-kpi-stack">
-							<Text as="p" size="0" color="2">
-								{overview.insights.cleanestCombo.track}
+			<SectionStatRow
+				className="g61-racing-kpis"
+				items={[
+					{
+						key: "time-on-track",
+						label: (
+							<Text as="p" size="0" color="2" className="g61-racing-kpi-label">
+								Time on track
 							</Text>
-							<Text as="p" size="0" color="2">
-								{overview.insights.cleanestCombo.car}
+						),
+						value: (
+							<Text
+								as="p"
+								size="6"
+								family="mono"
+								className="g61-racing-kpi-value g61-racing-kpi-time-value"
+							>
+								{formatDuration(overview.totalTimeOnTrackSeconds)}
 							</Text>
-						</div>
-					)}
-				</div>
-
-				<div className="g61-racing-kpi-card">
-					<Text as="p" size="0" color="2" className="g61-racing-kpi-label">
-						Seat balance
-					</Text>
-					<Text as="p" size="6" family="mono" className="g61-racing-kpi-value">
-						{sessionTimeBreakdown
-							? formatPercentLabel(sessionTimeBreakdown.practicePercentage)
-							: "n/a"}
-					</Text>
-					<div className="g61-racing-balance-bar" aria-hidden="true">
-						<div
-							className="g61-racing-balance-practice"
-							style={{
-								width: `${clampPercent(sessionTimeBreakdown?.practicePercentage ?? 0)}%`,
-							}}
-						/>
-						<div
-							className="g61-racing-balance-racing"
-							style={{
-								width: `${clampPercent(sessionTimeBreakdown?.racingPercentage ?? 0)}%`,
-							}}
-						/>
-					</div>
-					<div className="g61-racing-balance-labels">
-						<Text as="p" size="0" color="2" family="mono">
-							{sessionTimeBreakdown
-								? `Practice ${formatDuration(sessionTimeBreakdown.practiceTimeOnTrackSeconds)}`
-								: "Practice n/a"}
-						</Text>
-						<Text as="p" size="0" family="mono" className="g61-racing-red">
-							{sessionTimeBreakdown
-								? `Racing ${formatDuration(sessionTimeBreakdown.racingTimeOnTrackSeconds)}`
-								: "Racing n/a"}
-						</Text>
-					</div>
-				</div>
-			</div>
+						),
+					},
+					{
+						key: "clean-laps",
+						label: (
+							<Text as="p" size="0" color="2" className="g61-racing-kpi-label">
+								Clean laps
+							</Text>
+						),
+						value: (
+							<Text as="p" size="6" family="mono" className="g61-racing-kpi-value">
+								{formatPercentLabel(overview.cleanLapPercentage)}
+							</Text>
+						),
+						subline: (
+							<Text as="p" size="0" color="2" className="g61-racing-kpi-subline">
+								Incident-free
+							</Text>
+						),
+					},
+					{
+						key: "cleanest-combo",
+						label: (
+							<Text as="p" size="0" color="2" className="g61-racing-kpi-label">
+								Cleanest combo
+							</Text>
+						),
+						value: (
+							<Text as="p" size="6" family="mono" className="g61-racing-kpi-value">
+								{overview.insights.cleanestCombo
+									? formatPercentLabel(overview.insights.cleanestCombo.cleanPercentage)
+									: "n/a"}
+							</Text>
+						),
+						subline: overview.insights.cleanestCombo ? (
+							<div className="g61-racing-kpi-stack">
+								<Text as="p" size="0" color="2">
+									{overview.insights.cleanestCombo.track}
+								</Text>
+								<Text as="p" size="0" color="2">
+									{overview.insights.cleanestCombo.car}
+								</Text>
+							</div>
+						) : undefined,
+					},
+					{
+						key: "seat-balance",
+						label: (
+							<Text as="p" size="0" color="2" className="g61-racing-kpi-label">
+								Seat balance
+							</Text>
+						),
+						value: (
+							<Text as="p" size="6" family="mono" className="g61-racing-kpi-value">
+								{sessionTimeBreakdown
+									? formatPercentLabel(sessionTimeBreakdown.practicePercentage)
+									: "n/a"}
+							</Text>
+						),
+						subline: (
+							<>
+								<div className="g61-racing-balance-bar" aria-hidden="true">
+									<div
+										className="g61-racing-balance-practice"
+										style={{
+											width: `${clampPercent(sessionTimeBreakdown?.practicePercentage ?? 0)}%`,
+										}}
+									/>
+									<div
+										className="g61-racing-balance-racing"
+										style={{
+											width: `${clampPercent(sessionTimeBreakdown?.racingPercentage ?? 0)}%`,
+										}}
+									/>
+								</div>
+								<div className="g61-racing-balance-labels">
+									<Text as="p" size="0" color="2" family="mono">
+										{sessionTimeBreakdown
+											? `Practice ${formatDuration(sessionTimeBreakdown.practiceTimeOnTrackSeconds)}`
+											: "Practice n/a"}
+									</Text>
+									<Text as="p" size="0" family="mono" className="g61-racing-red">
+										{sessionTimeBreakdown
+											? `Racing ${formatDuration(sessionTimeBreakdown.racingTimeOnTrackSeconds)}`
+											: "Racing n/a"}
+									</Text>
+								</div>
+							</>
+						),
+					},
+				]}
+			/>
 
 			<div className="g61-racing-chart-card">
 				<div className="g61-racing-chart-head">
@@ -715,36 +759,12 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 							Cleanest tracks
 						</Text>
 					</div>
-					<div className="g61-racing-table-rows">
-						{cleanestTracks.map((track) => (
-							<div
-								className="g61-racing-clean-row"
-								key={`clean-${track.track}`}
-							>
-								<div className="g61-racing-clean-head">
-									<Text as="p" size="0" weight="500" className="g61-racing-recent-name">
-										{track.track}
-									</Text>
-									<div className="g61-racing-metric-side">
-										<Text as="p" size="0" color="2" family="mono">
-											{getCleanLapRatio(track)} laps
-										</Text>
-									</div>
-								</div>
-								<div className="g61-racing-clean-progress">
-									<div className="g61-racing-clean-bar">
-										<div
-											className="g61-racing-clean-bar-fill"
-											style={{ width: `${clampPercent(track.cleanPercentage)}%` }}
-										/>
-									</div>
-									<Text as="p" size="0" family="mono" className="g61-racing-progress-percent">
-										{formatPercentLabel(track.cleanPercentage)}
-									</Text>
-								</div>
-							</div>
-						))}
-					</div>
+					<StatBarList
+						rows={cleanestTrackRows}
+						barColorVar="--color-racing-red"
+						percentColorVar="--color-racing-red"
+						className="g61-racing-table-rows"
+					/>
 				</div>
 			</div>
 
@@ -755,41 +775,11 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 							Recent tracks
 						</Text>
 					</div>
-					{recentTracks.map((track) => (
-						<div
-							className="g61-racing-clean-row"
-							key={`track-${track.id}-${track.name}`}
-						>
-							<div className="g61-racing-clean-head">
-								<Text
-									as="p"
-									size="0"
-									weight="500"
-									className="g61-racing-recent-name"
-								>
-									{track.name}
-								</Text>
-								<div className="g61-racing-metric-side">
-									<Text as="p" size="0" color="2" family="mono">
-										{formatDuration(track.timeOnTrackSeconds)}
-									</Text>
-								</div>
-							</div>
-							<div className="g61-racing-clean-progress">
-								<div className="g61-racing-recent-bar">
-									<div
-										className="g61-racing-recent-bar-fill"
-										style={{
-											width: `${clampPercent(track.lapSharePercentage ?? 0)}%`,
-										}}
-									/>
-								</div>
-								<Text as="p" size="0" family="mono" className="g61-racing-progress-percent">
-									{formatPercentLabel(track.lapSharePercentage)}
-								</Text>
-							</div>
-						</div>
-					))}
+					<StatBarList
+						rows={recentTrackRows}
+						barColorVar="--color-racing-red"
+						percentColorVar="--color-racing-red"
+					/>
 				</div>
 
 				<div className="g61-racing-recent-card">
@@ -798,41 +788,11 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 							Recent cars
 						</Text>
 					</div>
-					{recentCars.map((car) => (
-						<div
-							className="g61-racing-clean-row"
-							key={`car-${car.id}-${car.name}`}
-						>
-							<div className="g61-racing-clean-head">
-								<Text
-									as="p"
-									size="0"
-									weight="500"
-									className="g61-racing-recent-name"
-								>
-									{car.name}
-								</Text>
-								<div className="g61-racing-metric-side">
-									<Text as="p" size="0" color="2" family="mono">
-										{formatDuration(car.timeOnTrackSeconds)}
-									</Text>
-								</div>
-							</div>
-							<div className="g61-racing-clean-progress">
-								<div className="g61-racing-recent-bar">
-									<div
-										className="g61-racing-recent-bar-fill"
-										style={{
-											width: `${clampPercent(car.lapSharePercentage ?? 0)}%`,
-										}}
-									/>
-								</div>
-								<Text as="p" size="0" family="mono" className="g61-racing-progress-percent">
-									{formatPercentLabel(car.lapSharePercentage)}
-								</Text>
-							</div>
-						</div>
-					))}
+					<StatBarList
+						rows={recentCarRows}
+						barColorVar="--color-racing-red"
+						percentColorVar="--color-racing-red"
+					/>
 				</div>
 			</div>
 		</div>
