@@ -29,11 +29,15 @@ class Garage61Error extends TaggedError("Garage61Error")<{
 
 const GARAGE61_API_URL = "https://garage61.net/api/v1";
 const GARAGE61_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-export const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v19";
+// NOTE: when adding new fields to Garage61Summary, keep them backwards
+// compatible (filled from emptySummary() in normalizeSummary) so old cached
+// envelopes deserialize cleanly. Bumping this key triggers the stale-data
+// monitor between deploy and the next request that warms a fresh envelope.
+export const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v10";
 const GARAGE61_SUMMARY_CACHE_FALLBACK_KEYS = [
-	"garage61:summary:v12",
-	"garage61:summary:v11",
-	"garage61:summary:v10",
+	"garage61:summary:v9",
+	"garage61:summary:v8",
+	"garage61:summary:v7",
 ] as const;
 const GARAGE61_SUMMARY_CACHE_TTL_SECONDS = 30 * 60;
 const GARAGE61_REQUEST_TIMEOUT_MS = 15_000;
