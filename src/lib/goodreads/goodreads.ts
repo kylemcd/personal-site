@@ -5,7 +5,11 @@ import type { Book } from "./schema";
 import { GOODREADS_USER_ID } from "@/lib/config";
 import { toErrorDetails } from "@/lib/error-details";
 import { getJson, refreshJson } from "@/lib/store";
-export const GOODREADS_SHELF_CACHE_KEY = "goodreads:shelf:v2";
+// NOTE: when extending ShelfBook with new fields, keep them optional/nullable so
+// old cached entries (without the field) keep deserializing cleanly. Bumping
+// this key to invalidate old data triggers a stale-data alert in prod between
+// deploy and the next user request that warms the cache.
+export const GOODREADS_SHELF_CACHE_KEY = "goodreads:shelf:v1";
 const GOODREADS_SHELF_CACHE_TTL_SECONDS = 30 * 60;
 
 type ShelfBook = Book & {
