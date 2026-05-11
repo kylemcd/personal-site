@@ -7,16 +7,21 @@ import { getOrComputeJson } from "@/lib/store";
 import { LASTFM_USERNAME } from "@/lib/config";
 
 import {
+	type ArtistTagMap,
+	buildArtistTagMap,
+	buildSimilarTagMap,
+	buildTopGenresFromWeights,
+	type SimilarTagMap,
+} from "./genres";
+import {
 	type Album,
 	type ListeningData,
 	type NowPlayingAlbum,
 	RecentTracksResponseSchema,
-	SimilarTagsResponseSchema,
 	type TopAlbumsResponse,
 	TopAlbumsResponseSchema,
 	type TopArtistsResponse,
 	TopArtistsResponseSchema,
-	TopArtistTagsResponseSchema,
 	type TopTracksResponse,
 	TopTracksResponseSchema,
 	type Track,
@@ -79,132 +84,25 @@ const getArtistUrl = (artist: string) => {
 	return `https://www.last.fm/music/${encode(artist)}`;
 };
 
-const normalizeGenreTag = (tag: string): string => {
-	const trimmed = tag.trim().toLowerCase();
-	if (!trimmed) return "";
-	const normalized = trimmed
-		.replace(/[./_,]+/g, " ")
-		.replace(/[-]+/g, " ")
-		.replace(/\s+/g, " ");
-	if (
-		normalized.includes("seen live") ||
-		normalized.includes("favorites") ||
-		normalized.includes("favorite")
-	) {
-		return "";
-	}
-	return normalized;
-};
-
-const formatGenreLabel = (tag: string): string =>
-	tag
-		.split(" ")
-		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-		.join(" ");
-
-const groupGenresByLastFmSimilarity = (params: {
-	genreScores: ReadonlyMap<string, number>;
-	similarGenreTags: Readonly<Record<string, Array<string>>>;
-}): Map<string, number> => {
-	const { genreScores, similarGenreTags } = params;
-	if (genreScores.size === 0) return new Map();
-
-	const adjacency = new Map<string, Set<string>>();
-	for (const tag of genreScores.keys()) {
-		adjacency.set(tag, new Set([tag]));
-	}
-	for (const [tag, similarTags] of Object.entries(similarGenreTags)) {
-		if (!adjacency.has(tag)) continue;
-		for (const similar of similarTags) {
-			if (!adjacency.has(similar)) continue;
-			adjacency.get(tag)?.add(similar);
-			adjacency.get(similar)?.add(tag);
-		}
-	}
-
-	const visited = new Set<string>();
-	const grouped = new Map<string, number>();
-
-	for (const tag of genreScores.keys()) {
-		if (visited.has(tag)) continue;
-
-		const stack = [tag];
-		const component: string[] = [];
-		while (stack.length > 0) {
-			const current = stack.pop();
-			if (!current || visited.has(current)) continue;
-			visited.add(current);
-			component.push(current);
-			for (const next of adjacency.get(current) ?? []) {
-				if (!visited.has(next)) stack.push(next);
-			}
-		}
-
-		if (component.length === 0) continue;
-		const canonical = component
-			.sort((a, b) => {
-				const scoreDelta =
-					(genreScores.get(b) ?? 0) - (genreScores.get(a) ?? 0);
-				if (scoreDelta !== 0) return scoreDelta;
-				return a.localeCompare(b);
-			})
-			.at(0);
-		if (!canonical) continue;
-
-		const combinedScore = component.reduce(
-			(total, item) => total + (genreScores.get(item) ?? 0),
-			0,
-		);
-		grouped.set(canonical, combinedScore);
-	}
-
-	return grouped;
-};
-
 const buildTopGenres = (params: {
 	topArtists: ReadonlyArray<TopArtistsResponse["topartists"]["artist"][number]>;
-	artistTopTags: Readonly<
-		Record<string, Array<{ name: string; count: number }>>
-	>;
-	similarGenreTags: Readonly<Record<string, Array<string>>>;
+	artistTopTags: ArtistTagMap;
+	similarGenreTags: SimilarTagMap;
 }): Array<{ name: string; share: number }> => {
 	const { topArtists, artistTopTags, similarGenreTags } = params;
-	const weightedGenreScores = new Map<string, number>();
-
-	for (const artist of topArtists.slice(0, GENRE_ARTIST_SAMPLE_LIMIT)) {
-		const artistPlays = parsePlayCount(artist.playcount);
-		if (artistPlays <= 0) continue;
-		const artistKey = getPrimaryArtist(artist.name).toLowerCase();
-		const tags = artistTopTags[artistKey] ?? [];
-		for (const tag of tags.slice(0, ARTIST_TAG_LIMIT)) {
-			const normalized = normalizeGenreTag(tag.name);
-			if (!normalized) continue;
-			const tagWeight = Math.max(1, tag.count);
-			const score = artistPlays * tagWeight;
-			weightedGenreScores.set(
-				normalized,
-				(weightedGenreScores.get(normalized) ?? 0) + score,
-			);
-		}
-	}
-
-	const groupedScores = groupGenresByLastFmSimilarity({
-		genreScores: weightedGenreScores,
-		similarGenreTags,
-	});
-	const totalScore = [...groupedScores.values()].reduce(
-		(total, score) => total + score,
-		0,
-	);
-	if (totalScore <= 0 || groupedScores.size === 0) return [];
-
-	return [...groupedScores.entries()]
-		.sort((a, b) => b[1] - a[1])
-		.slice(0, WRAPPED_GENRE_COUNT)
-		.map(([tag, score]) => ({
-			name: formatGenreLabel(tag),
-			share: Math.max(1, Math.round((score / totalScore) * 100)),
+	const weightedArtists = topArtists
+		.slice(0, GENRE_ARTIST_SAMPLE_LIMIT)
+		.map((artist) => ({
+			key: getPrimaryArtist(artist.name).toLowerCase(),
+			weight: parsePlayCount(artist.playcount),
 		}));
+	return buildTopGenresFromWeights({
+		weightedArtists,
+		artistTopTags,
+		similarGenreTags,
+		genreCount: WRAPPED_GENRE_COUNT,
+		artistTagLimit: ARTIST_TAG_LIMIT,
+	});
 };
 
 const trackToAlbum = (track: Track, requireMbid = true): Album | null => {
@@ -766,62 +664,8 @@ type CachedMonthlyTopData = {
 	topTracks: ReadonlyArray<TopTracksResponse["toptracks"]["track"][number]>;
 	topArtists: ReadonlyArray<TopArtistsResponse["topartists"]["artist"][number]>;
 	topAlbums: ReadonlyArray<TopAlbumsResponse["topalbums"]["album"][number]>;
-	artistTopTags: Record<string, Array<{ name: string; count: number }>>;
-	similarGenreTags: Record<string, Array<string>>;
-};
-
-const fetchArtistTopTags = async (
-	artist: string,
-): Promise<
-	Result<Array<{ name: string; count: number }>, LastFmDataError>
-> => {
-	const params = new URLSearchParams({
-		...getBaseParams(),
-		method: "artist.gettoptags",
-		artist,
-		autocorrect: "1",
-	});
-	const res = await fetchFresh({
-		url: `${LASTFM_API_URL}?${params.toString()}`,
-		method: "GET",
-		schema: TopArtistTagsResponseSchema,
-	});
-	if (Result.isError(res)) {
-		return Result.err(new LastFmDataError({ error: res.error }));
-	}
-	const tags = res.value.data.toptags.tag
-		.map((tag) => ({
-			name: tag.name,
-			count:
-				typeof tag.count === "number"
-					? tag.count
-					: Number.parseInt(tag.count ?? "0", 10) || 0,
-		}))
-		.filter((tag) => tag.name.trim().length > 0);
-	return Result.ok(tags);
-};
-
-const fetchSimilarGenreTags = async (
-	tag: string,
-): Promise<Result<Array<string>, LastFmDataError>> => {
-	const params = new URLSearchParams({
-		...getBaseParams(),
-		method: "tag.getsimilar",
-		tag,
-	});
-	const res = await fetchFresh({
-		url: `${LASTFM_API_URL}?${params.toString()}`,
-		method: "GET",
-		schema: SimilarTagsResponseSchema,
-	});
-	if (Result.isError(res)) {
-		return Result.err(new LastFmDataError({ error: res.error }));
-	}
-	return Result.ok(
-		res.value.data.similartags.tag
-			.map((item) => normalizeGenreTag(item.name))
-			.filter((item) => item.length > 0),
-	);
+	artistTopTags: ArtistTagMap;
+	similarGenreTags: SimilarTagMap;
 };
 
 const monthlyTopData = () => {
@@ -887,55 +731,20 @@ const monthlyTopData = () => {
 			const primaryArtists = topArtistsRes.value.data.topartists.artist
 				.slice(0, GENRE_ARTIST_SAMPLE_LIMIT)
 				.map((artist) => getPrimaryArtist(artist.name));
-			const uniqueArtists = [...new Set(primaryArtists)];
-			const tagResults = await Promise.all(
-				uniqueArtists.map(async (artist) => ({
-					artist,
-					result: await fetchArtistTopTags(artist),
-				})),
-			);
-			const artistTopTags: Record<
-				string,
-				Array<{ name: string; count: number }>
-			> = {};
-			for (const tagResult of tagResults) {
-				if (Result.isError(tagResult.result)) continue;
-				artistTopTags[tagResult.artist.toLowerCase()] = tagResult.result.value;
-			}
+			const artistTopTags = await buildArtistTagMap(primaryArtists);
 
-			const genreSeedScores = new Map<string, number>();
-			for (const artist of topArtistsRes.value.data.topartists.artist.slice(
-				0,
-				GENRE_ARTIST_SAMPLE_LIMIT,
-			)) {
-				const artistKey = getPrimaryArtist(artist.name).toLowerCase();
-				const artistPlays = parsePlayCount(artist.playcount);
-				const tags = artistTopTags[artistKey] ?? [];
-				for (const tag of tags.slice(0, ARTIST_TAG_LIMIT)) {
-					const normalized = normalizeGenreTag(tag.name);
-					if (!normalized) continue;
-					const score = artistPlays * Math.max(1, tag.count);
-					genreSeedScores.set(
-						normalized,
-						(genreSeedScores.get(normalized) ?? 0) + score,
-					);
-				}
-			}
-			const genreSeeds = [...genreSeedScores.entries()]
-				.sort((a, b) => b[1] - a[1])
-				.slice(0, GENRE_SIMILAR_TAG_SAMPLE_LIMIT)
-				.map(([name]) => name);
-			const similarTagResults = await Promise.all(
-				genreSeeds.map(async (tag) => ({
-					tag,
-					result: await fetchSimilarGenreTags(tag),
-				})),
-			);
-			const similarGenreTags: Record<string, Array<string>> = {};
-			for (const entry of similarTagResults) {
-				if (Result.isError(entry.result)) continue;
-				similarGenreTags[entry.tag] = entry.result.value;
-			}
+			const weightedArtists = topArtistsRes.value.data.topartists.artist
+				.slice(0, GENRE_ARTIST_SAMPLE_LIMIT)
+				.map((artist) => ({
+					key: getPrimaryArtist(artist.name).toLowerCase(),
+					weight: parsePlayCount(artist.playcount),
+				}));
+			const similarGenreTags = await buildSimilarTagMap({
+				weightedArtists,
+				artistTopTags,
+				artistTagLimit: ARTIST_TAG_LIMIT,
+				seedLimit: GENRE_SIMILAR_TAG_SAMPLE_LIMIT,
+			});
 
 			return Result.ok({
 				topTracks: topTracksRes.value.data.toptracks.track,
@@ -1002,9 +811,125 @@ const recentActivity = async (): Promise<
 
 const refreshMonthlyTop = () => monthlyTopData();
 
+export type ListeningSessionTrack = {
+	name: string;
+	artist: string;
+	count: number;
+};
+
+export type ListeningSession = {
+	startIso: string;
+	endIso: string;
+	scrobbleCount: number;
+	topArtist: string;
+	topTrack: string;
+	tracks: ListeningSessionTrack[];
+};
+
+/**
+ * Cluster recent scrobbles into listening sessions. Tracks within
+ * SESSION_BREAK_SECONDS of each other belong to the same session.
+ * Excludes any track tagged "now playing" (no timestamp). The end of a
+ * session is approximated as the last scrobble + average track length.
+ */
+const recentSessions = async (params: {
+	withinDays: number;
+}): Promise<Result<ListeningSession[], LastFmDataError>> => {
+	const recentTracksParams = new URLSearchParams({
+		...getBaseParams(),
+		method: "user.getrecenttracks",
+		limit: "200",
+	});
+	const res = await fetchFresh({
+		url: `${LASTFM_API_URL}?${recentTracksParams.toString()}`,
+		method: "GET",
+		schema: RecentTracksResponseSchema,
+	});
+	if (Result.isError(res)) {
+		return Result.err(new LastFmDataError({ error: res.error }));
+	}
+
+	const cutoffMs = Date.now() - params.withinDays * 24 * 60 * 60 * 1000;
+	const tracks = res.value.data.recenttracks.track
+		.filter((track): track is Track & { date: { uts: string; "#text": string } } =>
+			Boolean(track.date?.uts),
+		)
+		.map((track) => ({
+			track,
+			ts: Number.parseInt(track.date.uts, 10) * 1000,
+		}))
+		.filter((entry) => Number.isFinite(entry.ts) && entry.ts >= cutoffMs)
+		.sort((a, b) => a.ts - b.ts);
+
+	if (tracks.length === 0) return Result.ok([]);
+
+	const breakMs = SESSION_BREAK_SECONDS * 1000;
+	const groups: Array<typeof tracks> = [[]];
+	for (let i = 0; i < tracks.length; i += 1) {
+		const current = tracks[i]!;
+		const last = groups[groups.length - 1]!;
+		if (last.length === 0) {
+			last.push(current);
+			continue;
+		}
+		const prev = last[last.length - 1]!;
+		if (current.ts - prev.ts <= breakMs) {
+			last.push(current);
+		} else {
+			groups.push([current]);
+		}
+	}
+
+	const sessions: ListeningSession[] = groups
+		.filter((group) => group.length > 0)
+		.map((group) => {
+			const first = group[0]!;
+			const last = group[group.length - 1]!;
+			const startIso = new Date(first.ts).toISOString();
+			// Approximate end: last scrobble + 1 track length so single-track sessions still get a duration.
+			const endMs = last.ts + FALLBACK_TRACK_SECONDS * 1000;
+			const endIso = new Date(endMs).toISOString();
+
+			const artistCounts = new Map<string, number>();
+			type TrackAgg = { name: string; artist: string; count: number };
+			const trackAggs = new Map<string, TrackAgg>();
+			for (const entry of group) {
+				const artist = getPrimaryArtist(entry.track.artist["#text"]);
+				artistCounts.set(artist, (artistCounts.get(artist) ?? 0) + 1);
+				const trackKey = `${entry.track.name}::${artist}`.toLowerCase();
+				const existing = trackAggs.get(trackKey);
+				if (existing) {
+					existing.count += 1;
+				} else {
+					trackAggs.set(trackKey, {
+						name: entry.track.name,
+						artist,
+						count: 1,
+					});
+				}
+			}
+			const topArtist =
+				[...artistCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+			const tracks = [...trackAggs.values()].sort((a, b) => b.count - a.count);
+			const topTrack = tracks[0]?.name ?? "";
+
+			return {
+				startIso,
+				endIso,
+				scrobbleCount: group.length,
+				topArtist,
+				topTrack,
+				tracks,
+			};
+		});
+
+	return Result.ok(sessions);
+};
+
 const lastfm = {
 	recentActivity,
 	refreshMonthlyTop,
+	recentSessions,
 };
 
 export { lastfm };

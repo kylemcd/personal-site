@@ -12,6 +12,7 @@ import {
 	buildBestSessionChart,
 	buildFallbackTrendFromStatistics,
 	computeSharePercentage,
+	extractSessionLapRows,
 	getArrayCandidate,
 	getFirstValue,
 	getIdValue,
@@ -28,11 +29,11 @@ class Garage61Error extends TaggedError("Garage61Error")<{
 
 const GARAGE61_API_URL = "https://garage61.net/api/v1";
 const GARAGE61_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-export const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v10";
+export const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v19";
 const GARAGE61_SUMMARY_CACHE_FALLBACK_KEYS = [
-	"garage61:summary:v9",
-	"garage61:summary:v8",
-	"garage61:summary:v7",
+	"garage61:summary:v12",
+	"garage61:summary:v11",
+	"garage61:summary:v10",
 ] as const;
 const GARAGE61_SUMMARY_CACHE_TTL_SECONDS = 30 * 60;
 const GARAGE61_REQUEST_TIMEOUT_MS = 15_000;
@@ -128,6 +129,7 @@ const emptySummary = (): Garage61Summary => ({
 		trackCount: null,
 		fastestLaps: [],
 		recentStatistics: [],
+		recentSessions: [],
 		overview: {
 			windowLabel: "Last 30 Days",
 			totalTimeOnTrackSeconds: 0,
@@ -1066,6 +1068,99 @@ const summaryUncached = async (
 			]),
 		);
 
+		// Derive per-session timestamps for the calendar view. We need ALL session
+		// types (practice + quali + race), not just race/quali, so we issue a
+		// separate fetch per (track, car) combo seen in the last 7 days. The
+		// result is grouped by sessionKey (subsession id) and we use min/max lap
+		// timestamps as the session window.
+		const RECENT_SESSION_WINDOW_DAYS = 7;
+		const RECENT_SESSION_CUTOFF_MS =
+			nowMs - RECENT_SESSION_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+		const recentComboMap = new Map<
+			string,
+			{ trackId: number; carId: number; track: string; car: string }
+		>();
+		for (const row of nonOvalTimeShareStatistics) {
+			if (row.trackId === null || row.carId === null) continue;
+			if (!row.day) continue;
+			const dayMs = Date.parse(row.day);
+			if (!Number.isFinite(dayMs) || dayMs < RECENT_SESSION_CUTOFF_MS) continue;
+			const key = `${row.trackId}-${row.carId}`;
+			if (recentComboMap.has(key)) continue;
+			recentComboMap.set(key, {
+				trackId: row.trackId,
+				carId: row.carId,
+				track: row.track,
+				car: row.car,
+			});
+		}
+		const recentSessionsLapsResult = await forEachConcurrent(
+			[...recentComboMap.values()],
+			async (combo) => {
+				const lapsRes = await laps(garage61ApiKey, {
+					trackId: combo.trackId,
+					carFilter: String(combo.carId),
+					drivers: "me",
+					age: RECENT_SESSION_WINDOW_DAYS,
+					limit: 500,
+					round: "metric",
+					unclean: true,
+				});
+				if (Result.isError(lapsRes)) return lapsRes;
+				return Result.ok({ combo, lapsRes: lapsRes.value });
+			},
+		);
+		const recentSessions: Garage61Summary["derived"]["recentSessions"] = [];
+		if (Result.isOk(recentSessionsLapsResult)) {
+			for (const { combo, lapsRes } of recentSessionsLapsResult.value) {
+				const lapRows = extractSessionLapRows(lapsRes.data);
+				const bySession = new Map<string, typeof lapRows[number][]>();
+				for (const row of lapRows) {
+					if (row.timestampMs === null) continue;
+					const list = bySession.get(row.sessionKey);
+					if (list) list.push(row);
+					else bySession.set(row.sessionKey, [row]);
+				}
+				for (const [sessionKey, rows] of bySession) {
+					if (rows.length === 0) continue;
+					const stamps = rows
+						.map((r) => r.timestampMs)
+						.filter((ms): ms is number => ms !== null);
+					if (stamps.length === 0) continue;
+					const startMs = Math.min(...stamps);
+					if (startMs < RECENT_SESSION_CUTOFF_MS) continue;
+					const lastMs = Math.max(...stamps);
+					const fastestLapSeconds = Math.min(
+						...rows.map((r) => r.lapSeconds),
+					);
+					// Approximate session end as last lap timestamp + that lap's duration.
+					const endMs = lastMs + Math.max(0, fastestLapSeconds * 1000);
+					const lapTimes = [...rows]
+						.sort((a, b) => {
+							if (a.lapNumber !== null && b.lapNumber !== null) {
+								return a.lapNumber - b.lapNumber;
+							}
+							return (a.timestampMs ?? 0) - (b.timestampMs ?? 0);
+						})
+						.map((r) => ({
+							lapNumber: r.lapNumber,
+							lapSeconds: roundTo(r.lapSeconds, 3),
+						}));
+					recentSessions.push({
+						sessionKey,
+						track: combo.track,
+						car: combo.car,
+						startIso: new Date(startMs).toISOString(),
+						endIso: new Date(endMs).toISOString(),
+						lapCount: rows.length,
+						fastestLapSeconds: roundTo(fastestLapSeconds, 3),
+						lapTimes,
+					});
+				}
+			}
+		}
+		recentSessions.sort((a, b) => b.startIso.localeCompare(a.startIso));
+
 		type ComboComparisonCandidate = {
 			combo: {
 				trackId: number;
@@ -1436,6 +1531,7 @@ const summaryUncached = async (
 					raceQualiTrackIds.length > 0 ? raceQualiTrackIds.length : null,
 				fastestLaps: [],
 				recentStatistics,
+				recentSessions,
 				overview: {
 					windowLabel,
 					totalTimeOnTrackSeconds,

@@ -42,6 +42,16 @@ export type Garage61Summary = {
 			cleanLapsDriven: number | null;
 			timeOnTrack: number | null;
 		}>;
+		recentSessions: Array<{
+			sessionKey: string;
+			track: string;
+			car: string;
+			startIso: string;
+			endIso: string;
+			lapCount: number;
+			fastestLapSeconds: number;
+			lapTimes: Array<{ lapNumber: number | null; lapSeconds: number }>;
+		}>;
 		overview: {
 			windowLabel: string;
 			totalTimeOnTrackSeconds: number;

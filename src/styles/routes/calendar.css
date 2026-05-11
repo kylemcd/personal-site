@@ -1,0 +1,55 @@
+.calendar-page-section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spc-5);
+}
+
+.calendar-auth-form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spc-3);
+	max-width: 360px;
+}
+
+.calendar-auth-form-row {
+	display: flex;
+	gap: var(--spc-2);
+}
+
+.calendar-auth-input {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: var(--spc-2) var(--spc-3);
+	background: var(--color-bg-1);
+	border: var(--spc-px) solid var(--color-ui-2);
+	border-radius: var(--rnd-2, 4px);
+	color: var(--color-text-1);
+	font-family: inherit;
+	font-size: 0.9rem;
+}
+
+.calendar-auth-input:focus-visible {
+	outline: none;
+	border-color: var(--color-text-1);
+}
+
+.calendar-auth-submit {
+	padding: var(--spc-2) var(--spc-3);
+	background: var(--color-text-1);
+	color: var(--color-bg-1);
+	border: none;
+	border-radius: var(--rnd-2, 4px);
+	font-family: inherit;
+	font-size: 0.9rem;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.calendar-auth-submit:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.calendar-auth-error {
+	color: rgb(175, 48, 41);
+}

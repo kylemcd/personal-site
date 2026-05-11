@@ -52,19 +52,21 @@ function ListeningRoute() {
 	return (
 		<div className="section-container section-container-flush-right listening-page-section">
 			<div className="listening-stack">
-				{listening.wrapped && (
+				{listening.wrapped ? (
 					<WrappedListening
 						wrapped={listening.wrapped}
 						nowPlaying={listening.nowPlaying}
 						variant="rich"
 					/>
-				)}
-				<div className="listening-section listening-recent-section">
-					<Text as="h3" size="1" weight="500">
-						Recently played
-					</Text>
-					<AlbumShelf albums={listening.albums} variant="scroll" />
-				</div>
+				) : null}
+				{listening.albums.length > 0 ? (
+					<div className="listening-section listening-recent-section">
+						<Text as="h3" size="1" weight="500">
+							Recently played
+						</Text>
+						<AlbumShelf albums={listening.albums} variant="scroll" />
+					</div>
+				) : null}
 			</div>
 		</div>
 	);

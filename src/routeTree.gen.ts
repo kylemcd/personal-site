@@ -15,6 +15,8 @@ import { Route as ReadingIndexRouteImport } from './routes/reading.index'
 import { Route as RacingIndexRouteImport } from './routes/racing.index'
 import { Route as PostsIndexRouteImport } from './routes/posts.index'
 import { Route as ListeningIndexRouteImport } from './routes/listening.index'
+import { Route as ConcertsIndexRouteImport } from './routes/concerts.index'
+import { Route as CalendarIndexRouteImport } from './routes/calendar.index'
 import { Route as PostsSlugRouteImport } from './routes/posts.$slug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +49,16 @@ const ListeningIndexRoute = ListeningIndexRouteImport.update({
   path: '/listening/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConcertsIndexRoute = ConcertsIndexRouteImport.update({
+  id: '/concerts/',
+  path: '/concerts/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalendarIndexRoute = CalendarIndexRouteImport.update({
+  id: '/calendar/',
+  path: '/calendar/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PostsSlugRoute = PostsSlugRouteImport.update({
   id: '/posts/$slug',
   path: '/posts/$slug',
@@ -56,6 +68,8 @@ const PostsSlugRoute = PostsSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/posts/$slug': typeof PostsSlugRoute
+  '/calendar/': typeof CalendarIndexRoute
+  '/concerts/': typeof ConcertsIndexRoute
   '/listening/': typeof ListeningIndexRoute
   '/posts/': typeof PostsIndexRoute
   '/racing/': typeof RacingIndexRoute
@@ -65,6 +79,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/posts/$slug': typeof PostsSlugRoute
+  '/calendar': typeof CalendarIndexRoute
+  '/concerts': typeof ConcertsIndexRoute
   '/listening': typeof ListeningIndexRoute
   '/posts': typeof PostsIndexRoute
   '/racing': typeof RacingIndexRoute
@@ -75,6 +91,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/posts/$slug': typeof PostsSlugRoute
+  '/calendar/': typeof CalendarIndexRoute
+  '/concerts/': typeof ConcertsIndexRoute
   '/listening/': typeof ListeningIndexRoute
   '/posts/': typeof PostsIndexRoute
   '/racing/': typeof RacingIndexRoute
@@ -86,6 +104,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/posts/$slug'
+    | '/calendar/'
+    | '/concerts/'
     | '/listening/'
     | '/posts/'
     | '/racing/'
@@ -95,6 +115,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/posts/$slug'
+    | '/calendar'
+    | '/concerts'
     | '/listening'
     | '/posts'
     | '/racing'
@@ -104,6 +126,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/posts/$slug'
+    | '/calendar/'
+    | '/concerts/'
     | '/listening/'
     | '/posts/'
     | '/racing/'
@@ -114,6 +138,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PostsSlugRoute: typeof PostsSlugRoute
+  CalendarIndexRoute: typeof CalendarIndexRoute
+  ConcertsIndexRoute: typeof ConcertsIndexRoute
   ListeningIndexRoute: typeof ListeningIndexRoute
   PostsIndexRoute: typeof PostsIndexRoute
   RacingIndexRoute: typeof RacingIndexRoute
@@ -165,6 +191,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListeningIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/concerts/': {
+      id: '/concerts/'
+      path: '/concerts'
+      fullPath: '/concerts/'
+      preLoaderRoute: typeof ConcertsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calendar/': {
+      id: '/calendar/'
+      path: '/calendar'
+      fullPath: '/calendar/'
+      preLoaderRoute: typeof CalendarIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/posts/$slug': {
       id: '/posts/$slug'
       path: '/posts/$slug'
@@ -178,6 +218,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PostsSlugRoute: PostsSlugRoute,
+  CalendarIndexRoute: CalendarIndexRoute,
+  ConcertsIndexRoute: ConcertsIndexRoute,
   ListeningIndexRoute: ListeningIndexRoute,
   PostsIndexRoute: PostsIndexRoute,
   RacingIndexRoute: RacingIndexRoute,
