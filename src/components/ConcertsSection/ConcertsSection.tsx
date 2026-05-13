@@ -1,7 +1,8 @@
 import {
 	Bar,
-	BarChart,
 	CartesianGrid,
+	ComposedChart,
+	Line,
 	PolarAngleAxis,
 	PolarGrid,
 	PolarRadiusAxis,
@@ -98,6 +99,11 @@ const renderYearlyTooltip = ({
 			<div className="concerts-yearly-tooltip-year">{data.year}</div>
 			<div className="concerts-yearly-tooltip-rows">
 				<div className="concerts-yearly-tooltip-row">
+					<span className="concerts-yearly-tooltip-swatch concerts-yearly-tooltip-swatch-line" />
+					<span className="concerts-yearly-tooltip-label">Shows</span>
+					<span className="concerts-yearly-tooltip-value">{data.showCount}</span>
+				</div>
+				<div className="concerts-yearly-tooltip-row">
 					<span
 						className="concerts-yearly-tooltip-swatch"
 						style={{
@@ -117,9 +123,6 @@ const renderYearlyTooltip = ({
 					<span className="concerts-yearly-tooltip-label">New artists</span>
 					<span className="concerts-yearly-tooltip-value">{data.firstTime}</span>
 				</div>
-			</div>
-			<div className="concerts-yearly-tooltip-total">
-				{data.showCount} {data.showCount === 1 ? "show" : "shows"}
 			</div>
 		</div>
 	);
@@ -466,7 +469,7 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 								</div>
 								<div className="concerts-bar-chart">
 									<ResponsiveContainer width="100%" height={240} minWidth={0} minHeight={1}>
-										<BarChart
+										<ComposedChart
 											data={yearlyArtists}
 											margin={{ top: 12, right: 4, bottom: 0, left: 0 }}
 										>
@@ -484,7 +487,19 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 												tick={{ fontSize: 11, fontFamily: "var(--font-family-mono)" }}
 											/>
 											<YAxis
+												yAxisId="artists"
 												width={28}
+												stroke="var(--color-text-2)"
+												tickLine={false}
+												axisLine={false}
+												allowDecimals={false}
+												tickMargin={2}
+												tick={{ fontSize: 11, fontFamily: "var(--font-family-mono)" }}
+											/>
+											<YAxis
+												yAxisId="shows"
+												orientation="right"
+												width={24}
 												stroke="var(--color-text-2)"
 												tickLine={false}
 												axisLine={false}
@@ -497,18 +512,35 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 												content={renderYearlyTooltip}
 											/>
 											<Bar
+												yAxisId="artists"
 												dataKey="firstTime"
 												stackId="artists"
 												shape={renderFirstTimeBarShape}
 												isAnimationActive={false}
 											/>
 											<Bar
+												yAxisId="artists"
 												dataKey="returning"
 												stackId="artists"
 												shape={renderReturningBarShape}
 												isAnimationActive={false}
 											/>
-										</BarChart>
+											<Line
+												yAxisId="shows"
+												type="monotone"
+												dataKey="showCount"
+												stroke="var(--color-text-1)"
+												strokeWidth={2}
+												dot={{
+													fill: "var(--color-bg-1)",
+													stroke: "var(--color-text-1)",
+													strokeWidth: 2,
+													r: 3,
+												}}
+												activeDot={{ r: 5 }}
+												isAnimationActive={false}
+											/>
+										</ComposedChart>
 									</ResponsiveContainer>
 								</div>
 							</div>
