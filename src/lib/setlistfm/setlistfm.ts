@@ -1,8 +1,6 @@
 import { Result, TaggedError } from "better-result";
 
-import { SETLIST_FM_USER_ID } from "@/lib/config";
 import { env } from "@/lib/env";
-import { fetchFresh } from "@/lib/fetch";
 import {
 	buildArtistTagMap,
 	buildSimilarTagMap,
@@ -10,56 +8,26 @@ import {
 } from "@/lib/lastfm/genres";
 import { getOrComputeJson } from "@/lib/store";
 
-import {
-	AttendedSetlistsResponseSchema,
-	type ConcertsData,
-	type Setlist,
-	type SetlistArtist,
-} from "./schema";
+import { CONCERTS_DATA_FINGERPRINT, loadConcerts } from "./concerts-data";
+import type { ConcertsData, Setlist, SetlistArtist } from "./schema";
 
 class SetlistFmDataError extends TaggedError("SetlistFmDataError")<{
 	readonly error: unknown;
 }>() {
-	override message = "Failed to fetch attended setlists from Setlist.fm";
+	override message = "Failed to load attended concerts";
 }
 
-const SETLIST_FM_API_URL = "https://api.setlist.fm/rest/1.0";
-const MAX_PAGES = 5;
 const RECENT_SHOWS_COUNT = 8;
-const TOP_ARTISTS_COUNT = 8;
+const TOP_ARTISTS_COUNT = 10;
 const TOP_SONGS_COUNT = 10;
 const GENRE_ARTIST_SAMPLE_LIMIT = 20;
 const GENRE_COUNT = 6;
-export const SETLIST_FM_CACHE_KEY = "setlistfm:attended:v8";
-const CACHE_TTL_SECONDS = 24 * 60 * 60;
-
-const buildHeaders = (): HeadersInit => ({
-	"x-api-key": env.SETLIST_FM_API_KEY || "",
-	Accept: "application/json",
-});
-
-const fetchAttendedPage = async (
-	page: number,
-): Promise<
-	Result<
-		import("zod").infer<typeof AttendedSetlistsResponseSchema>,
-		SetlistFmDataError
-	>
-> => {
-	const url = `${SETLIST_FM_API_URL}/user/${encodeURIComponent(
-		SETLIST_FM_USER_ID,
-	)}/attended?p=${page}`;
-	const res = await fetchFresh({
-		url,
-		method: "GET",
-		headers: buildHeaders(),
-		schema: AttendedSetlistsResponseSchema,
-	});
-	if (Result.isError(res)) {
-		return Result.err(new SetlistFmDataError({ error: res.error }));
-	}
-	return Result.ok(res.value.data);
-};
+// Cache key includes the JSON content fingerprint so we recompute (and re-fetch
+// the ~80 Last.fm tag lookups for the genre radar) exactly when content/
+// concerts.json changes, not on a TTL. The TTL stays long as a backstop in
+// case Last.fm tag data drifts; the fingerprint handles content changes.
+export const SETLIST_FM_CACHE_KEY = `setlistfm:attended:v2:${CONCERTS_DATA_FINGERPRINT}`;
+const CACHE_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
 /**
  * Setlist.fm dates are dd-MM-yyyy. Returns null when malformed.
@@ -151,10 +119,63 @@ const songCount = (setlist: Setlist): number => {
 type CoreAggregation = {
 	totalShows: number;
 	uniqueArtists: number;
+	firstShowYear: number | null;
+	records: ConcertsData["records"];
+	showsByYear: ConcertsData["showsByYear"];
+	firstTimeByYear: ConcertsData["firstTimeByYear"];
+	setlistStats: ConcertsData["setlistStats"];
 	recentShows: ConcertsData["recentShows"];
 	topArtists: ConcertsData["topArtists"];
 	topSongs: ConcertsData["topSongs"];
 	weightedArtists: Array<{ key: string; name: string; weight: number }>;
+};
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const computeRecords = (
+	uniqueDays: ReadonlyArray<string>,
+): ConcertsData["records"] => {
+	if (uniqueDays.length === 0) {
+		return {
+			avgDaysBetweenShows: null,
+			biggestMonth: null,
+			biggestWeek: null,
+		};
+	}
+	const sorted = [...uniqueDays].sort();
+	const avgDaysBetweenShows =
+		sorted.length > 1
+			? Math.round(
+					(Date.parse(sorted[sorted.length - 1]!) - Date.parse(sorted[0]!)) /
+						MS_PER_DAY /
+						(sorted.length - 1),
+				)
+			: null;
+	const byMonth = new Map<string, number>();
+	const byWeek = new Map<string, number>();
+	for (const day of sorted) {
+		const monthKey = day.slice(0, 7);
+		byMonth.set(monthKey, (byMonth.get(monthKey) ?? 0) + 1);
+		const date = new Date(day);
+		date.setUTCDate(date.getUTCDate() - date.getUTCDay()); // Sunday-anchored
+		const weekKey = date.toISOString().slice(0, 10);
+		byWeek.set(weekKey, (byWeek.get(weekKey) ?? 0) + 1);
+	}
+	const monthEntry = [...byMonth.entries()].sort((a, b) => b[1] - a[1])[0];
+	const weekEntry = [...byWeek.entries()].sort((a, b) => b[1] - a[1])[0];
+	return {
+		avgDaysBetweenShows,
+		biggestMonth: monthEntry
+			? {
+					year: Number.parseInt(monthEntry[0].slice(0, 4), 10),
+					month: Number.parseInt(monthEntry[0].slice(5, 7), 10),
+					count: monthEntry[1],
+				}
+			: null,
+		biggestWeek: weekEntry
+			? { weekStartIso: weekEntry[0], count: weekEntry[1] }
+			: null,
+	};
 };
 
 const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
@@ -281,9 +302,114 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 		.sort((a, b) => b.weight - a.weight)
 		.slice(0, GENRE_ARTIST_SAMPLE_LIMIT);
 
+	const allDateIsos = [...showGroups.values()]
+		.map((g) => g.dateIso)
+		.filter((iso): iso is string => Boolean(iso));
+	const earliestIso = allDateIsos.length
+		? allDateIsos.reduce((min, iso) => (iso < min ? iso : min))
+		: null;
+	const firstShowYear = earliestIso
+		? Number.parseInt(earliestIso.slice(0, 4), 10)
+		: null;
+
+	// Records are computed across distinct show DAYS (multi-band nights count once).
+	const uniqueDays = [...new Set(allDateIsos.map((iso) => iso.slice(0, 10)))];
+	const records = computeRecords(uniqueDays);
+
+	// Shows per year — one entry per show (date+venue group), with rollups.
+	type YearAgg = {
+		count: number;
+		artists: Set<string>;
+		totalSongs: number;
+	};
+	const yearAggs = new Map<number, YearAgg>();
+	for (const group of showGroups.values()) {
+		if (!group.dateIso) continue;
+		const year = Number.parseInt(group.dateIso.slice(0, 4), 10);
+		const entry = yearAggs.get(year) ?? {
+			count: 0,
+			artists: new Set<string>(),
+			totalSongs: 0,
+		};
+		entry.count += 1;
+		for (const setlist of group.setlists) {
+			entry.artists.add(getArtistKey(setlist.artist));
+			entry.totalSongs += songCount(setlist);
+		}
+		yearAggs.set(year, entry);
+	}
+	const showsByYear: ConcertsData["showsByYear"] = [...yearAggs.entries()]
+		.map(([year, v]) => ({
+			year,
+			showCount: v.count,
+			uniqueArtists: v.artists.size,
+			totalSongs: v.totalSongs,
+		}))
+		.sort((a, b) => a.year - b.year);
+
+	// First-time-seen per year (per artist, not per setlist). Walk chronologically
+	// and bucket each artist's earliest year.
+	const sortedSetlists = [...setlists]
+		.map((s) => ({ s, iso: parseEventDateIso(s.eventDate) }))
+		.filter((entry): entry is { s: Setlist; iso: string } => Boolean(entry.iso))
+		.sort((a, b) => a.iso.localeCompare(b.iso));
+	const firstYearByArtist = new Map<string, number>();
+	const yearArtistSets = new Map<number, Set<string>>();
+	for (const { s, iso } of sortedSetlists) {
+		const year = Number.parseInt(iso.slice(0, 4), 10);
+		const key = getArtistKey(s.artist);
+		if (!firstYearByArtist.has(key)) firstYearByArtist.set(key, year);
+		const seen = yearArtistSets.get(year) ?? new Set<string>();
+		seen.add(key);
+		yearArtistSets.set(year, seen);
+	}
+	const firstTimeByYear: ConcertsData["firstTimeByYear"] = [
+		...yearArtistSets.entries(),
+	]
+		.map(([year, artists]) => {
+			let firstTime = 0;
+			let returning = 0;
+			for (const a of artists) {
+				if (firstYearByArtist.get(a) === year) firstTime += 1;
+				else returning += 1;
+			}
+			return { year, firstTime, returning };
+		})
+		.sort((a, b) => a.year - b.year);
+
+	// Setlist depth — average length and the single longest setlist across all
+	// per-artist appearances (openers + headliners both contribute).
+	let totalSongsAcrossSetlists = 0;
+	let setlistsWithSongs = 0;
+	let longestSetlist: ConcertsData["setlistStats"]["longestSetlist"] = null;
+	for (const setlist of setlists) {
+		const count = songCount(setlist);
+		if (count <= 0) continue;
+		totalSongsAcrossSetlists += count;
+		setlistsWithSongs += 1;
+		if (!longestSetlist || count > longestSetlist.songCount) {
+			longestSetlist = {
+				artist: setlist.artist.name,
+				songCount: count,
+			};
+		}
+	}
+	const setlistStats: ConcertsData["setlistStats"] = {
+		averageLength:
+			setlistsWithSongs > 0
+				? totalSongsAcrossSetlists / setlistsWithSongs
+				: 0,
+		longestSetlist,
+	};
+
 	return {
 		totalShows: showGroups.size,
 		uniqueArtists: topArtistsMap.size,
+		firstShowYear,
+		records,
+		showsByYear,
+		firstTimeByYear,
+		setlistStats,
 		recentShows,
 		topArtists,
 		topSongs,
@@ -323,46 +449,22 @@ const buildConcertsData = async (
 	return {
 		totalShows: core.totalShows,
 		uniqueArtists: core.uniqueArtists,
+		firstShowYear: core.firstShowYear,
 		recentShows: core.recentShows,
 		topArtists: core.topArtists,
 		topSongs: core.topSongs,
 		topGenres,
+		records: core.records,
+		showsByYear: core.showsByYear,
+		firstTimeByYear: core.firstTimeByYear,
+		setlistStats: core.setlistStats,
 	};
 };
 
 const computeAttendedConcerts = async (): Promise<
 	Result<ConcertsData, SetlistFmDataError>
 > => {
-	if (!env.SETLIST_FM_API_KEY) {
-		return Result.err(
-			new SetlistFmDataError({ error: "SETLIST_FM_API_KEY not set" }),
-		);
-	}
-
-	const firstPageResult = await fetchAttendedPage(1);
-	if (Result.isError(firstPageResult)) return firstPageResult;
-	const firstPage = firstPageResult.value;
-
-	const itemsPerPage = firstPage.itemsPerPage || 20;
-	const total = firstPage.total || 0;
-	const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
-	const pagesToFetch = Math.min(MAX_PAGES, totalPages);
-
-	const remainingPages: Array<number> = [];
-	for (let page = 2; page <= pagesToFetch; page += 1) {
-		remainingPages.push(page);
-	}
-
-	const remainingResults = await Promise.all(
-		remainingPages.map((page) => fetchAttendedPage(page)),
-	);
-
-	const setlists: Array<Setlist> = [...firstPage.setlist];
-	for (const pageResult of remainingResults) {
-		if (Result.isError(pageResult)) return pageResult;
-		setlists.push(...pageResult.value.setlist);
-	}
-
+	const setlists = loadConcerts();
 	return Result.ok(await buildConcertsData(setlists));
 };
 
@@ -376,11 +478,8 @@ const attendedConcerts = (): Promise<
 	});
 };
 
-const refreshAttendedConcerts = () => attendedConcerts();
-
 const setlistfm = {
 	attendedConcerts,
-	refreshAttendedConcerts,
 };
 
 export { setlistfm, SetlistFmDataError };

@@ -5,21 +5,12 @@ import { Text } from "@/components/Text";
 
 import "./Navigation.styles.css";
 
-// Concerts pull from Setlist.fm. The API key application takes manual review by
-// their team before any request is accepted, so until it's approved we hide the
-// /concerts entry from navigation. Set VITE_SETLIST_FM_API_APPROVED=true in .env
-// and restart once the approval email lands.
-const CONCERTS_APPROVED =
-	import.meta.env.VITE_SETLIST_FM_API_APPROVED === "true";
-
 const PAGE_LINKS = [
 	{ href: "/", label: "Home" },
 	{ href: "/calendar", label: "Calendar" },
 	{ href: "/posts", label: "Writing" },
 	{ href: "/listening", label: "Listening" },
-	...(CONCERTS_APPROVED
-		? [{ href: "/concerts", label: "Concerts" }]
-		: []),
+	{ href: "/concerts", label: "Concerts" },
 	{ href: "/reading", label: "Reading" },
 	{ href: "/racing", label: "Racing" },
 	{ href: "/uses", label: "Uses" },

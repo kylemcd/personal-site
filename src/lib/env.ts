@@ -12,7 +12,6 @@ const EnvSchema = z
 		SPOTIFY_CLIENT_SECRET: optionalString,
 		MUSIC_BRAINZ_CLIENT_ID: optionalString,
 		MUSIC_BRAINZ_CLIENT_SECRET: optionalString,
-		SETLIST_FM_API_KEY: optionalString,
 		CALENDAR_AUTH: optionalString,
 		KV_CACHE_VERSION: optionalString,
 		KV_READ_ONLY_CACHE: z

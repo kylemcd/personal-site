@@ -4,6 +4,7 @@ import { Result } from "better-result";
 
 import { AlbumShelf } from "@/components/AlbumShelf";
 import { Bookshelf } from "@/components/Bookshelf";
+import { ConcertsSection } from "@/components/ConcertsSection";
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { Experience } from "@/components/Experience";
 import { Garage61 } from "@/components/Garage61";
@@ -17,13 +18,15 @@ import { goodreads } from "@/lib/goodreads";
 import { lastfm } from "@/lib/lastfm";
 import { markdown } from "@/lib/markdown";
 import { buildMeta } from "@/lib/meta";
+import { setlistfm } from "@/lib/setlistfm";
 import "@/styles/routes/home.css";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
-	const [listeningRes, booksRes, racingRes] = await Promise.all([
+	const [listeningRes, booksRes, racingRes, concertsRes] = await Promise.all([
 		lastfm.recentActivity(),
 		goodreads.shelf(),
 		garage61.summary(),
+		setlistfm.attendedConcerts(),
 	]);
 	const writingRes = markdown.all();
 
@@ -33,6 +36,7 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 		? booksRes.value
 		: { reading: [], finished: [], next: [] };
 	const racing = Result.isOk(racingRes) ? racingRes.value : null;
+	const concerts = Result.isOk(concertsRes) ? concertsRes.value : null;
 
 	if (Result.isError(listeningRes)) {
 		console.error("Last.fm recentActivity failed:", listeningRes.error);
@@ -43,12 +47,16 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 	if (Result.isError(racingRes)) {
 		console.error("Garage61 summary failed:", racingRes.error);
 	}
+	if (Result.isError(concertsRes)) {
+		console.error("Setlist.fm attendedConcerts failed:", concertsRes.error);
+	}
 
 	return {
 		listening,
 		writing,
 		books,
 		racing,
+		concerts,
 	};
 });
 
@@ -62,7 +70,7 @@ export const Route = createFileRoute("/")({
 });
 
 function HomeRoute() {
-	const { listening, writing, books, racing } = Route.useLoaderData();
+	const { listening, writing, books, racing, concerts } = Route.useLoaderData();
 	const hasListeningContent = Boolean(
 		listening &&
 			(listening.nowPlaying ||
@@ -77,6 +85,7 @@ function HomeRoute() {
 			racing?.derived.overview.recentCars.length ||
 			racing?.derived.overview.totalTimeOnTrackSeconds,
 	);
+	const hasConcerts = Boolean(concerts && concerts.totalShows > 0);
 
 	return (
 		<>
@@ -145,6 +154,11 @@ function HomeRoute() {
 			{racing && hasRacingOverview && (
 				<div className="section-container section-container-flush-right">
 					<Garage61 overview={racing.derived.overview} titleHref="/racing" />
+				</div>
+			)}
+			{hasConcerts && concerts && (
+				<div className="section-container section-container-flush-right">
+					<ConcertsSection concerts={concerts} titleHref="/concerts" />
 				</div>
 			)}
 		</>

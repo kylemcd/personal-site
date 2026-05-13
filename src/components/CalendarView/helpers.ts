@@ -49,7 +49,7 @@ export const SOURCE_ACCENT_VAR: Record<CalendarSource, string> = {
 	listening: "var(--color-listening-blue)", // rgb(175, 48, 41) — red
 	racing: "var(--color-racing-red)", // rgb(32, 94, 166) — blue
 	reading: "rgb(135, 154, 57)", // green
-	concert: "var(--color-concert, #c084fc)",
+	concert: "var(--color-concert-orange)",
 	post: "var(--color-posts, #38bdf8)",
 };
 

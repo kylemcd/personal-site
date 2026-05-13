@@ -20,6 +20,7 @@
 	--color-accent: rgb(32, 94, 166);
 	--color-listening-blue: rgb(175, 48, 41);
 	--color-racing-red: rgb(32, 94, 166);
+	--color-concert-orange: rgb(188, 82, 21);
 	--color-transparent: transparent;
 
 	--font-family-sans:
@@ -44,4 +45,5 @@
 
 	--color-listening-blue: rgb(175, 48, 41);
 	--color-racing-red: rgb(32, 94, 166);
+	--color-concert-orange: rgb(188, 82, 21);
 }

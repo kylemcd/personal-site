@@ -59,17 +59,6 @@ export const SetlistSchema = z.object({
 
 export type Setlist = z.infer<typeof SetlistSchema>;
 
-export const AttendedSetlistsResponseSchema = z.object({
-	itemsPerPage: z.number(),
-	page: z.number(),
-	total: z.number(),
-	setlist: z.array(SetlistSchema).optional().default([]),
-});
-
-export type AttendedSetlistsResponse = z.infer<
-	typeof AttendedSetlistsResponseSchema
->;
-
 /**
  * Normalized data shape consumed by the UI.
  *
@@ -81,6 +70,8 @@ export type AttendedSetlistsResponse = z.infer<
 export type ConcertsData = {
 	totalShows: number;
 	uniqueArtists: number;
+	/** Year of the earliest dated setlist; `null` if no setlists have parsable dates. */
+	firstShowYear: number | null;
 	recentShows: Array<{
 		artists: Array<{
 			name: string;
@@ -107,4 +98,31 @@ export type ConcertsData = {
 		name: string;
 		share: number;
 	}>;
+	/** Cadence KPIs computed across the full attendance history. */
+	records: {
+		avgDaysBetweenShows: number | null;
+		biggestMonth: { year: number; month: number; count: number } | null;
+		biggestWeek: { weekStartIso: string; count: number } | null;
+	};
+	/** Year-by-year show count + supplementary metrics for the bar chart. */
+	showsByYear: Array<{
+		year: number;
+		showCount: number;
+		uniqueArtists: number;
+		totalSongs: number;
+	}>;
+	/** Per-year split of artists seen for the first time vs. returning artists. */
+	firstTimeByYear: Array<{
+		year: number;
+		firstTime: number;
+		returning: number;
+	}>;
+	/** Setlist depth: average length and the single longest setlist. */
+	setlistStats: {
+		averageLength: number;
+		longestSetlist: {
+			artist: string;
+			songCount: number;
+		} | null;
+	};
 };
