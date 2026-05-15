@@ -40,6 +40,11 @@
 			"class_name": "RefreshLastFmWorkflow"
 		},
 		{
+			"binding": "SETLISTFM_REFRESH_WORKFLOW",
+			"name": "refresh-setlistfm",
+			"class_name": "RefreshSetlistFmWorkflow"
+		},
+		{
 			"binding": "STALE_MONITOR_WORKFLOW",
 			"name": "stale-data-monitor",
 			"class_name": "StaleDataMonitorWorkflow"

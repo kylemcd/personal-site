@@ -16,6 +16,11 @@ import type {
 } from "./workflows/refresh-lastfm";
 import { RefreshLastFmWorkflow } from "./workflows/refresh-lastfm";
 import type {
+	RefreshWorkflowParams as SetlistFmRefreshParams,
+	RefreshSetlistFmWorkflowEnv,
+} from "./workflows/refresh-setlistfm";
+import { RefreshSetlistFmWorkflow } from "./workflows/refresh-setlistfm";
+import type {
 	StaleMonitorParams,
 	StaleMonitorWorkflowEnv,
 } from "./workflows/stale-data-monitor";
@@ -25,7 +30,8 @@ import { applyBaseRuntimeEnv } from "./workflows/shared";
 type WorkerEnv = StaleMonitorWorkflowEnv &
 	RefreshGarage61WorkflowEnv &
 	RefreshGoodreadsWorkflowEnv &
-	RefreshLastFmWorkflowEnv & {
+	RefreshLastFmWorkflowEnv &
+	RefreshSetlistFmWorkflowEnv & {
 		GARAGE61_REFRESH_WORKFLOW?: {
 			create: (options?: {
 				id?: string;
@@ -44,6 +50,12 @@ type WorkerEnv = StaleMonitorWorkflowEnv &
 				params?: LastFmRefreshParams;
 			}) => Promise<unknown>;
 		};
+		SETLISTFM_REFRESH_WORKFLOW?: {
+			create: (options?: {
+				id?: string;
+				params?: SetlistFmRefreshParams;
+			}) => Promise<unknown>;
+		};
 		STALE_MONITOR_WORKFLOW?: {
 			create: (options?: {
 				id?: string;
@@ -56,6 +68,7 @@ export {
 	RefreshGarage61Workflow,
 	RefreshGoodreadsWorkflow,
 	RefreshLastFmWorkflow,
+	RefreshSetlistFmWorkflow,
 	StaleDataMonitorWorkflow,
 };
 
@@ -133,6 +146,7 @@ export default {
 		triggerRefreshWorkflow(ctx, env.GARAGE61_REFRESH_WORKFLOW, "GARAGE61_REFRESH_WORKFLOW", "refresh-garage61", triggeredAt);
 		triggerRefreshWorkflow(ctx, env.GOODREADS_REFRESH_WORKFLOW, "GOODREADS_REFRESH_WORKFLOW", "refresh-goodreads", triggeredAt);
 		triggerRefreshWorkflow(ctx, env.LASTFM_REFRESH_WORKFLOW, "LASTFM_REFRESH_WORKFLOW", "refresh-lastfm", triggeredAt);
+		triggerRefreshWorkflow(ctx, env.SETLISTFM_REFRESH_WORKFLOW, "SETLISTFM_REFRESH_WORKFLOW", "refresh-setlistfm", triggeredAt);
 
 		if (minute !== 0) return;
 		if (!env.STALE_MONITOR_WORKFLOW) {

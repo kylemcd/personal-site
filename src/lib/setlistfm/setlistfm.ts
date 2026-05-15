@@ -6,10 +6,17 @@ import {
 	buildSimilarTagMap,
 	buildTopGenresFromWeights,
 } from "@/lib/lastfm/genres";
-import { getOrComputeJson } from "@/lib/store";
+import { getOrComputeJson, refreshJson } from "@/lib/store";
 
-import { CONCERTS_DATA_FINGERPRINT, loadConcerts } from "./concerts-data";
+import {
+	CONCERTS_DATA_FINGERPRINT,
+	loadConcertEntries,
+	loadConcertsWithSource,
+	SETLIST_FM_CONCERTS_KV_KEY,
+	type ConcertsFile,
+} from "./concerts-data";
 import type { ConcertsData, Setlist, SetlistArtist } from "./schema";
+import { scrapeConcertEntriesDiff } from "./scrape";
 
 class SetlistFmDataError extends TaggedError("SetlistFmDataError")<{
 	readonly error: unknown;
@@ -26,8 +33,9 @@ const GENRE_COUNT = 6;
 // the ~80 Last.fm tag lookups for the genre radar) exactly when content/
 // concerts.json changes, not on a TTL. The TTL stays long as a backstop in
 // case Last.fm tag data drifts; the fingerprint handles content changes.
-export const SETLIST_FM_CACHE_KEY = `setlistfm:attended:v2:${CONCERTS_DATA_FINGERPRINT}`;
+export const SETLIST_FM_CACHE_KEY = `setlistfm:attended:v3:${CONCERTS_DATA_FINGERPRINT}`;
 const CACHE_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
+const RAW_CONCERTS_TTL_SECONDS = 365 * 24 * 60 * 60; // 1 year
 
 /**
  * Setlist.fm dates are dd-MM-yyyy. Returns null when malformed.
@@ -464,8 +472,54 @@ const buildConcertsData = async (
 const computeAttendedConcerts = async (): Promise<
 	Result<ConcertsData, SetlistFmDataError>
 > => {
-	const setlists = loadConcerts();
+	const { setlists, source } = await loadConcertsWithSource();
+	if (source === "file") {
+		console.warn("[setlistfm] using bundled concerts.json fallback");
+	}
 	return Result.ok(await buildConcertsData(setlists));
+};
+
+const refreshConcertsFromSetlistProfile = async (params?: {
+	user?: string;
+}): Promise<
+	Result<
+		{
+			totalConcerts: number;
+			addedConcerts: number;
+			discoveredLinks: number;
+		},
+		SetlistFmDataError
+	>
+> => {
+	const existing = await loadConcertEntries();
+	const scrapeResult = await scrapeConcertEntriesDiff({
+		...(params?.user ? { user: params.user } : {}),
+		existing: existing.entries,
+	});
+	if (Result.isError(scrapeResult)) {
+		return Result.err(new SetlistFmDataError({ error: scrapeResult.error }));
+	}
+
+	const rawPayload: ConcertsFile = { concerts: scrapeResult.value.concerts };
+	const rawWrite = await refreshJson<ConcertsFile, SetlistFmDataError>({
+		key: SETLIST_FM_CONCERTS_KV_KEY,
+		ttlSeconds: RAW_CONCERTS_TTL_SECONDS,
+		compute: async () => Result.ok(rawPayload),
+	});
+	if (Result.isError(rawWrite)) return rawWrite;
+
+	const aggregateWrite = await refreshJson<ConcertsData, SetlistFmDataError>({
+		key: SETLIST_FM_CACHE_KEY,
+		ttlSeconds: CACHE_TTL_SECONDS,
+		compute: computeAttendedConcerts,
+	});
+	if (Result.isError(aggregateWrite)) return aggregateWrite;
+
+	return Result.ok({
+		totalConcerts: scrapeResult.value.concerts.length,
+		addedConcerts: scrapeResult.value.added,
+		discoveredLinks: scrapeResult.value.discoveredLinks,
+	});
 };
 
 const attendedConcerts = (): Promise<
@@ -480,6 +534,7 @@ const attendedConcerts = (): Promise<
 
 const setlistfm = {
 	attendedConcerts,
+	refreshConcertsFromSetlistProfile,
 };
 
 export { setlistfm, SetlistFmDataError };
