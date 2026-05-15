@@ -657,15 +657,17 @@ const summaryUncached = async (
 		const nonOvalTimeShareStatistics = enrichStatistics(
 			allStatisticsRows,
 		).filter((row) => isNonOvalRow(row));
+		const allTimeShareStatistics = enrichStatistics(allStatisticsRows);
+		const allRaceQualiStatistics = enrichStatistics(raceQualiStatisticsRows);
 		const nonOvalRaceQualiStatistics = enrichStatistics(
 			raceQualiStatisticsRows,
 		).filter((row) => isNonOvalRow(row));
 
-		const totalTimeOnTrackSeconds = nonOvalTimeShareStatistics.reduce(
+		const totalTimeOnTrackSeconds = allTimeShareStatistics.reduce(
 			(sum, row) => sum + (row.timeOnTrack ?? 0),
 			0,
 		);
-		const racingTimeOnTrackSeconds = nonOvalRaceQualiStatistics.reduce(
+		const racingTimeOnTrackSeconds = allRaceQualiStatistics.reduce(
 			(sum, row) => sum + (row.timeOnTrack ?? 0),
 			0,
 		);
@@ -722,7 +724,7 @@ const summaryUncached = async (
 			}
 		>();
 
-		for (const [rowIndex, row] of nonOvalTimeShareStatistics.entries()) {
+		for (const [rowIndex, row] of allTimeShareStatistics.entries()) {
 			const rowTime = row.timeOnTrack ?? 0;
 			const rowTimestamp = row.day ? Date.parse(row.day) : Number.NaN;
 			const validTimestamp = Number.isFinite(rowTimestamp)
