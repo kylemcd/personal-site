@@ -454,8 +454,25 @@ const extractTrackIsOval = (data: unknown, targetId: number): boolean => {
 const normalizeName = (value: string): string =>
 	value.trim().toLowerCase().replace(/\s+/g, " ");
 
-const isLikelyOvalTrackName = (trackName: string): boolean =>
-	/\b(oval|speedway|superspeedway|tri-oval)\b/.test(normalizeName(trackName));
+const isLikelyOvalTrackName = (trackName: string): boolean => {
+	const name = normalizeName(trackName);
+	if (!name) return false;
+	if (/\b(roval|road course)\b/.test(name)) return false;
+	if (/\b(oval|superspeedway|tri-oval|speedway)\b/.test(name)) return true;
+	// "Raceway" is ambiguous (for example Laguna Seca), so only treat it as
+	// oval when the name doesn't also clearly indicate a road/street circuit.
+	if (/\braceway\b/.test(name)) {
+		if (
+			/\b(laguna seca|road|street|circuit|autodromo|autódromo|international)\b/.test(
+				name,
+			)
+		) {
+			return false;
+		}
+		return true;
+	}
+	return false;
+};
 
 const stableNameId = (kind: "track" | "car", name: string): number => {
 	const key = `${kind}:${normalizeName(name)}`;
