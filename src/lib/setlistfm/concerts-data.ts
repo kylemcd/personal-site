@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { Result } from "better-result";
 
 import concertsJson from "../../../content/concerts.json";
 import { hashString } from "@/lib/hash";
+import { getJson } from "@/lib/store";
 
 import type { Setlist } from "./schema";
 
@@ -12,6 +14,7 @@ import type { Setlist } from "./schema";
  * changes — not on a TTL.
  */
 export const CONCERTS_DATA_FINGERPRINT = hashString(JSON.stringify(concertsJson));
+export const SETLIST_FM_CONCERTS_KV_KEY = "setlistfm:concerts:raw:v1";
 
 const SongSchema = z.union([
 	z.string(),
@@ -37,6 +40,7 @@ const ConcertsFileSchema = z.object({
 });
 
 export type ConcertEntry = z.infer<typeof ConcertEntrySchema>;
+export type ConcertsFile = z.infer<typeof ConcertsFileSchema>;
 
 const isoDateToSetlistFm = (iso: string): string => {
 	const [y, m, d] = iso.split("-");
@@ -74,3 +78,37 @@ export const loadConcerts = (): ReadonlyArray<Setlist> => {
 	const parsed = ConcertsFileSchema.parse(concertsJson);
 	return parsed.concerts.map(entryToSetlist);
 };
+
+const loadConcertEntriesFromFile = (): ConcertsFile => {
+	return ConcertsFileSchema.parse(concertsJson);
+};
+
+export const loadConcertEntries = async (): Promise<{
+	entries: ConcertsFile["concerts"];
+	source: "kv" | "file";
+}> => {
+	const fromKv = await getJson<ConcertsFile>({ key: SETLIST_FM_CONCERTS_KV_KEY });
+	if (Result.isOk(fromKv) && fromKv.value) {
+		const parsed = ConcertsFileSchema.safeParse(fromKv.value);
+		if (parsed.success) return { entries: parsed.data.concerts, source: "kv" };
+		console.error("[setlistfm] invalid KV concerts payload; falling back to file", {
+			issues: parsed.error.issues,
+		});
+	}
+
+	const parsed = loadConcertEntriesFromFile();
+	return { entries: parsed.concerts, source: "file" };
+};
+
+export const loadConcertsWithSource = async (): Promise<{
+	setlists: ReadonlyArray<Setlist>;
+	source: "kv" | "file";
+}> => {
+	const data = await loadConcertEntries();
+	return {
+		setlists: data.entries.map(entryToSetlist),
+		source: data.source,
+	};
+};
+
+export { ConcertEntrySchema, ConcertsFileSchema };
