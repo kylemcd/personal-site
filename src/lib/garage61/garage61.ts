@@ -618,6 +618,9 @@ const summaryUncached = async (
 		const carCategoryByCarId = new Map(
 			carLookups.map((car) => [car.id, car.categoryId]),
 		);
+		const isNonOvalRow = (row: { trackId: number | null; track: string }) =>
+			(row.trackId === null || trackIsOvalById.get(row.trackId) !== true) &&
+			!isLikelyOvalTrackName(row.track);
 
 		const enrichStatistics = (
 			rows: ReadonlyArray<(typeof allStatisticsRows)[number]>,
@@ -636,16 +639,10 @@ const summaryUncached = async (
 
 		const nonOvalTimeShareStatistics = enrichStatistics(
 			allStatisticsRows,
-		).filter(
-			(row) =>
-				row.trackId === null || trackIsOvalById.get(row.trackId) !== true,
-		);
+		).filter((row) => isNonOvalRow(row));
 		const nonOvalRaceQualiStatistics = enrichStatistics(
 			raceQualiStatisticsRows,
-		).filter(
-			(row) =>
-				row.trackId === null || trackIsOvalById.get(row.trackId) !== true,
-		);
+		).filter((row) => isNonOvalRow(row));
 
 		const totalTimeOnTrackSeconds = nonOvalTimeShareStatistics.reduce(
 			(sum, row) => sum + (row.timeOnTrack ?? 0),
