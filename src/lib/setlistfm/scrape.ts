@@ -32,6 +32,10 @@ class SetlistScrapeError extends TaggedError("SetlistScrapeError")<{
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
+const getTodayIsoDate = (): string => new Date().toISOString().slice(0, 10);
+
+const isFutureConcertDate = (date: string): boolean => date > getTodayIsoDate();
+
 const decodeHtml = (value: string): string =>
 	value
 		.replace(/&amp;/g, "&")
@@ -269,8 +273,12 @@ const mergeConcertEntries = (
 	incoming: ReadonlyArray<ConcertEntry>,
 ): ConcertEntry[] => {
 	const byId = new Map<string, ConcertEntry>();
-	for (const entry of existing) byId.set(entry.id, entry);
-	for (const entry of incoming) byId.set(entry.id, entry);
+	for (const entry of existing) {
+		if (!isFutureConcertDate(entry.date)) byId.set(entry.id, entry);
+	}
+	for (const entry of incoming) {
+		if (!isFutureConcertDate(entry.date)) byId.set(entry.id, entry);
+	}
 	return [...byId.values()].sort((a, b) => b.date.localeCompare(a.date));
 };
 
@@ -311,7 +319,9 @@ const scrapeConcertEntriesDiff = async (params?: {
 			await sleep(REQUEST_DELAY_MS);
 			continue;
 		}
-		if (entry.value) incoming.push(entry.value);
+		if (entry.value && !isFutureConcertDate(entry.value.date)) {
+			incoming.push(entry.value);
+		}
 		await sleep(REQUEST_DELAY_MS);
 	}
 

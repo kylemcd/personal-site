@@ -42,6 +42,15 @@ const ConcertsFileSchema = z.object({
 export type ConcertEntry = z.infer<typeof ConcertEntrySchema>;
 export type ConcertsFile = z.infer<typeof ConcertsFileSchema>;
 
+const getTodayIsoDate = (): string => new Date().toISOString().slice(0, 10);
+
+const filterFutureConcerts = (
+	entries: ConcertsFile["concerts"],
+): ConcertsFile["concerts"] => {
+	const today = getTodayIsoDate();
+	return entries.filter((entry) => entry.date <= today);
+};
+
 const isoDateToSetlistFm = (iso: string): string => {
 	const [y, m, d] = iso.split("-");
 	return `${d}-${m}-${y}`;
@@ -90,14 +99,19 @@ export const loadConcertEntries = async (): Promise<{
 	const fromKv = await getJson<ConcertsFile>({ key: SETLIST_FM_CONCERTS_KV_KEY });
 	if (Result.isOk(fromKv) && fromKv.value) {
 		const parsed = ConcertsFileSchema.safeParse(fromKv.value);
-		if (parsed.success) return { entries: parsed.data.concerts, source: "kv" };
+		if (parsed.success) {
+			return {
+				entries: filterFutureConcerts(parsed.data.concerts),
+				source: "kv",
+			};
+		}
 		console.error("[setlistfm] invalid KV concerts payload; falling back to file", {
 			issues: parsed.error.issues,
 		});
 	}
 
 	const parsed = loadConcertEntriesFromFile();
-	return { entries: parsed.concerts, source: "file" };
+	return { entries: filterFutureConcerts(parsed.concerts), source: "file" };
 };
 
 export const loadConcertsWithSource = async (): Promise<{
