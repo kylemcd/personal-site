@@ -146,7 +146,15 @@ export default {
 		triggerRefreshWorkflow(ctx, env.GARAGE61_REFRESH_WORKFLOW, "GARAGE61_REFRESH_WORKFLOW", "refresh-garage61", triggeredAt);
 		triggerRefreshWorkflow(ctx, env.GOODREADS_REFRESH_WORKFLOW, "GOODREADS_REFRESH_WORKFLOW", "refresh-goodreads", triggeredAt);
 		triggerRefreshWorkflow(ctx, env.LASTFM_REFRESH_WORKFLOW, "LASTFM_REFRESH_WORKFLOW", "refresh-lastfm", triggeredAt);
-		triggerRefreshWorkflow(ctx, env.SETLISTFM_REFRESH_WORKFLOW, "SETLISTFM_REFRESH_WORKFLOW", "refresh-setlistfm", triggeredAt);
+		if (scheduledAt.getUTCHours() === 0 && minute === 0) {
+			triggerRefreshWorkflow(
+				ctx,
+				env.SETLISTFM_REFRESH_WORKFLOW,
+				"SETLISTFM_REFRESH_WORKFLOW",
+				"refresh-setlistfm",
+				triggeredAt,
+			);
+		}
 
 		if (minute !== 0) return;
 		if (!env.STALE_MONITOR_WORKFLOW) {
