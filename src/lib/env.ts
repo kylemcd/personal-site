@@ -8,8 +8,6 @@ const EnvSchema = z
 		LASTFM_API_KEY: optionalString,
 		IRACING_EMAIL: optionalString,
 		IRACING_ENCODED_PASSWORD: optionalString,
-		SPOTIFY_CLIENT_ID: optionalString,
-		SPOTIFY_CLIENT_SECRET: optionalString,
 		MUSIC_BRAINZ_CLIENT_ID: optionalString,
 		MUSIC_BRAINZ_CLIENT_SECRET: optionalString,
 		CALENDAR_AUTH: optionalString,

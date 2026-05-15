@@ -2,7 +2,6 @@ import { Result, TaggedError } from "better-result";
 
 import { env } from "@/lib/env";
 import { fetchFresh } from "@/lib/fetch";
-import { enrichWrappedWithSpotifyArtistImages } from "@/lib/spotify";
 import { getOrComputeJson } from "@/lib/store";
 import { LASTFM_USERNAME } from "@/lib/config";
 
@@ -798,15 +797,7 @@ const recentActivity = async (): Promise<
 			nowMs: Date.now(),
 		}),
 	);
-
-	if (!listening.wrapped) return Result.ok(listening);
-
-	const wrappedRes = await enrichWrappedWithSpotifyArtistImages(
-		listening.wrapped,
-	);
-	if (Result.isError(wrappedRes)) return Result.ok(listening);
-
-	return Result.ok({ ...listening, wrapped: wrappedRes.value });
+	return Result.ok(listening);
 };
 
 const refreshMonthlyTop = () => monthlyTopData();
