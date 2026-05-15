@@ -1,20 +1,12 @@
 import { z } from "zod";
 import { Result } from "better-result";
 
-import concertsJson from "../../../content/concerts.json";
-import { hashString } from "@/lib/hash";
 import { getJson } from "@/lib/store";
 
 import type { Setlist } from "./schema";
 
-/**
- * Content-addressed fingerprint of the bundled concerts JSON. Using this in
- * the cache key means the aggregated data (including the ~80 Last.fm tag
- * fetches that drive the genre radar) is recomputed exactly when the JSON
- * changes — not on a TTL.
- */
-export const CONCERTS_DATA_FINGERPRINT = hashString(JSON.stringify(concertsJson));
 export const SETLIST_FM_CONCERTS_KV_KEY = "setlistfm:concerts:raw:v1";
+export const SETLIST_FM_CONCERTS_BACKUP_KV_KEY = "setlistfm:concerts:raw:backup:v1";
 
 const SongSchema = z.union([
 	z.string(),
@@ -77,24 +69,9 @@ const entryToSetlist = (entry: ConcertEntry): Setlist => ({
 	url: entry.url,
 });
 
-/**
- * Load and validate content/concerts.json, returning entries in the verbose
- * Setlist shape that aggregateCore consumes. Throws on schema parse failure so
- * a malformed JSON file fails loudly at import time rather than silently
- * yielding empty data.
- */
-export const loadConcerts = (): ReadonlyArray<Setlist> => {
-	const parsed = ConcertsFileSchema.parse(concertsJson);
-	return parsed.concerts.map(entryToSetlist);
-};
-
-const loadConcertEntriesFromFile = (): ConcertsFile => {
-	return ConcertsFileSchema.parse(concertsJson);
-};
-
 export const loadConcertEntries = async (): Promise<{
 	entries: ConcertsFile["concerts"];
-	source: "kv" | "file";
+	source: "kv" | "backup";
 }> => {
 	const fromKv = await getJson<ConcertsFile>({ key: SETLIST_FM_CONCERTS_KV_KEY });
 	if (Result.isOk(fromKv) && fromKv.value) {
@@ -105,18 +82,33 @@ export const loadConcertEntries = async (): Promise<{
 				source: "kv",
 			};
 		}
-		console.error("[setlistfm] invalid KV concerts payload; falling back to file", {
+		console.error("[setlistfm] invalid KV concerts payload; falling back to backup", {
 			issues: parsed.error.issues,
 		});
 	}
 
-	const parsed = loadConcertEntriesFromFile();
-	return { entries: filterFutureConcerts(parsed.concerts), source: "file" };
+	const fromBackup = await getJson<ConcertsFile>({
+		key: SETLIST_FM_CONCERTS_BACKUP_KV_KEY,
+	});
+	if (Result.isOk(fromBackup) && fromBackup.value) {
+		const parsed = ConcertsFileSchema.safeParse(fromBackup.value);
+		if (parsed.success) {
+			return {
+				entries: filterFutureConcerts(parsed.data.concerts),
+				source: "backup",
+			};
+		}
+		console.error("[setlistfm] invalid backup KV concerts payload", {
+			issues: parsed.error.issues,
+		});
+	}
+
+	return { entries: [], source: "backup" };
 };
 
 export const loadConcertsWithSource = async (): Promise<{
 	setlists: ReadonlyArray<Setlist>;
-	source: "kv" | "file";
+	source: "kv" | "backup";
 }> => {
 	const data = await loadConcertEntries();
 	return {

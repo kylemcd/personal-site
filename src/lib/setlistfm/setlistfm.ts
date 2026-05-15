@@ -9,9 +9,9 @@ import {
 import { getOrComputeJson, refreshJson } from "@/lib/store";
 
 import {
-	CONCERTS_DATA_FINGERPRINT,
 	loadConcertEntries,
 	loadConcertsWithSource,
+	SETLIST_FM_CONCERTS_BACKUP_KV_KEY,
 	SETLIST_FM_CONCERTS_KV_KEY,
 	type ConcertsFile,
 } from "./concerts-data";
@@ -29,11 +29,7 @@ const TOP_ARTISTS_COUNT = 10;
 const TOP_SONGS_COUNT = 10;
 const GENRE_ARTIST_SAMPLE_LIMIT = 20;
 const GENRE_COUNT = 6;
-// Cache key includes the JSON content fingerprint so we recompute (and re-fetch
-// the ~80 Last.fm tag lookups for the genre radar) exactly when content/
-// concerts.json changes, not on a TTL. The TTL stays long as a backstop in
-// case Last.fm tag data drifts; the fingerprint handles content changes.
-export const SETLIST_FM_CACHE_KEY = `setlistfm:attended:v3:${CONCERTS_DATA_FINGERPRINT}`;
+export const SETLIST_FM_CACHE_KEY = "setlistfm:attended:v4";
 const CACHE_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const RAW_CONCERTS_TTL_SECONDS = 365 * 24 * 60 * 60; // 1 year
 
@@ -473,8 +469,8 @@ const computeAttendedConcerts = async (): Promise<
 	Result<ConcertsData, SetlistFmDataError>
 > => {
 	const { setlists, source } = await loadConcertsWithSource();
-	if (source === "file") {
-		console.warn("[setlistfm] using bundled concerts.json fallback");
+	if (source === "backup") {
+		console.warn("[setlistfm] using backup KV concerts payload");
 	}
 	return Result.ok(await buildConcertsData(setlists));
 };
@@ -501,6 +497,14 @@ const refreshConcertsFromSetlistProfile = async (params?: {
 	}
 
 	const rawPayload: ConcertsFile = { concerts: scrapeResult.value.concerts };
+	const backupPayload: ConcertsFile = { concerts: existing.entries };
+	const backupWrite = await refreshJson<ConcertsFile, SetlistFmDataError>({
+		key: SETLIST_FM_CONCERTS_BACKUP_KV_KEY,
+		ttlSeconds: RAW_CONCERTS_TTL_SECONDS,
+		compute: async () => Result.ok(backupPayload),
+	});
+	if (Result.isError(backupWrite)) return backupWrite;
+
 	const rawWrite = await refreshJson<ConcertsFile, SetlistFmDataError>({
 		key: SETLIST_FM_CONCERTS_KV_KEY,
 		ttlSeconds: RAW_CONCERTS_TTL_SECONDS,
