@@ -26,11 +26,13 @@ export const RefreshSetlistFmWorkflow = makeRefreshWorkflow<RefreshSetlistFmWork
 		const data = value as {
 			totalConcerts: number;
 			addedConcerts: number;
+			updatedConcerts: number;
 			discoveredLinks: number;
 		};
 		return {
 			totalConcerts: data.totalConcerts,
 			addedConcerts: data.addedConcerts,
+			updatedConcerts: data.updatedConcerts,
 			discoveredLinks: data.discoveredLinks,
 		};
 	},

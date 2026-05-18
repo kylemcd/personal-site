@@ -6,6 +6,8 @@ const SETLIST_FM_BASE_URL = "https://www.setlist.fm";
 const SETLIST_FM_USER_DEFAULT = "kpmdev";
 const REQUEST_DELAY_MS = 350;
 const MAX_PAGES = 25;
+const RECENT_REFRESH_DAYS = 31;
+const RECENT_REFRESH_LIMIT = 40;
 const USER_AGENT =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
@@ -35,6 +37,19 @@ const sleep = (ms: number): Promise<void> =>
 const getTodayIsoDate = (): string => new Date().toISOString().slice(0, 10);
 
 const isFutureConcertDate = (date: string): boolean => date > getTodayIsoDate();
+
+const isWithinRecentDays = (dateIso: string, days: number): boolean => {
+	const now = Date.now();
+	const timestamp = Date.parse(`${dateIso}T00:00:00Z`);
+	if (Number.isNaN(timestamp)) return false;
+	const diffDays = (now - timestamp) / (1000 * 60 * 60 * 24);
+	return diffDays >= 0 && diffDays <= days;
+};
+
+const countSongs = (entry: ConcertEntry): number => entry.songs.length;
+
+const needsBackfill = (entry: ConcertEntry): boolean =>
+	countSongs(entry) === 0 || !entry.tour;
 
 const decodeHtml = (value: string): string =>
 	value
@@ -290,6 +305,7 @@ const scrapeConcertEntriesDiff = async (params?: {
 		{
 			concerts: ConcertEntry[];
 			added: number;
+			updated: number;
 			discoveredLinks: number;
 		},
 		SetlistScrapeError
@@ -303,16 +319,29 @@ const scrapeConcertEntriesDiff = async (params?: {
 	if (Result.isError(linksResult)) return linksResult;
 	const links = linksResult.value;
 	const newLinks = links.filter((url) => !existingIds.has(slugFromUrl(url)));
-	if (newLinks.length === 0) {
+
+	const existingById = new Map(existing.map((entry) => [entry.id, entry]));
+	const refreshLinks = links
+		.filter((url) => {
+			const entry = existingById.get(slugFromUrl(url));
+			if (!entry) return false;
+			if (needsBackfill(entry)) return true;
+			return isWithinRecentDays(entry.date, RECENT_REFRESH_DAYS);
+		})
+		.slice(0, RECENT_REFRESH_LIMIT);
+
+	if (newLinks.length === 0 && refreshLinks.length === 0) {
 		return Result.ok({
 			concerts: [...existing].sort((a, b) => b.date.localeCompare(a.date)),
 			added: 0,
+			updated: 0,
 			discoveredLinks: links.length,
 		});
 	}
 
 	const incoming: ConcertEntry[] = [];
-	for (const url of newLinks) {
+	const urlsToFetch = [...newLinks, ...refreshLinks];
+	for (const url of urlsToFetch) {
 		const entry = await fetchSetlistEntry(url);
 		if (Result.isError(entry)) {
 			console.error("[setlistfm] failed to fetch setlist", { url, error: entry.error });
@@ -325,9 +354,15 @@ const scrapeConcertEntriesDiff = async (params?: {
 		await sleep(REQUEST_DELAY_MS);
 	}
 
+	const incomingIds = new Set(incoming.map((entry) => entry.id));
+	const added = incoming.filter((entry) => !existingIds.has(entry.id)).length;
+	const updated = incoming.filter((entry) => existingIds.has(entry.id)).length;
+	const retainedExisting = existing.filter((entry) => !incomingIds.has(entry.id));
+
 	return Result.ok({
-		concerts: mergeConcertEntries(existing, incoming),
-		added: incoming.length,
+		concerts: mergeConcertEntries(retainedExisting, incoming),
+		added,
+		updated,
 		discoveredLinks: links.length,
 	});
 };

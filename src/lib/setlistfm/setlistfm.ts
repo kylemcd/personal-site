@@ -482,6 +482,7 @@ const refreshConcertsFromSetlistProfile = async (params?: {
 		{
 			totalConcerts: number;
 			addedConcerts: number;
+			updatedConcerts: number;
 			discoveredLinks: number;
 		},
 		SetlistFmDataError
@@ -522,6 +523,7 @@ const refreshConcertsFromSetlistProfile = async (params?: {
 	return Result.ok({
 		totalConcerts: scrapeResult.value.concerts.length,
 		addedConcerts: scrapeResult.value.added,
+		updatedConcerts: scrapeResult.value.updated,
 		discoveredLinks: scrapeResult.value.discoveredLinks,
 	});
 };
