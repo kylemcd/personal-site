@@ -27,6 +27,7 @@ class SetlistFmDataError extends TaggedError("SetlistFmDataError")<{
 const RECENT_SHOWS_COUNT = 8;
 const TOP_ARTISTS_COUNT = 10;
 const TOP_SONGS_COUNT = 10;
+const TOP_SONG_CLOSER_BONUS = 0.5;
 const GENRE_ARTIST_SAMPLE_LIMIT = 20;
 const GENRE_COUNT = 6;
 export const SETLIST_FM_CACHE_KEY = "setlistfm:attended:v4";
@@ -221,7 +222,13 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 	>();
 	const topSongsMap = new Map<
 		string,
-		{ name: string; artist: string; artistKey: string; count: number }
+		{
+			name: string;
+			artist: string;
+			artistKey: string;
+			count: number;
+			closerCount: number;
+		}
 	>();
 
 	for (const [showKey, group] of showGroups) {
@@ -261,22 +268,30 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 			}
 
 			for (const set of setlist.sets?.set ?? []) {
+				const nonCoverSongs = (set.song ?? []).filter((song) => !song.cover);
+				const closerSong = nonCoverSongs.at(-1);
+				const closerKey = closerSong
+					? normalizeSongKey(closerSong.name?.trim() ?? "")
+					: "";
 				for (const song of set.song ?? []) {
 					if (song.cover) continue;
 					const trimmed = song.name?.trim() ?? "";
 					if (!trimmed) continue;
 					const normalized = normalizeSongKey(trimmed);
 					if (!normalized) continue;
+					const isCloser = closerKey.length > 0 && normalized === closerKey;
 					const songKey = `${artistKey}::${normalized}`;
 					const existingSong = topSongsMap.get(songKey);
 					if (existingSong) {
 						existingSong.count += 1;
+						if (isCloser) existingSong.closerCount += 1;
 					} else {
 						topSongsMap.set(songKey, {
 							name: trimmed,
 							artist: setlist.artist.name,
 							artistKey,
 							count: 1,
+							closerCount: isCloser ? 1 : 0,
 						});
 					}
 				}
@@ -320,7 +335,13 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 	// Keep one representative top song per artist (no duplicate artists in list).
 	const topSongByArtist = new Map<
 		string,
-		{ name: string; artist: string; artistKey: string; count: number }
+		{
+			name: string;
+			artist: string;
+			artistKey: string;
+			count: number;
+			closerCount: number;
+		}
 	>();
 	for (const song of topSongsMap.values()) {
 		const existing = topSongByArtist.get(song.artistKey);
@@ -328,9 +349,15 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 			topSongByArtist.set(song.artistKey, song);
 			continue;
 		}
+		const songWeighted = song.count + song.closerCount * TOP_SONG_CLOSER_BONUS;
+		const existingWeighted =
+			existing.count + existing.closerCount * TOP_SONG_CLOSER_BONUS;
 		if (
-			song.count > existing.count ||
-			(song.count === existing.count && song.name.localeCompare(existing.name) < 0)
+			songWeighted > existingWeighted ||
+			(songWeighted === existingWeighted && song.count > existing.count) ||
+			(songWeighted === existingWeighted &&
+				song.count === existing.count &&
+				song.name.localeCompare(existing.name) < 0)
 		) {
 			topSongByArtist.set(song.artistKey, song);
 		}
@@ -338,6 +365,9 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 
 	const topSongs = [...topSongByArtist.values()]
 		.sort((a, b) => {
+			const aWeighted = a.count + a.closerCount * TOP_SONG_CLOSER_BONUS;
+			const bWeighted = b.count + b.closerCount * TOP_SONG_CLOSER_BONUS;
+			if (bWeighted !== aWeighted) return bWeighted - aWeighted;
 			if (b.count !== a.count) return b.count - a.count;
 			const byArtist = a.artist.localeCompare(b.artist);
 			if (byArtist !== 0) return byArtist;
