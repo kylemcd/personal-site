@@ -28,7 +28,7 @@ export const RefreshSetlistFmWorkflow = makeRefreshWorkflow<
 				? { lookbackDays: params.lookbackDays }
 				: {}),
 			...(params.fullRescan ? { fullRescan: true } : {}),
-		}) as Promise<import("better-result").Result<unknown, unknown>>,
+		}),
 	applyEnv: (env) => {
 		process.env.SETLIST_FM_USER =
 			env.SETLIST_FM_USER ?? process.env.SETLIST_FM_USER ?? "kpmdev";

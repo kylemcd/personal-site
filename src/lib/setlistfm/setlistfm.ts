@@ -80,12 +80,51 @@ const normalizeSongKey = (name: string): string =>
 		.replace(/[‘’ʼ`´']/g, "'")
 		.replace(/[.,!?]+$/, "");
 
+const getOrCreateSet = (map: Map<string, Set<string>>, key: string): Set<string> => {
+	const existing = map.get(key);
+	if (existing) return existing;
+	const created = new Set<string>();
+	map.set(key, created);
+	return created;
+};
+
 type ShowGroup = {
 	dateIso: string | null;
 	venue: string;
 	city: string;
 	tour: string | null;
 	setlists: Array<Setlist>;
+};
+
+type TopSongEntry = {
+	name: string;
+	artist: string;
+	artistKey: string;
+	count: number;
+	closerCount: number;
+};
+
+const getTopSongWeight = (song: TopSongEntry): number =>
+	song.count + song.closerCount * TOP_SONG_CLOSER_BONUS;
+
+const compareTopSongs = (a: TopSongEntry, b: TopSongEntry): number => {
+	const byWeight = getTopSongWeight(b) - getTopSongWeight(a);
+	if (byWeight !== 0) return byWeight;
+	const byCount = b.count - a.count;
+	if (byCount !== 0) return byCount;
+	const byArtist = a.artist.localeCompare(b.artist);
+	if (byArtist !== 0) return byArtist;
+	return a.name.localeCompare(b.name);
+};
+
+const shouldReplaceArtistTopSong = (
+	candidate: TopSongEntry,
+	current: TopSongEntry,
+): boolean => {
+	const byWeight = getTopSongWeight(candidate) - getTopSongWeight(current);
+	if (byWeight !== 0) return byWeight > 0;
+	if (candidate.count !== current.count) return candidate.count > current.count;
+	return candidate.name.localeCompare(current.name) < 0;
 };
 
 const groupByShow = (
@@ -220,19 +259,53 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 			lastSeenIso: string;
 		}
 	>();
-	const topSongsMap = new Map<
-		string,
-		{
-			name: string;
-			artist: string;
-			artistKey: string;
-			count: number;
-			closerCount: number;
+	const topSongsMap = new Map<string, TopSongEntry>();
+	const bumpTopSong = (params: {
+		artistKey: string;
+		artistName: string;
+		songName: string;
+		normalizedSongKey: string;
+		songKey: string;
+		isCloser: boolean;
+		seenSongs: Set<string>;
+		countedCloserSongs: Set<string>;
+	}) => {
+		const {
+			artistKey,
+			artistName,
+			songName,
+			normalizedSongKey,
+			songKey,
+			isCloser,
+			seenSongs,
+			countedCloserSongs,
+		} = params;
+		const existingSong = topSongsMap.get(songKey);
+		if (!seenSongs.has(normalizedSongKey)) {
+			seenSongs.add(normalizedSongKey);
+			if (existingSong) {
+				existingSong.count += 1;
+			} else {
+				topSongsMap.set(songKey, {
+					name: songName,
+					artist: artistName,
+					artistKey,
+					count: 1,
+					closerCount: 0,
+				});
+			}
 		}
-	>();
+		if (!isCloser || countedCloserSongs.has(normalizedSongKey)) return;
+		const song = topSongsMap.get(songKey);
+		if (!song) return;
+		song.closerCount += 1;
+		countedCloserSongs.add(normalizedSongKey);
+	};
 
 	for (const [showKey, group] of showGroups) {
 		const dateIso = group.dateIso ?? "";
+		const songsSeenPerArtistInShow = new Map<string, Set<string>>();
+		const closersCountedPerArtistInShow = new Map<string, Set<string>>();
 		for (const setlist of group.setlists) {
 			const artistKey = getArtistKey(setlist.artist);
 			const artistMbid =
@@ -240,11 +313,7 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 					? setlist.artist.mbid.trim()
 					: null;
 
-			let showSet = artistShowKeys.get(artistKey);
-			if (!showSet) {
-				showSet = new Set<string>();
-				artistShowKeys.set(artistKey, showSet);
-			}
+			const showSet = getOrCreateSet(artistShowKeys, artistKey);
 			const isNewShowForArtist = !showSet.has(showKey);
 			showSet.add(showKey);
 
@@ -266,6 +335,11 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 					lastSeenIso: dateIso,
 				});
 			}
+			const seenSongs = getOrCreateSet(songsSeenPerArtistInShow, artistKey);
+			const countedCloserSongs = getOrCreateSet(
+				closersCountedPerArtistInShow,
+				artistKey,
+			);
 
 			for (const set of setlist.sets?.set ?? []) {
 				const nonCoverSongs = (set.song ?? []).filter((song) => !song.cover);
@@ -281,19 +355,16 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 					if (!normalized) continue;
 					const isCloser = closerKey.length > 0 && normalized === closerKey;
 					const songKey = `${artistKey}::${normalized}`;
-					const existingSong = topSongsMap.get(songKey);
-					if (existingSong) {
-						existingSong.count += 1;
-						if (isCloser) existingSong.closerCount += 1;
-					} else {
-						topSongsMap.set(songKey, {
-							name: trimmed,
-							artist: setlist.artist.name,
-							artistKey,
-							count: 1,
-							closerCount: isCloser ? 1 : 0,
-						});
-					}
+					bumpTopSong({
+						artistKey,
+						artistName: setlist.artist.name,
+						songName: trimmed,
+						normalizedSongKey: normalized,
+						songKey,
+						isCloser,
+						seenSongs,
+						countedCloserSongs,
+					});
 				}
 			}
 		}
@@ -333,46 +404,20 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 		.slice(0, TOP_ARTISTS_COUNT);
 
 	// Keep one representative top song per artist (no duplicate artists in list).
-	const topSongByArtist = new Map<
-		string,
-		{
-			name: string;
-			artist: string;
-			artistKey: string;
-			count: number;
-			closerCount: number;
-		}
-	>();
+	const topSongByArtist = new Map<string, TopSongEntry>();
 	for (const song of topSongsMap.values()) {
 		const existing = topSongByArtist.get(song.artistKey);
 		if (!existing) {
 			topSongByArtist.set(song.artistKey, song);
 			continue;
 		}
-		const songWeighted = song.count + song.closerCount * TOP_SONG_CLOSER_BONUS;
-		const existingWeighted =
-			existing.count + existing.closerCount * TOP_SONG_CLOSER_BONUS;
-		if (
-			songWeighted > existingWeighted ||
-			(songWeighted === existingWeighted && song.count > existing.count) ||
-			(songWeighted === existingWeighted &&
-				song.count === existing.count &&
-				song.name.localeCompare(existing.name) < 0)
-		) {
+		if (shouldReplaceArtistTopSong(song, existing)) {
 			topSongByArtist.set(song.artistKey, song);
 		}
 	}
 
 	const topSongs = [...topSongByArtist.values()]
-		.sort((a, b) => {
-			const aWeighted = a.count + a.closerCount * TOP_SONG_CLOSER_BONUS;
-			const bWeighted = b.count + b.closerCount * TOP_SONG_CLOSER_BONUS;
-			if (bWeighted !== aWeighted) return bWeighted - aWeighted;
-			if (b.count !== a.count) return b.count - a.count;
-			const byArtist = a.artist.localeCompare(b.artist);
-			if (byArtist !== 0) return byArtist;
-			return a.name.localeCompare(b.name);
-		})
+		.sort(compareTopSongs)
 		.slice(0, TOP_SONGS_COUNT);
 
 	const weightedArtists = [...topArtistsMap.entries()]
@@ -621,6 +666,12 @@ const attendedConcerts = (): Promise<
 const setlistfm = {
 	attendedConcerts,
 	refreshConcertsFromSetlistProfile,
+};
+
+// Test-only exports for deterministic unit coverage of aggregation behavior.
+export const __setlistfmTestUtils = {
+	aggregateCore,
+	computeRecords,
 };
 
 export { setlistfm, SetlistFmDataError };
