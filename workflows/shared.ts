@@ -71,16 +71,19 @@ export const toErrorSummary = (error: unknown): string => {
 	}
 };
 
-export function makeRefreshWorkflow<Env extends BaseEnv>(config: {
+export function makeRefreshWorkflow<
+	Env extends BaseEnv,
+	Params extends RefreshWorkflowParams = RefreshWorkflowParams,
+>(config: {
 	stepName: string;
 	apiKeyEnvVar?: string;
 	applyEnv?: (env: Env) => void;
-	refresh: () => Promise<Result<unknown, unknown>>;
+	refresh: (params: Readonly<Params>) => Promise<Result<unknown, unknown>>;
 	buildDetails: (value: unknown) => Record<string, unknown>;
 }) {
-	return class extends WorkflowEntrypoint<Env, RefreshWorkflowParams> {
+	return class extends WorkflowEntrypoint<Env, Params> {
 		override async run(
-			_event: Readonly<{ payload: Readonly<RefreshWorkflowParams> }>,
+			event: Readonly<{ payload: Readonly<Params> }>,
 			step: unknown,
 		) {
 			applyBaseRuntimeEnv(this.env);
@@ -101,7 +104,7 @@ export function makeRefreshWorkflow<Env extends BaseEnv>(config: {
 					} satisfies StepResult;
 				}
 
-				const dataResult = await config.refresh();
+				const dataResult = await config.refresh(event.payload);
 				if (Result.isError(dataResult)) {
 					return throwWorkflowError(
 						`[refresh] ${config.stepName} failed: ${toErrorSummary(dataResult.error)}`,

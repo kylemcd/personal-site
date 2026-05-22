@@ -3,6 +3,10 @@ import { setlistfm } from "@/lib/setlistfm";
 import { makeRefreshWorkflow, type RefreshWorkflowParams } from "./shared";
 
 export type { RefreshWorkflowParams };
+export type SetlistRefreshWorkflowParams = RefreshWorkflowParams & {
+	lookbackDays?: number;
+	fullRescan?: boolean;
+};
 
 export type RefreshSetlistFmWorkflowEnv = {
 	APP_STORE?: KVNamespace;
@@ -10,13 +14,20 @@ export type RefreshSetlistFmWorkflowEnv = {
 	SETLIST_FM_USER?: string;
 };
 
-export const RefreshSetlistFmWorkflow = makeRefreshWorkflow<RefreshSetlistFmWorkflowEnv>({
+export const RefreshSetlistFmWorkflow = makeRefreshWorkflow<
+	RefreshSetlistFmWorkflowEnv,
+	SetlistRefreshWorkflowParams
+>({
 	stepName: "refresh-setlistfm",
-	refresh: () =>
+	refresh: (params) =>
 		setlistfm.refreshConcertsFromSetlistProfile({
 			...(process.env.SETLIST_FM_USER
 				? { user: process.env.SETLIST_FM_USER }
 				: {}),
+			...(typeof params.lookbackDays === "number"
+				? { lookbackDays: params.lookbackDays }
+				: {}),
+			...(params.fullRescan ? { fullRescan: true } : {}),
 		}) as Promise<import("better-result").Result<unknown, unknown>>,
 	applyEnv: (env) => {
 		process.env.SETLIST_FM_USER =

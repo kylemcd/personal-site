@@ -6,7 +6,7 @@ const SETLIST_FM_BASE_URL = "https://www.setlist.fm";
 const SETLIST_FM_USER_DEFAULT = "kpmdev";
 const REQUEST_DELAY_MS = 350;
 const MAX_PAGES = 25;
-const RECENT_REFRESH_DAYS = 31;
+const DEFAULT_RECENT_REFRESH_DAYS = 30;
 const RECENT_REFRESH_LIMIT = 40;
 const USER_AGENT =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
@@ -300,6 +300,8 @@ const mergeConcertEntries = (
 const scrapeConcertEntriesDiff = async (params?: {
 	user?: string;
 	existing?: ReadonlyArray<ConcertEntry>;
+	lookbackDays?: number;
+	fullRescan?: boolean;
 }): Promise<
 	Result<
 		{
@@ -313,6 +315,13 @@ const scrapeConcertEntriesDiff = async (params?: {
 > => {
 	const user = params?.user?.trim() || SETLIST_FM_USER_DEFAULT;
 	const existing = params?.existing ?? [];
+	const fullRescan = params?.fullRescan === true;
+	const lookbackDays =
+		typeof params?.lookbackDays === "number" &&
+		Number.isFinite(params.lookbackDays) &&
+		params.lookbackDays >= 0
+			? Math.floor(params.lookbackDays)
+			: DEFAULT_RECENT_REFRESH_DAYS;
 	const existingIds = new Set(existing.map((entry) => entry.id));
 
 	const linksResult = await collectAllSetlistLinks(user);
@@ -321,14 +330,16 @@ const scrapeConcertEntriesDiff = async (params?: {
 	const newLinks = links.filter((url) => !existingIds.has(slugFromUrl(url)));
 
 	const existingById = new Map(existing.map((entry) => [entry.id, entry]));
-	const refreshLinks = links
-		.filter((url) => {
-			const entry = existingById.get(slugFromUrl(url));
-			if (!entry) return false;
-			if (needsBackfill(entry)) return true;
-			return isWithinRecentDays(entry.date, RECENT_REFRESH_DAYS);
-		})
-		.slice(0, RECENT_REFRESH_LIMIT);
+	const refreshLinks = fullRescan
+		? links.filter((url) => existingById.has(slugFromUrl(url)))
+		: links
+				.filter((url) => {
+					const entry = existingById.get(slugFromUrl(url));
+					if (!entry) return false;
+					if (needsBackfill(entry)) return true;
+					return isWithinRecentDays(entry.date, lookbackDays);
+				})
+				.slice(0, RECENT_REFRESH_LIMIT);
 
 	if (newLinks.length === 0 && refreshLinks.length === 0) {
 		return Result.ok({

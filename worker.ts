@@ -16,7 +16,7 @@ import type {
 } from "./workflows/refresh-lastfm";
 import { RefreshLastFmWorkflow } from "./workflows/refresh-lastfm";
 import type {
-	RefreshWorkflowParams as SetlistFmRefreshParams,
+	SetlistRefreshWorkflowParams as SetlistFmRefreshParams,
 	RefreshSetlistFmWorkflowEnv,
 } from "./workflows/refresh-setlistfm";
 import { RefreshSetlistFmWorkflow } from "./workflows/refresh-setlistfm";

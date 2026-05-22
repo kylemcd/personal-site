@@ -521,6 +521,8 @@ const computeAttendedConcerts = async (): Promise<
 
 const refreshConcertsFromSetlistProfile = async (params?: {
 	user?: string;
+	lookbackDays?: number;
+	fullRescan?: boolean;
 }): Promise<
 	Result<
 		{
@@ -535,6 +537,10 @@ const refreshConcertsFromSetlistProfile = async (params?: {
 	const existing = await loadConcertEntries();
 	const scrapeResult = await scrapeConcertEntriesDiff({
 		...(params?.user ? { user: params.user } : {}),
+		...(typeof params?.lookbackDays === "number"
+			? { lookbackDays: params.lookbackDays }
+			: {}),
+		...(params?.fullRescan ? { fullRescan: true } : {}),
 		existing: existing.entries,
 	});
 	if (Result.isError(scrapeResult)) {
