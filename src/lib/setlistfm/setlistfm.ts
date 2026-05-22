@@ -156,17 +156,39 @@ const computeRecords = (
 				)
 			: null;
 	const byMonth = new Map<string, number>();
-	const byWeek = new Map<string, number>();
 	for (const day of sorted) {
 		const monthKey = day.slice(0, 7);
 		byMonth.set(monthKey, (byMonth.get(monthKey) ?? 0) + 1);
-		const date = new Date(day);
-		date.setUTCDate(date.getUTCDate() - date.getUTCDay()); // Sunday-anchored
-		const weekKey = date.toISOString().slice(0, 10);
-		byWeek.set(weekKey, (byWeek.get(weekKey) ?? 0) + 1);
 	}
 	const monthEntry = [...byMonth.entries()].sort((a, b) => b[1] - a[1])[0];
-	const weekEntry = [...byWeek.entries()].sort((a, b) => b[1] - a[1])[0];
+
+	// Rolling 7-day busiest window, anchored on show dates. Ties prefer the latest.
+	let bestWeekStartIso: string | null = null;
+	let bestWeekCount = 0;
+	let windowEnd = 0;
+	for (let windowStart = 0; windowStart < sorted.length; windowStart += 1) {
+		const startMs = Date.parse(sorted[windowStart]!);
+		const maxMs = startMs + 6 * MS_PER_DAY;
+		while (
+			windowEnd < sorted.length &&
+			Date.parse(sorted[windowEnd]!) <= maxMs
+		) {
+			windowEnd += 1;
+		}
+		const count = windowEnd - windowStart;
+		const startIso = sorted[windowStart]!;
+		if (
+			count > bestWeekCount ||
+			(count === bestWeekCount &&
+				bestWeekStartIso !== null &&
+				startIso > bestWeekStartIso) ||
+			(count === bestWeekCount && bestWeekStartIso === null)
+		) {
+			bestWeekCount = count;
+			bestWeekStartIso = startIso;
+		}
+	}
+
 	return {
 		avgDaysBetweenShows,
 		biggestMonth: monthEntry
@@ -176,8 +198,8 @@ const computeRecords = (
 					count: monthEntry[1],
 				}
 			: null,
-		biggestWeek: weekEntry
-			? { weekStartIso: weekEntry[0], count: weekEntry[1] }
+		biggestWeek: bestWeekStartIso
+			? { weekStartIso: bestWeekStartIso, count: bestWeekCount }
 			: null,
 	};
 };
@@ -199,7 +221,7 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 	>();
 	const topSongsMap = new Map<
 		string,
-		{ name: string; artist: string; count: number }
+		{ name: string; artist: string; artistKey: string; count: number }
 	>();
 
 	for (const [showKey, group] of showGroups) {
@@ -253,6 +275,7 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 						topSongsMap.set(songKey, {
 							name: trimmed,
 							artist: setlist.artist.name,
+							artistKey,
 							count: 1,
 						});
 					}
@@ -294,9 +317,30 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 		})
 		.slice(0, TOP_ARTISTS_COUNT);
 
-	const topSongs = [...topSongsMap.values()]
+	// Keep one representative top song per artist (no duplicate artists in list).
+	const topSongByArtist = new Map<
+		string,
+		{ name: string; artist: string; artistKey: string; count: number }
+	>();
+	for (const song of topSongsMap.values()) {
+		const existing = topSongByArtist.get(song.artistKey);
+		if (!existing) {
+			topSongByArtist.set(song.artistKey, song);
+			continue;
+		}
+		if (
+			song.count > existing.count ||
+			(song.count === existing.count && song.name.localeCompare(existing.name) < 0)
+		) {
+			topSongByArtist.set(song.artistKey, song);
+		}
+	}
+
+	const topSongs = [...topSongByArtist.values()]
 		.sort((a, b) => {
 			if (b.count !== a.count) return b.count - a.count;
+			const byArtist = a.artist.localeCompare(b.artist);
+			if (byArtist !== 0) return byArtist;
 			return a.name.localeCompare(b.name);
 		})
 		.slice(0, TOP_SONGS_COUNT);
