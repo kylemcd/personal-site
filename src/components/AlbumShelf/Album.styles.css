@@ -97,6 +97,19 @@
 	transition: transform 0.1s ease-out;
 }
 
+.cover-art-fallback {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background:
+		linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--color-bg-3) 75%, black 25%),
+			color-mix(in srgb, var(--color-bg-2) 80%, black 20%)
+		);
+	border: 1px solid var(--color-border-1);
+}
+
 .now-playing:hover .now-playing-image {
 	transform: scale(0.98);
 }

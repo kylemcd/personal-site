@@ -57,6 +57,35 @@ type NowPlayingProps = {
 	album: NowPlayingAlbum;
 };
 
+type CoverArtProps = {
+	src: string;
+	alt: string;
+	className: string;
+};
+
+function CoverArt({ src, alt, className }: CoverArtProps) {
+	const [failed, setFailed] = useState(false);
+
+	if (failed) {
+		return (
+			<div className={`${className} cover-art-fallback`} aria-label={`${alt} cover unavailable`}>
+				<Text as="span" size="0" color="2">
+					No Cover
+				</Text>
+			</div>
+		);
+	}
+
+	return (
+		<img
+			src={src}
+			alt={alt}
+			className={className}
+			onError={() => setFailed(true)}
+		/>
+	);
+}
+
 function NowPlaying({ album }: NowPlayingProps) {
 	return (
 		<a
@@ -65,7 +94,7 @@ function NowPlaying({ album }: NowPlayingProps) {
 			target="_blank"
 			rel="noopener noreferrer"
 		>
-			<img src={album.image} alt={album.name} className="now-playing-image" />
+			<CoverArt src={album.image} alt={album.name} className="now-playing-image" />
 			<div className="now-playing-info">
 				<Marquee text={album.trackName} size="0" color="1" />
 				<Text as="p" size="0" color="2">
@@ -93,7 +122,7 @@ function AlbumCard({ album }: AlbumCardProps) {
 			target="_blank"
 			rel="noopener noreferrer"
 		>
-			<img src={album.image} alt={album.name} className="album-image" />
+			<CoverArt src={album.image} alt={album.name} className="album-image" />
 			<div className="album-info">
 				<Text as="p" size="0" weight="500">
 					{album.name}
