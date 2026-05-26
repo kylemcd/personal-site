@@ -26,12 +26,16 @@ describe("normalizeGenreTag", () => {
 		expect(normalizeGenreTag("Pop-Punk")).toBe("pop punk");
 		expect(normalizeGenreTag("Neon Pop Punk")).toBe("pop punk");
 		expect(normalizeGenreTag("emo pop punk")).toBe("pop punk");
+		expect(normalizeGenreTag("PopPunk")).toBe("pop punk");
 	});
 
 	it("collapses rock variants into canonical groups", () => {
 		expect(normalizeGenreTag("alt rock")).toBe("alternative rock");
 		expect(normalizeGenreTag("indie rock")).toBe("alternative rock");
 		expect(normalizeGenreTag("powerpop")).toBe("pop punk");
+		expect(normalizeGenreTag("PowerPop")).toBe("pop punk");
+		expect(normalizeGenreTag("power(pop)")).toBe("pop punk");
+		expect(normalizeGenreTag("altrock")).toBe("alternative rock");
 	});
 
 	it("drops non-genre personal tags", () => {

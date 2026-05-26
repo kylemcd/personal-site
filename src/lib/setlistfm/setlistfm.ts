@@ -59,11 +59,6 @@ const parseEventDateIso = (value: string): string | null => {
 	return date.toISOString();
 };
 
-const getArtistKey = (artist: SetlistArtist): string => {
-	if (artist.mbid && artist.mbid.trim().length > 0) return artist.mbid.trim();
-	return artist.name.toLowerCase().trim();
-};
-
 const getShowKey = (setlist: Setlist): string => {
 	const dateIso = parseEventDateIso(setlist.eventDate) ?? setlist.eventDate;
 	return `${dateIso}::${setlist.venue.name.toLowerCase()}::${(

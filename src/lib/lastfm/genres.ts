@@ -3,6 +3,11 @@ import { Result, TaggedError } from "better-result";
 import { env } from "@/lib/env";
 import { fetchFresh } from "@/lib/fetch";
 import { getOrComputeJson } from "@/lib/store";
+import {
+	canonicalizeGenreTag,
+	loadAliasMap,
+	recordObservedAndSuggestion,
+} from "./genre-taxonomy";
 
 import {
 	SimilarTagsResponseSchema,
@@ -18,31 +23,6 @@ export class LastFmGenreError extends TaggedError("LastFmGenreError")<{
 const LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
 const LASTFM_ARTIST_TAGS_CACHE_KEY_PREFIX = "lastfm:artist-top-tags:v1";
 const LASTFM_ARTIST_TAGS_TTL_SECONDS = 365 * 24 * 60 * 60; // 1 year
-
-const GENRE_ALIAS_MAP: Record<string, string> = {
-	"pop-punk": "pop punk",
-	"neon pop punk": "pop punk",
-	"punk pop": "pop punk",
-	"emo pop punk": "pop punk",
-	"powerpop": "pop punk",
-	"power pop": "pop punk",
-	"alt rock": "alternative rock",
-	"alternative": "alternative rock",
-	"indie rock": "alternative rock",
-	"emo rock": "emo",
-	"pop rock": "rock",
-};
-
-const applyGenreAlias = (tag: string): string => {
-	const direct = GENRE_ALIAS_MAP[tag];
-	if (direct) return direct;
-	if (tag.includes("pop punk")) return "pop punk";
-	if (tag.includes("power pop")) return "pop punk";
-	if (tag.includes("alt rock")) return "alternative rock";
-	if (tag.includes("alternative rock")) return "alternative rock";
-	if (tag.includes("indie rock")) return "alternative rock";
-	return tag;
-};
 
 const getPrimaryArtistGenre = (params: {
 	artist: WeightedArtist;
@@ -72,18 +52,7 @@ const baseQueryParams = () => ({
 export const normalizeGenreTag = (tag: string): string => {
 	const trimmed = tag.trim().toLowerCase();
 	if (!trimmed) return "";
-	const normalized = trimmed
-		.replace(/[./_,]+/g, " ")
-		.replace(/[-]+/g, " ")
-		.replace(/\s+/g, " ");
-	if (
-		normalized.includes("seen live") ||
-		normalized.includes("favorites") ||
-		normalized.includes("favorite")
-	) {
-		return "";
-	}
-	return applyGenreAlias(normalized);
+	return canonicalizeGenreTag(trimmed);
 };
 
 export const formatGenreLabel = (tag: string): string =>
@@ -128,6 +97,7 @@ export const fetchArtistTopTags = async (
 export const fetchSimilarGenreTags = async (
 	tag: string,
 ): Promise<Result<Array<string>, LastFmGenreError>> => {
+	await loadAliasMap();
 	const params = new URLSearchParams({
 		...baseQueryParams(),
 		method: "tag.getsimilar",
@@ -141,11 +111,18 @@ export const fetchSimilarGenreTags = async (
 	if (Result.isError(res)) {
 		return Result.err(new LastFmGenreError({ error: res.error }));
 	}
-	return Result.ok(
-		res.value.data.similartags.tag
-			.map((item) => normalizeGenreTag(item.name))
-			.filter((item) => item.length > 0),
+	const normalized = res.value.data.similartags.tag
+		.map((item) => normalizeGenreTag(item.name))
+		.filter((item) => item.length > 0);
+	void Promise.all(
+		res.value.data.similartags.tag.map((item) =>
+			recordObservedAndSuggestion({
+				rawTag: item.name,
+				source: "tag.getsimilar",
+			}),
+		),
 	);
+	return Result.ok(normalized);
 };
 
 export const groupGenresBySimilarity = (params: {
@@ -214,6 +191,7 @@ const GENRE_COUNT_DEFAULT = 6;
 export const buildArtistTagMap = async (
 	artistKeys: ReadonlyArray<string>,
 ): Promise<ArtistTagMap> => {
+	await loadAliasMap();
 	const unique = [...new Set(artistKeys)];
 	const artistCacheKey = (artist: string): string => {
 		const normalized = artist.toLowerCase().trim().replace(/\s+/g, " ");
@@ -232,7 +210,19 @@ export const buildArtistTagMap = async (
 	const artistTopTags: ArtistTagMap = {};
 	for (const tagResult of tagResults) {
 		if (Result.isError(tagResult.result)) continue;
-		artistTopTags[tagResult.artist.toLowerCase()] = tagResult.result.value;
+		const normalizedTags = tagResult.result.value.map((tag) => ({
+			...tag,
+			name: normalizeGenreTag(tag.name),
+		}));
+		artistTopTags[tagResult.artist.toLowerCase()] = normalizedTags;
+		void Promise.all(
+			tagResult.result.value.map((tag) =>
+				recordObservedAndSuggestion({
+					rawTag: tag.name,
+					source: "artist.gettoptags",
+				}),
+			),
+		);
 	}
 	return artistTopTags;
 };

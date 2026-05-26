@@ -25,13 +25,19 @@ import type {
 	StaleMonitorWorkflowEnv,
 } from "./workflows/stale-data-monitor";
 import { StaleDataMonitorWorkflow } from "./workflows/stale-data-monitor";
+import type {
+	GenreReviewDigestParams,
+	GenreReviewDigestWorkflowEnv,
+} from "./workflows/genre-review-digest";
+import { GenreReviewDigestWorkflow } from "./workflows/genre-review-digest";
 import { applyBaseRuntimeEnv } from "./workflows/shared";
 
 type WorkerEnv = StaleMonitorWorkflowEnv &
 	RefreshGarage61WorkflowEnv &
 	RefreshGoodreadsWorkflowEnv &
 	RefreshLastFmWorkflowEnv &
-	RefreshSetlistFmWorkflowEnv & {
+	RefreshSetlistFmWorkflowEnv &
+	GenreReviewDigestWorkflowEnv & {
 		GARAGE61_REFRESH_WORKFLOW?: {
 			create: (options?: {
 				id?: string;
@@ -62,6 +68,12 @@ type WorkerEnv = StaleMonitorWorkflowEnv &
 				params?: StaleMonitorParams;
 			}) => Promise<unknown>;
 		};
+		GENRE_REVIEW_DIGEST_WORKFLOW?: {
+			create: (options?: {
+				id?: string;
+				params?: GenreReviewDigestParams;
+			}) => Promise<unknown>;
+		};
 	};
 
 export {
@@ -70,6 +82,7 @@ export {
 	RefreshLastFmWorkflow,
 	RefreshSetlistFmWorkflow,
 	StaleDataMonitorWorkflow,
+	GenreReviewDigestWorkflow,
 };
 
 const applyRuntimeEnv = (env: WorkerEnv) => {
@@ -168,5 +181,17 @@ export default {
 				params: { triggeredAt: new Date().toISOString() },
 			}),
 		);
+		if (
+			scheduledAt.getUTCDay() === 1 &&
+			scheduledAt.getUTCHours() === 14 &&
+			env.GENRE_REVIEW_DIGEST_WORKFLOW
+		) {
+			ctx.waitUntil(
+				env.GENRE_REVIEW_DIGEST_WORKFLOW.create({
+					id: `genre-review-digest-${Date.now()}`,
+					params: { triggeredAt: new Date().toISOString() },
+				}),
+			);
+		}
 	},
 };

@@ -48,6 +48,11 @@
 			"binding": "STALE_MONITOR_WORKFLOW",
 			"name": "stale-data-monitor",
 			"class_name": "StaleDataMonitorWorkflow"
+		},
+		{
+			"binding": "GENRE_REVIEW_DIGEST_WORKFLOW",
+			"name": "genre-review-digest",
+			"class_name": "GenreReviewDigestWorkflow"
 		}
 	],
 	"triggers": {
