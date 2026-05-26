@@ -256,16 +256,11 @@ function GenreAdminDashboard(props: {
   const [rawTag, setRawTag] = useState("");
   const [canonicalGenre, setCanonicalGenre] = useState("");
   const [activeTab, setActiveTab] = useState<"tags" | "artists">("tags");
-  const [filter, setFilter] = useState<"all" | "unmapped" | "low-confidence" | "recent">("all");
   const [artistGenreDrafts, setArtistGenreDrafts] = useState<Record<string, string>>({});
 
   const aliasesEntries = useMemo(
     () => Object.entries(props.aliases).sort((a, b) => a[0].localeCompare(b[0])),
     [props.aliases],
-  );
-  const observedEntries = useMemo(
-    () => Object.values(props.observed).sort((a, b) => b.count - a.count),
-    [props.observed],
   );
   const observedArtistEntries = useMemo(
     () =>
@@ -275,15 +270,13 @@ function GenreAdminDashboard(props: {
     [props.observedArtists],
   );
   const suggestionEntries = useMemo(() => {
-    const base = Object.values(props.suggestions).sort((a, b) => b.count - a.count);
-    if (filter === "unmapped") return base.filter((s) => !props.aliases[s.normalizedTag]);
-    if (filter === "low-confidence") return base.filter((s) => s.confidence === "low");
-    if (filter === "recent") {
-      const cutoffMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      return base.filter((s) => Date.parse(s.lastSuggestedIso) >= cutoffMs);
-    }
-    return base;
-  }, [props.suggestions, props.aliases, filter]);
+    return Object.values(props.suggestions)
+      .filter((suggestion) => {
+        const status = props.reviewState[normalizeRawTag(suggestion.rawTag)] ?? "pending";
+        return status === "pending";
+      })
+      .sort((a, b) => b.count - a.count);
+  }, [props.suggestions, props.reviewState]);
 
   const onSetAlias = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -303,6 +296,29 @@ function GenreAdminDashboard(props: {
     if (!value) return;
     await runAndRefresh(() =>
       setArtistOverride({ data: { artistKey, canonicalGenre: value } }),
+    );
+  };
+
+  const onAcceptSuggestion = async (suggestion: SuggestionEntry) => {
+    if (normalizeRawTag(suggestion.rawTag) !== normalizeRawTag(suggestion.suggestedCanonical)) {
+      await runAndRefresh(() =>
+        promoteSuggestion({
+          data: {
+            rawTag: suggestion.rawTag,
+            canonicalGenre: suggestion.suggestedCanonical,
+          },
+        }),
+      );
+      return;
+    }
+    await runAndRefresh(() =>
+      setSuggestionStatus({ data: { rawTag: suggestion.rawTag, status: "accepted" } }),
+    );
+  };
+
+  const onRejectSuggestion = async (suggestion: SuggestionEntry) => {
+    await runAndRefresh(() =>
+      setSuggestionStatus({ data: { rawTag: suggestion.rawTag, status: "rejected" } }),
     );
   };
 
@@ -350,72 +366,36 @@ function GenreAdminDashboard(props: {
             </div>
           </form>
 
-          <div style={{ display: "flex", gap: 8, marginTop: 16, marginBottom: 8 }}>
-            {(["all", "unmapped", "low-confidence", "recent"] as const).map((item) => (
-              <button
-                key={item}
-                type="button"
-                className="calendar-auth-submit"
-                onClick={() => setFilter(item)}
-                disabled={filter === item}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-
           <Text as="h3" size="2">Suggestions ({suggestionEntries.length})</Text>
           <ul>
             {suggestionEntries.slice(0, 200).map((suggestion) => {
-              const status = props.reviewState[normalizeRawTag(suggestion.rawTag)] ?? "pending";
               return (
                 <li key={suggestion.normalizedTag}>
                   <Text as="p" size="1">
                     {suggestion.rawTag} {"->"} {suggestion.suggestedCanonical} ({suggestion.confidence})
                   </Text>
                   <Text as="p" size="0" color="2">
-                    {suggestion.reason} | count {suggestion.count} | status {status}
+                    {suggestion.reason} | count {suggestion.count}
                   </Text>
                   <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                     <button
                       type="button"
                       className="calendar-auth-submit"
-                      onClick={() => runAndRefresh(() => promoteSuggestion({ data: { rawTag: suggestion.rawTag } }))}
+                      onClick={() => onAcceptSuggestion(suggestion)}
                     >
-                      Promote
+                      Accept
                     </button>
-                    {(["pending", "accepted", "rejected", "dismissed"] as GenreSuggestionStatus[]).map((nextStatus) => (
-                      <button
-                        key={nextStatus}
-                        type="button"
-                        className="calendar-auth-submit"
-                        onClick={() =>
-                          runAndRefresh(() =>
-                            setSuggestionStatus({ data: { rawTag: suggestion.rawTag, status: nextStatus } }),
-                          )
-                        }
-                      >
-                        {nextStatus}
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      className="calendar-auth-submit"
+                      onClick={() => onRejectSuggestion(suggestion)}
+                    >
+                      Reject
+                    </button>
                   </div>
                 </li>
               );
             })}
-          </ul>
-
-          <Text as="h3" size="2">Observed tags ({observedEntries.length})</Text>
-          <ul>
-            {observedEntries.slice(0, 200).map((entry) => (
-              <li key={entry.normalizedTag}>
-                <Text as="p" size="1">
-                  {entry.rawTag} {"=>"} {entry.currentCanonical} (count {entry.count})
-                </Text>
-                <Text as="p" size="0" color="2">
-                  last seen {entry.lastSeenIso} | sources {entry.sources.join(", ")}
-                </Text>
-              </li>
-            ))}
           </ul>
 
           <Text as="h3" size="2">Aliases ({aliasesEntries.length})</Text>
@@ -439,52 +419,77 @@ function GenreAdminDashboard(props: {
       ) : (
         <>
           <Text as="h3" size="2">Artists ({observedArtistEntries.length})</Text>
-          <ul>
-            {observedArtistEntries.slice(0, 300).map((artist) => {
-              const override = props.artistOverrides[artist.artistKey] ?? "";
-              return (
-                <li key={artist.artistKey}>
-                  <Text as="p" size="1">
-                    {artist.artistName} {"=>"} {override || artist.genre} {override ? "(override)" : "(observed)"}
-                  </Text>
-                  <Text as="p" size="0" color="2">
-                    count {artist.count} | last seen {artist.lastSeenIso}
-                  </Text>
-                  <div className="calendar-auth-form-row">
-                    <input
-                      className="calendar-auth-input"
-                      placeholder="set canonical genre"
-                      value={artistGenreDrafts[artist.artistKey] ?? override}
-                      onChange={(e) =>
-                        setArtistGenreDrafts((prev) => ({
-                          ...prev,
-                          [artist.artistKey]: e.target.value,
-                        }))
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="calendar-auth-submit"
-                      onClick={() => onSetArtistOverride(artist.artistKey)}
-                    >
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      className="calendar-auth-submit"
-                      onClick={() =>
-                        runAndRefresh(() =>
-                          removeArtistOverride({ data: { artistKey: artist.artistKey } }),
-                        )
-                      }
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", padding: "8px 4px" }}>Artist</th>
+                  <th style={{ textAlign: "left", padding: "8px 4px" }}>Current Genre</th>
+                  <th style={{ textAlign: "left", padding: "8px 4px" }}>Status</th>
+                  <th style={{ textAlign: "left", padding: "8px 4px" }}>Count</th>
+                  <th style={{ textAlign: "left", padding: "8px 4px" }}>Last Seen</th>
+                  <th style={{ textAlign: "left", padding: "8px 4px" }}>Override</th>
+                </tr>
+              </thead>
+              <tbody>
+                {observedArtistEntries.slice(0, 300).map((artist) => {
+                  const override = props.artistOverrides[artist.artistKey] ?? "";
+                  return (
+                    <tr key={artist.artistKey}>
+                      <td style={{ padding: "8px 4px", verticalAlign: "top" }}>
+                        <Text as="p" size="1">{artist.artistName}</Text>
+                      </td>
+                      <td style={{ padding: "8px 4px", verticalAlign: "top" }}>
+                        <Text as="p" size="1">{override || artist.genre}</Text>
+                      </td>
+                      <td style={{ padding: "8px 4px", verticalAlign: "top" }}>
+                        <Text as="p" size="0" color="2">{override ? "override" : "observed"}</Text>
+                      </td>
+                      <td style={{ padding: "8px 4px", verticalAlign: "top" }}>
+                        <Text as="p" size="0" color="2">{artist.count}</Text>
+                      </td>
+                      <td style={{ padding: "8px 4px", verticalAlign: "top" }}>
+                        <Text as="p" size="0" color="2">{artist.lastSeenIso}</Text>
+                      </td>
+                      <td style={{ padding: "8px 4px", verticalAlign: "top" }}>
+                        <div className="calendar-auth-form-row">
+                          <input
+                            className="calendar-auth-input"
+                            placeholder="set canonical genre"
+                            value={artistGenreDrafts[artist.artistKey] ?? override}
+                            onChange={(e) =>
+                              setArtistGenreDrafts((prev) => ({
+                                ...prev,
+                                [artist.artistKey]: e.target.value,
+                              }))
+                            }
+                          />
+                          <button
+                            type="button"
+                            className="calendar-auth-submit"
+                            onClick={() => onSetArtistOverride(artist.artistKey)}
+                          >
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            className="calendar-auth-submit"
+                            onClick={() =>
+                              runAndRefresh(() =>
+                                removeArtistOverride({ data: { artistKey: artist.artistKey } }),
+                              )
+                            }
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </div>
