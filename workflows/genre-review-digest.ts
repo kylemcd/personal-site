@@ -148,6 +148,11 @@ export class GenreReviewDigestWorkflow extends WorkflowEntrypoint<
 				.sort((a, b) => b.count - a.count)
 				.slice(0, 15);
 
+			if (pendingSuggestions.length === 0 && topObservedUnmapped.length === 0) {
+				console.log("[genre-digest] no pending genre review items; skipping email");
+				return;
+			}
+
 			const lines = [
 				"Weekly genre taxonomy review digest",
 				"",

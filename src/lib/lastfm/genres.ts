@@ -5,7 +5,10 @@ import { fetchFresh } from "@/lib/fetch";
 import { getOrComputeJson } from "@/lib/store";
 import {
 	canonicalizeGenreTag,
+	getArtistGenreOverride,
 	loadAliasMap,
+	loadArtistGenreOverrides,
+	recordObservedArtistGenre,
 	recordObservedAndSuggestion,
 } from "./genre-taxonomy";
 
@@ -30,6 +33,10 @@ const getPrimaryArtistGenre = (params: {
 	artistTagLimit: number;
 }): { genre: string; score: number } | null => {
 	const { artist, artistTopTags, artistTagLimit } = params;
+	const overrideGenre = getArtistGenreOverride(artist.key);
+	if (overrideGenre) {
+		return { genre: overrideGenre, score: artist.weight };
+	}
 	const tags = artistTopTags[artist.key.toLowerCase()] ?? [];
 	let best: { genre: string; score: number } | null = null;
 	for (const tag of tags.slice(0, artistTagLimit)) {
@@ -182,7 +189,7 @@ export const groupGenresBySimilarity = (params: {
 	return grouped;
 };
 
-export type WeightedArtist = { key: string; weight: number };
+export type WeightedArtist = { key: string; weight: number; name?: string };
 
 const ARTIST_TAG_LIMIT_DEFAULT = 6;
 const SIMILAR_SEED_LIMIT_DEFAULT = 20;
@@ -192,6 +199,7 @@ export const buildArtistTagMap = async (
 	artistKeys: ReadonlyArray<string>,
 ): Promise<ArtistTagMap> => {
 	await loadAliasMap();
+	await loadArtistGenreOverrides();
 	const unique = [...new Set(artistKeys)];
 	const artistCacheKey = (artist: string): string => {
 		const normalized = artist.toLowerCase().trim().replace(/\s+/g, " ");
@@ -293,6 +301,12 @@ export const buildTopGenresFromWeights = (params: {
 			artistTagLimit,
 		});
 		if (!primary) continue;
+		void recordObservedArtistGenre({
+			artistKey: artist.key,
+			artistName: artist.name ?? artist.key,
+			genre: primary.genre,
+			source: "genre-rollup",
+		});
 		weightedScores.set(
 			primary.genre,
 			(weightedScores.get(primary.genre) ?? 0) + primary.score,

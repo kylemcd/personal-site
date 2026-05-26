@@ -91,4 +91,27 @@ describe("genre taxonomy state reducers", () => {
 		expect(second[key]?.lastSuggestedIso).toBe("2026-05-03T00:00:00.000Z");
 		expect(second[key]?.confidence).toBe("medium");
 	});
+
+	it("tracks observed artist genre mappings and increments counts", () => {
+		const first = __genreTaxonomyTestUtils.nextObservedArtistMap({
+			current: {},
+			artistKey: "the maine",
+			artistName: "The Maine",
+			genre: "pop punk",
+			source: "genre-rollup",
+			nowIso: "2026-05-01T00:00:00.000Z",
+		});
+		const second = __genreTaxonomyTestUtils.nextObservedArtistMap({
+			current: first,
+			artistKey: "the maine",
+			artistName: "The Maine",
+			genre: "alternative rock",
+			source: "genre-rollup",
+			nowIso: "2026-05-04T00:00:00.000Z",
+		});
+		expect(second["the maine"]?.count).toBe(2);
+		expect(second["the maine"]?.genre).toBe("alternative rock");
+		expect(second["the maine"]?.firstSeenIso).toBe("2026-05-01T00:00:00.000Z");
+		expect(second["the maine"]?.lastSeenIso).toBe("2026-05-04T00:00:00.000Z");
+	});
 });

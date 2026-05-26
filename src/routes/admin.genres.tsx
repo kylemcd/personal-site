@@ -36,6 +36,16 @@ type SuggestionEntry = {
   count: number;
 };
 
+type ArtistEntry = {
+  artistKey: string;
+  artistName: string;
+  genre: string;
+  count: number;
+  firstSeenIso: string;
+  lastSeenIso: string;
+  sources: string[];
+};
+
 const getExpectedAuth = (): string => env.CALENDAR_AUTH || "";
 
 const isAuthCookieValid = (): boolean => {
@@ -63,21 +73,25 @@ type LoaderData =
         observed: Record<string, ObservedEntry>;
         suggestions: Record<string, SuggestionEntry>;
         reviewState: Record<string, GenreSuggestionStatus>;
+        observedArtists: Record<string, ArtistEntry>;
+        artistOverrides: Record<string, string>;
       };
     };
 
 const getData = createServerFn({ method: "GET" }).handler(async (): Promise<LoaderData> => {
   if (!isAuthCookieValid()) return { authRequired: true };
   const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
-  const [observed, suggestions, reviewState, aliases] = await Promise.all([
+  const [observed, suggestions, reviewState, aliases, observedArtists, artistOverrides] = await Promise.all([
     taxonomyAdmin.listObserved(),
     taxonomyAdmin.listSuggestions(),
     taxonomyAdmin.listReviewState(),
     taxonomyAdmin.loadAliasMap(),
+    taxonomyAdmin.listObservedArtists(),
+    taxonomyAdmin.loadArtistGenreOverrides(),
   ]);
   return {
     authRequired: false,
-    data: { aliases, observed, suggestions, reviewState },
+    data: { aliases, observed, suggestions, reviewState, observedArtists, artistOverrides },
   };
 });
 
@@ -135,6 +149,24 @@ const promoteSuggestion = createServerFn({ method: "POST" })
     if (!isAuthCookieValid()) return { ok: false };
     const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
     await taxonomyAdmin.promoteSuggestion(data.rawTag, data.canonicalGenre);
+    return { ok: true };
+  });
+
+const setArtistOverride = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ artistKey: z.string(), canonicalGenre: z.string() }))
+  .handler(async ({ data }) => {
+    if (!isAuthCookieValid()) return { ok: false };
+    const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
+    await taxonomyAdmin.setArtistOverride(data.artistKey, data.canonicalGenre);
+    return { ok: true };
+  });
+
+const removeArtistOverride = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ artistKey: z.string() }))
+  .handler(async ({ data }) => {
+    if (!isAuthCookieValid()) return { ok: false };
+    const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
+    await taxonomyAdmin.removeArtistOverride(data.artistKey);
     return { ok: true };
   });
 
@@ -217,11 +249,15 @@ function GenreAdminDashboard(props: {
   observed: Record<string, ObservedEntry>;
   suggestions: Record<string, SuggestionEntry>;
   reviewState: Record<string, GenreSuggestionStatus>;
+  observedArtists: Record<string, ArtistEntry>;
+  artistOverrides: Record<string, string>;
 }) {
   const router = useRouter();
   const [rawTag, setRawTag] = useState("");
   const [canonicalGenre, setCanonicalGenre] = useState("");
+  const [activeTab, setActiveTab] = useState<"tags" | "artists">("tags");
   const [filter, setFilter] = useState<"all" | "unmapped" | "low-confidence" | "recent">("all");
+  const [artistGenreDrafts, setArtistGenreDrafts] = useState<Record<string, string>>({});
 
   const aliasesEntries = useMemo(
     () => Object.entries(props.aliases).sort((a, b) => a[0].localeCompare(b[0])),
@@ -230,6 +266,13 @@ function GenreAdminDashboard(props: {
   const observedEntries = useMemo(
     () => Object.values(props.observed).sort((a, b) => b.count - a.count),
     [props.observed],
+  );
+  const observedArtistEntries = useMemo(
+    () =>
+      Object.values(props.observedArtists).sort((a, b) =>
+        b.count !== a.count ? b.count - a.count : a.artistName.localeCompare(b.artistName),
+      ),
+    [props.observedArtists],
   );
   const suggestionEntries = useMemo(() => {
     const base = Object.values(props.suggestions).sort((a, b) => b.count - a.count);
@@ -255,6 +298,14 @@ function GenreAdminDashboard(props: {
     await router.invalidate();
   };
 
+  const onSetArtistOverride = async (artistKey: string) => {
+    const value = artistGenreDrafts[artistKey]?.trim();
+    if (!value) return;
+    await runAndRefresh(() =>
+      setArtistOverride({ data: { artistKey, canonicalGenre: value } }),
+    );
+  };
+
   return (
     <div className="section-container calendar-page-section">
       <Text as="h2" size="3">Genre Admin</Text>
@@ -262,112 +313,180 @@ function GenreAdminDashboard(props: {
         Manage alias mappings and review auto-suggested genre buckets.
       </Text>
 
-      <form className="calendar-auth-form" onSubmit={onSetAlias}>
-        <Text as="label" size="1" color="2">Set alias</Text>
-        <div className="calendar-auth-form-row">
-          <input
-            className="calendar-auth-input"
-            placeholder="raw tag (e.g. power(pop))"
-            value={rawTag}
-            onChange={(e) => setRawTag(e.target.value)}
-            required
-          />
-          <input
-            className="calendar-auth-input"
-            placeholder="canonical genre (e.g. pop punk)"
-            value={canonicalGenre}
-            onChange={(e) => setCanonicalGenre(e.target.value)}
-            required
-          />
-          <button className="calendar-auth-submit" type="submit">Save</button>
-        </div>
-      </form>
-
       <div style={{ display: "flex", gap: 8, marginTop: 16, marginBottom: 8 }}>
-        {(["all", "unmapped", "low-confidence", "recent"] as const).map((item) => (
+        {(["tags", "artists"] as const).map((tab) => (
           <button
-            key={item}
+            key={tab}
             type="button"
             className="calendar-auth-submit"
-            onClick={() => setFilter(item)}
-            disabled={filter === item}
+            onClick={() => setActiveTab(tab)}
+            disabled={activeTab === tab}
           >
-            {item}
+            {tab}
           </button>
         ))}
       </div>
 
-      <Text as="h3" size="2">Suggestions ({suggestionEntries.length})</Text>
-      <ul>
-        {suggestionEntries.slice(0, 200).map((suggestion) => {
-          const status = props.reviewState[normalizeRawTag(suggestion.rawTag)] ?? "pending";
-          return (
-            <li key={suggestion.normalizedTag}>
-              <Text as="p" size="1">
-                {suggestion.rawTag} {"->"} {suggestion.suggestedCanonical} ({suggestion.confidence})
-              </Text>
-              <Text as="p" size="0" color="2">
-                {suggestion.reason} | count {suggestion.count} | status {status}
-              </Text>
-              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+      {activeTab === "tags" ? (
+        <>
+          <form className="calendar-auth-form" onSubmit={onSetAlias}>
+            <Text as="label" size="1" color="2">Set alias</Text>
+            <div className="calendar-auth-form-row">
+              <input
+                className="calendar-auth-input"
+                placeholder="raw tag (e.g. power(pop))"
+                value={rawTag}
+                onChange={(e) => setRawTag(e.target.value)}
+                required
+              />
+              <input
+                className="calendar-auth-input"
+                placeholder="canonical genre (e.g. pop punk)"
+                value={canonicalGenre}
+                onChange={(e) => setCanonicalGenre(e.target.value)}
+                required
+              />
+              <button className="calendar-auth-submit" type="submit">Save</button>
+            </div>
+          </form>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 16, marginBottom: 8 }}>
+            {(["all", "unmapped", "low-confidence", "recent"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                className="calendar-auth-submit"
+                onClick={() => setFilter(item)}
+                disabled={filter === item}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
+          <Text as="h3" size="2">Suggestions ({suggestionEntries.length})</Text>
+          <ul>
+            {suggestionEntries.slice(0, 200).map((suggestion) => {
+              const status = props.reviewState[normalizeRawTag(suggestion.rawTag)] ?? "pending";
+              return (
+                <li key={suggestion.normalizedTag}>
+                  <Text as="p" size="1">
+                    {suggestion.rawTag} {"->"} {suggestion.suggestedCanonical} ({suggestion.confidence})
+                  </Text>
+                  <Text as="p" size="0" color="2">
+                    {suggestion.reason} | count {suggestion.count} | status {status}
+                  </Text>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                    <button
+                      type="button"
+                      className="calendar-auth-submit"
+                      onClick={() => runAndRefresh(() => promoteSuggestion({ data: { rawTag: suggestion.rawTag } }))}
+                    >
+                      Promote
+                    </button>
+                    {(["pending", "accepted", "rejected", "dismissed"] as GenreSuggestionStatus[]).map((nextStatus) => (
+                      <button
+                        key={nextStatus}
+                        type="button"
+                        className="calendar-auth-submit"
+                        onClick={() =>
+                          runAndRefresh(() =>
+                            setSuggestionStatus({ data: { rawTag: suggestion.rawTag, status: nextStatus } }),
+                          )
+                        }
+                      >
+                        {nextStatus}
+                      </button>
+                    ))}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          <Text as="h3" size="2">Observed tags ({observedEntries.length})</Text>
+          <ul>
+            {observedEntries.slice(0, 200).map((entry) => (
+              <li key={entry.normalizedTag}>
+                <Text as="p" size="1">
+                  {entry.rawTag} {"=>"} {entry.currentCanonical} (count {entry.count})
+                </Text>
+                <Text as="p" size="0" color="2">
+                  last seen {entry.lastSeenIso} | sources {entry.sources.join(", ")}
+                </Text>
+              </li>
+            ))}
+          </ul>
+
+          <Text as="h3" size="2">Aliases ({aliasesEntries.length})</Text>
+          <ul>
+            {aliasesEntries.map(([raw, canonical]) => (
+              <li key={raw}>
+                <Text as="p" size="1">
+                  {raw} {"=>"} {canonical}
+                </Text>
                 <button
                   type="button"
                   className="calendar-auth-submit"
-                  onClick={() => runAndRefresh(() => promoteSuggestion({ data: { rawTag: suggestion.rawTag } }))}
+                  onClick={() => runAndRefresh(() => removeAlias({ data: { rawTag: raw } }))}
                 >
-                  Promote
+                  Remove
                 </button>
-                {(["pending", "accepted", "rejected", "dismissed"] as GenreSuggestionStatus[]).map((nextStatus) => (
-                  <button
-                    key={nextStatus}
-                    type="button"
-                    className="calendar-auth-submit"
-                    onClick={() =>
-                      runAndRefresh(() =>
-                        setSuggestionStatus({ data: { rawTag: suggestion.rawTag, status: nextStatus } }),
-                      )
-                    }
-                  >
-                    {nextStatus}
-                  </button>
-                ))}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-
-      <Text as="h3" size="2">Observed tags ({observedEntries.length})</Text>
-      <ul>
-        {observedEntries.slice(0, 200).map((entry) => (
-          <li key={entry.normalizedTag}>
-            <Text as="p" size="1">
-              {entry.rawTag} {"=>"} {entry.currentCanonical} (count {entry.count})
-            </Text>
-            <Text as="p" size="0" color="2">
-              last seen {entry.lastSeenIso} | sources {entry.sources.join(", ")}
-            </Text>
-          </li>
-        ))}
-      </ul>
-
-      <Text as="h3" size="2">Aliases ({aliasesEntries.length})</Text>
-      <ul>
-        {aliasesEntries.map(([raw, canonical]) => (
-          <li key={raw}>
-            <Text as="p" size="1">
-              {raw} {"=>"} {canonical}
-            </Text>
-            <button
-              type="button"
-              className="calendar-auth-submit"
-              onClick={() => runAndRefresh(() => removeAlias({ data: { rawTag: raw } }))}
-            >
-              Remove
-            </button>
-          </li>
-        ))}
-      </ul>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <>
+          <Text as="h3" size="2">Artists ({observedArtistEntries.length})</Text>
+          <ul>
+            {observedArtistEntries.slice(0, 300).map((artist) => {
+              const override = props.artistOverrides[artist.artistKey] ?? "";
+              return (
+                <li key={artist.artistKey}>
+                  <Text as="p" size="1">
+                    {artist.artistName} {"=>"} {override || artist.genre} {override ? "(override)" : "(observed)"}
+                  </Text>
+                  <Text as="p" size="0" color="2">
+                    count {artist.count} | last seen {artist.lastSeenIso}
+                  </Text>
+                  <div className="calendar-auth-form-row">
+                    <input
+                      className="calendar-auth-input"
+                      placeholder="set canonical genre"
+                      value={artistGenreDrafts[artist.artistKey] ?? override}
+                      onChange={(e) =>
+                        setArtistGenreDrafts((prev) => ({
+                          ...prev,
+                          [artist.artistKey]: e.target.value,
+                        }))
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="calendar-auth-submit"
+                      onClick={() => onSetArtistOverride(artist.artistKey)}
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      className="calendar-auth-submit"
+                      onClick={() =>
+                        runAndRefresh(() =>
+                          removeArtistOverride({ data: { artistKey: artist.artistKey } }),
+                        )
+                      }
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
     </div>
   );
 }

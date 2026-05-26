@@ -571,6 +571,7 @@ const buildConcertGenres = async (
 	const artistTopTags = await buildArtistTagMap(lookupKeys);
 	const tagWeighted = weightedArtists.map((a) => ({
 		key: a.name.toLowerCase(),
+		name: a.name,
 		weight: a.weight,
 	}));
 	const similarGenreTags = await buildSimilarTagMap({

@@ -91,6 +91,7 @@ const buildTopGenres = (params: {
 	const weightedArtists = topArtists
 		.map((artist) => ({
 			key: getPrimaryArtist(artist.name).toLowerCase(),
+			name: getPrimaryArtist(artist.name),
 			weight: parsePlayCount(artist.playcount),
 		}));
 	return buildTopGenresFromWeights({
@@ -732,6 +733,7 @@ const monthlyTopData = () => {
 			const weightedArtists = topArtistsRes.value.data.topartists.artist
 				.map((artist) => ({
 					key: getPrimaryArtist(artist.name).toLowerCase(),
+					name: getPrimaryArtist(artist.name),
 					weight: parsePlayCount(artist.playcount),
 				}));
 			const similarGenreTags = await buildSimilarTagMap({

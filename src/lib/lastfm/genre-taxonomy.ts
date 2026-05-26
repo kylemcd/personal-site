@@ -7,6 +7,8 @@ export const GENRE_OBSERVED_KV_KEY = "lastfm:genre:observed:v1";
 export const GENRE_SUGGESTIONS_KV_KEY = "lastfm:genre:suggestions:v1";
 export const GENRE_REVIEW_STATE_KV_KEY = "lastfm:genre:review-state:v1";
 export const GENRE_DIGEST_LAST_SENT_KV_KEY = "lastfm:genre:digest:last-sent:v1";
+export const GENRE_ARTIST_OBSERVED_KV_KEY = "lastfm:genre:artist-observed:v1";
+export const GENRE_ARTIST_OVERRIDE_KV_KEY = "lastfm:genre:artist-override:v1";
 
 const TAXONOMY_TTL_SECONDS = 365 * 24 * 60 * 60;
 
@@ -35,8 +37,21 @@ export type GenreSuggestion = {
 	count: number;
 };
 
+export type ObservedArtistGenre = {
+	artistKey: string;
+	artistName: string;
+	genre: string;
+	count: number;
+	firstSeenIso: string;
+	lastSeenIso: string;
+	sources: string[];
+};
+
+export type ArtistGenreOverrideMap = Record<string, string>;
+
 type ObservedMap = Record<string, ObservedGenreTag>;
 type SuggestionMap = Record<string, GenreSuggestion>;
+type ObservedArtistMap = Record<string, ObservedArtistGenre>;
 
 const DEFAULT_ALIAS_MAP: GenreAliasMap = {
 	"pop-punk": "pop punk",
@@ -93,6 +108,8 @@ export const heuristicCanonicalGenre = (tag: string): string => {
 };
 
 const keyForTag = (rawTag: string): string => normalizeRawGenreTag(rawTag);
+const keyForArtist = (artistKey: string): string =>
+	artistKey.toLowerCase().trim().replace(/\s+/g, " ");
 
 const confidenceForSuggestion = (
 	normalizedTag: string,
@@ -197,6 +214,46 @@ const nextSuggestionMap = (params: {
 	};
 };
 
+const nextObservedArtistMap = (params: {
+	current: ObservedArtistMap;
+	artistKey: string;
+	artistName: string;
+	genre: string;
+	source: string;
+	nowIso: string;
+}): ObservedArtistMap => {
+	const { current, artistKey, artistName, genre, source, nowIso } = params;
+	const existing = current[artistKey];
+	if (!existing) {
+		return {
+			...current,
+			[artistKey]: {
+				artistKey,
+				artistName,
+				genre,
+				count: 1,
+				firstSeenIso: nowIso,
+				lastSeenIso: nowIso,
+				sources: [source],
+			},
+		};
+	}
+	const sources = existing.sources.includes(source)
+		? existing.sources
+		: [...existing.sources, source];
+	return {
+		...current,
+		[artistKey]: {
+			...existing,
+			artistName,
+			genre,
+			count: existing.count + 1,
+			lastSeenIso: nowIso,
+			sources,
+		},
+	};
+};
+
 const readJsonOrDefault = async <T>(key: string, fallback: T): Promise<T> => {
 	const current = await getJson<T>({ key });
 	if (Result.isError(current) || !current.value) return fallback;
@@ -219,6 +276,7 @@ const upsertJson = async <T>(
 };
 
 let inMemoryAliasMap: GenreAliasMap | null = null;
+let inMemoryArtistOverrideMap: ArtistGenreOverrideMap | null = null;
 
 export const loadAliasMap = async (): Promise<GenreAliasMap> => {
 	const kvAliases = await readJsonOrDefault<GenreAliasMap>(GENRE_ALIAS_MAP_KV_KEY, {});
@@ -227,7 +285,18 @@ export const loadAliasMap = async (): Promise<GenreAliasMap> => {
 	return merged;
 };
 
+export const loadArtistGenreOverrides = async (): Promise<ArtistGenreOverrideMap> => {
+	const overrides = await readJsonOrDefault<ArtistGenreOverrideMap>(
+		GENRE_ARTIST_OVERRIDE_KV_KEY,
+		{},
+	);
+	inMemoryArtistOverrideMap = overrides;
+	return overrides;
+};
+
 const getAliasMapSync = (): GenreAliasMap => inMemoryAliasMap ?? DEFAULT_ALIAS_MAP;
+const getArtistOverrideMapSync = (): ArtistGenreOverrideMap =>
+	inMemoryArtistOverrideMap ?? {};
 
 export const canonicalizeGenreTag = (rawTag: string): string => {
 	const normalized = normalizeRawGenreTag(rawTag);
@@ -236,6 +305,13 @@ export const canonicalizeGenreTag = (rawTag: string): string => {
 	const direct = aliases[normalized];
 	if (direct) return normalizeRawGenreTag(direct);
 	return heuristicCanonicalGenre(normalized);
+};
+
+export const getArtistGenreOverride = (artistKey: string): string | null => {
+	const key = keyForArtist(artistKey);
+	if (!key) return null;
+	const override = getArtistOverrideMapSync()[key];
+	return override ? normalizeRawGenreTag(override) : null;
 };
 
 export const recordObservedAndSuggestion = async (params: {
@@ -282,10 +358,39 @@ export const recordObservedAndSuggestion = async (params: {
 	]);
 };
 
+export const recordObservedArtistGenre = async (params: {
+	artistKey: string;
+	artistName: string;
+	genre: string;
+	source: string;
+}): Promise<void> => {
+	const artistKey = keyForArtist(params.artistKey);
+	const artistName = params.artistName.trim();
+	const genre = normalizeRawGenreTag(params.genre);
+	if (!artistKey || !artistName || !genre) return;
+	const nowIso = new Date().toISOString();
+	await upsertJson<ObservedArtistMap>(
+		GENRE_ARTIST_OBSERVED_KV_KEY,
+		(current) =>
+			nextObservedArtistMap({
+				current,
+				artistKey,
+				artistName,
+				genre,
+				source: params.source,
+				nowIso,
+			}),
+		{},
+	);
+};
+
 export const taxonomyAdmin = {
 	loadAliasMap,
+	loadArtistGenreOverrides,
 	listObserved: async (): Promise<ObservedMap> =>
 		readJsonOrDefault<ObservedMap>(GENRE_OBSERVED_KV_KEY, {}),
+	listObservedArtists: async (): Promise<ObservedArtistMap> =>
+		readJsonOrDefault<ObservedArtistMap>(GENRE_ARTIST_OBSERVED_KV_KEY, {}),
 	listSuggestions: async (): Promise<SuggestionMap> =>
 		readJsonOrDefault<SuggestionMap>(GENRE_SUGGESTIONS_KV_KEY, {}),
 	listReviewState: async (): Promise<GenreReviewState> =>
@@ -314,6 +419,34 @@ export const taxonomyAdmin = {
 			{},
 		);
 		inMemoryAliasMap = null;
+	},
+	setArtistOverride: async (
+		artistKey: string,
+		canonicalGenre: string,
+	): Promise<void> => {
+		const key = keyForArtist(artistKey);
+		const value = normalizeRawGenreTag(canonicalGenre);
+		if (!key || !value) return;
+		await upsertJson<ArtistGenreOverrideMap>(
+			GENRE_ARTIST_OVERRIDE_KV_KEY,
+			(current) => ({ ...current, [key]: value }),
+			{},
+		);
+		inMemoryArtistOverrideMap = null;
+	},
+	removeArtistOverride: async (artistKey: string): Promise<void> => {
+		const key = keyForArtist(artistKey);
+		if (!key) return;
+		await upsertJson<ArtistGenreOverrideMap>(
+			GENRE_ARTIST_OVERRIDE_KV_KEY,
+			(current) => {
+				const next = { ...current };
+				delete next[key];
+				return next;
+			},
+			{},
+		);
+		inMemoryArtistOverrideMap = null;
 	},
 	setSuggestionStatus: async (
 		rawTag: string,
@@ -348,7 +481,9 @@ export const taxonomyAdmin = {
 export const __genreTaxonomyTestUtils = {
 	nextObservedMap,
 	nextSuggestionMap,
+	nextObservedArtistMap,
 	keyForTag,
+	keyForArtist,
 	confidenceForSuggestion,
 	reasonForSuggestion,
 };
