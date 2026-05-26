@@ -204,6 +204,12 @@ const getPrimaryArtist = (artistName: string): string => {
 	return primary.trim();
 };
 
+const getCanonicalArtistKey = (artistName: string): string =>
+	getPrimaryArtist(artistName)
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, " ")
+		.trim();
+
 /**
  * Creates a unique key for an album based on name and primary artist.
  * Uses primary artist to avoid duplicates from featured artist variations.
@@ -538,20 +544,36 @@ const extractWrappedData = (params: {
 		return null;
 
 	const topArtistShare = Math.round((topArtistPlays / totalScrobbles) * 100);
-	const topArtists = topArtistsRaw
-		.slice(0, WRAPPED_TOP_COUNT)
-		.map((artist) => {
-			const plays = parsePlayCount(artist.playcount);
-			const share = Math.round((plays / totalScrobbles) * 100);
-			return {
-				name: getPrimaryArtist(artist.name),
+	const mergedTopArtists = new Map<
+		string,
+		{ name: string; plays: number; url: string; image: string | null }
+	>();
+	for (const artist of topArtistsRaw) {
+		const plays = parsePlayCount(artist.playcount);
+		if (plays <= 0) continue;
+		const name = getPrimaryArtist(artist.name);
+		const key = getCanonicalArtistKey(name);
+		const existing = mergedTopArtists.get(key);
+		if (!existing) {
+			mergedTopArtists.set(key, {
+				name,
 				plays,
-				share,
 				url: artist.url,
 				image: null,
-			};
-		})
-		.filter((artist) => artist.plays > 0);
+			});
+			continue;
+		}
+		existing.plays += plays;
+		if (name.length > existing.name.length) existing.name = name;
+		if (!existing.url && artist.url) existing.url = artist.url;
+	}
+	const topArtists = Array.from(mergedTopArtists.values())
+		.sort((a, b) => b.plays - a.plays)
+		.slice(0, WRAPPED_TOP_COUNT)
+		.map((artist) => ({
+			...artist,
+			share: Math.round((artist.plays / totalScrobbles) * 100),
+		}));
 
 	const topTracksSummary = topTracks
 		.slice(0, WRAPPED_TOP_COUNT)
