@@ -59,7 +59,15 @@ const decodeHtml = (value: string): string =>
 		.replace(/&quot;/g, '"')
 		.replace(/&#39;/g, "'")
 		.replace(/&apos;/g, "'")
-		.replace(/&nbsp;/g, " ");
+		.replace(/&nbsp;/g, " ")
+		.replace(/&#(\d+);/g, (_match, code) => {
+			const parsed = Number.parseInt(code, 10);
+			return Number.isFinite(parsed) ? String.fromCodePoint(parsed) : _match;
+		})
+		.replace(/&#x([0-9a-f]+);/gi, (_match, hex) => {
+			const parsed = Number.parseInt(hex, 16);
+			return Number.isFinite(parsed) ? String.fromCodePoint(parsed) : _match;
+		});
 
 const slugFromUrl = (url: string): string => {
 	const match = url.match(/\/setlist\/[^/]+\/\d+\/([^"/]+)\.html/);
