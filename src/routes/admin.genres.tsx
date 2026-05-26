@@ -264,9 +264,12 @@ function GenreAdminDashboard(props: {
   );
   const observedArtistEntries = useMemo(
     () =>
-      Object.values(props.observedArtists).sort((a, b) =>
-        b.count !== a.count ? b.count - a.count : a.artistName.localeCompare(b.artistName),
-      ),
+      Object.values(props.observedArtists).sort((a, b) => {
+        const lastSeenDiff = new Date(b.lastSeenIso).getTime() - new Date(a.lastSeenIso).getTime();
+        if (lastSeenDiff !== 0) return lastSeenDiff;
+        if (b.count !== a.count) return b.count - a.count;
+        return a.artistName.localeCompare(b.artistName);
+      }),
     [props.observedArtists],
   );
   const suggestionEntries = useMemo(() => {
