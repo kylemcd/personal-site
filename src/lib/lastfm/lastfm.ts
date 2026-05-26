@@ -39,7 +39,6 @@ export const LASTFM_MONTHLY_TOP_CACHE_KEY = "lastfm:monthly-top:v3";
 const LASTFM_MONTHLY_TOP_CACHE_TTL_SECONDS = 30 * 60; // 30 minutes
 const WRAPPED_TOP_COUNT = 10;
 const WRAPPED_GENRE_COUNT = 6;
-const GENRE_ARTIST_SAMPLE_LIMIT = 10;
 const ARTIST_TAG_LIMIT = 6;
 const GENRE_SIMILAR_TAG_SAMPLE_LIMIT = 20;
 const RECENTLY_PLAYED_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
@@ -90,7 +89,6 @@ const buildTopGenres = (params: {
 }): Array<{ name: string; share: number }> => {
 	const { topArtists, artistTopTags, similarGenreTags } = params;
 	const weightedArtists = topArtists
-		.slice(0, GENRE_ARTIST_SAMPLE_LIMIT)
 		.map((artist) => ({
 			key: getPrimaryArtist(artist.name).toLowerCase(),
 			weight: parsePlayCount(artist.playcount),
@@ -728,12 +726,10 @@ const monthlyTopData = () => {
 			}
 
 			const primaryArtists = topArtistsRes.value.data.topartists.artist
-				.slice(0, GENRE_ARTIST_SAMPLE_LIMIT)
 				.map((artist) => getPrimaryArtist(artist.name));
 			const artistTopTags = await buildArtistTagMap(primaryArtists);
 
 			const weightedArtists = topArtistsRes.value.data.topartists.artist
-				.slice(0, GENRE_ARTIST_SAMPLE_LIMIT)
 				.map((artist) => ({
 					key: getPrimaryArtist(artist.name).toLowerCase(),
 					weight: parsePlayCount(artist.playcount),

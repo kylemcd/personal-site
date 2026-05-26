@@ -28,7 +28,6 @@ const RECENT_SHOWS_COUNT = 8;
 const TOP_ARTISTS_COUNT = 10;
 const TOP_SONGS_COUNT = 10;
 const TOP_SONG_CLOSER_BONUS = 0.5;
-const GENRE_ARTIST_SAMPLE_LIMIT = 20;
 const GENRE_COUNT = 6;
 export const SETLIST_FM_CACHE_KEY = "setlistfm:attended:v4";
 const CACHE_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
@@ -450,7 +449,7 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 	const weightedArtists = [...topArtistsMap.entries()]
 		.map(([key, value]) => ({ key, name: value.name, weight: value.count }))
 		.sort((a, b) => b.weight - a.weight)
-		.slice(0, GENRE_ARTIST_SAMPLE_LIMIT);
+		.filter((artist) => artist.weight > 0);
 
 	const allDateIsos = [...showGroups.values()]
 		.map((g) => g.dateIso)

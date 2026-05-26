@@ -2,6 +2,7 @@ import { Result, TaggedError } from "better-result";
 
 import { env } from "@/lib/env";
 import { fetchFresh } from "@/lib/fetch";
+import { getOrComputeJson } from "@/lib/store";
 
 import {
 	SimilarTagsResponseSchema,
@@ -15,6 +16,53 @@ export class LastFmGenreError extends TaggedError("LastFmGenreError")<{
 }
 
 const LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
+const LASTFM_ARTIST_TAGS_CACHE_KEY_PREFIX = "lastfm:artist-top-tags:v1";
+const LASTFM_ARTIST_TAGS_TTL_SECONDS = 365 * 24 * 60 * 60; // 1 year
+
+const GENRE_ALIAS_MAP: Record<string, string> = {
+	"pop-punk": "pop punk",
+	"neon pop punk": "pop punk",
+	"punk pop": "pop punk",
+	"emo pop punk": "pop punk",
+	"powerpop": "pop punk",
+	"power pop": "pop punk",
+	"alt rock": "alternative rock",
+	"alternative": "alternative rock",
+	"indie rock": "alternative rock",
+	"emo rock": "emo",
+	"pop rock": "rock",
+};
+
+const applyGenreAlias = (tag: string): string => {
+	const direct = GENRE_ALIAS_MAP[tag];
+	if (direct) return direct;
+	if (tag.includes("pop punk")) return "pop punk";
+	if (tag.includes("power pop")) return "pop punk";
+	if (tag.includes("alt rock")) return "alternative rock";
+	if (tag.includes("alternative rock")) return "alternative rock";
+	if (tag.includes("indie rock")) return "alternative rock";
+	return tag;
+};
+
+const getPrimaryArtistGenre = (params: {
+	artist: WeightedArtist;
+	artistTopTags: ArtistTagMap;
+	artistTagLimit: number;
+}): { genre: string; score: number } | null => {
+	const { artist, artistTopTags, artistTagLimit } = params;
+	const tags = artistTopTags[artist.key.toLowerCase()] ?? [];
+	let best: { genre: string; score: number } | null = null;
+	for (const tag of tags.slice(0, artistTagLimit)) {
+		const normalized = normalizeGenreTag(tag.name);
+		if (!normalized) continue;
+		const tagWeight = Math.max(1, tag.count);
+		const score = artist.weight * tagWeight;
+		if (!best || score > best.score) {
+			best = { genre: normalized, score };
+		}
+	}
+	return best;
+};
 
 const baseQueryParams = () => ({
 	api_key: env.LASTFM_API_KEY || "",
@@ -35,7 +83,7 @@ export const normalizeGenreTag = (tag: string): string => {
 	) {
 		return "";
 	}
-	return normalized;
+	return applyGenreAlias(normalized);
 };
 
 export const formatGenreLabel = (tag: string): string =>
@@ -167,10 +215,18 @@ export const buildArtistTagMap = async (
 	artistKeys: ReadonlyArray<string>,
 ): Promise<ArtistTagMap> => {
 	const unique = [...new Set(artistKeys)];
+	const artistCacheKey = (artist: string): string => {
+		const normalized = artist.toLowerCase().trim().replace(/\s+/g, " ");
+		return `${LASTFM_ARTIST_TAGS_CACHE_KEY_PREFIX}:${encodeURIComponent(normalized)}`;
+	};
 	const tagResults = await Promise.all(
 		unique.map(async (artist) => ({
 			artist,
-			result: await fetchArtistTopTags(artist),
+			result: await getOrComputeJson<ArtistTopTags, LastFmGenreError>({
+				key: artistCacheKey(artist),
+				ttlSeconds: LASTFM_ARTIST_TAGS_TTL_SECONDS,
+				compute: () => fetchArtistTopTags(artist),
+			}),
 		})),
 	);
 	const artistTopTags: ArtistTagMap = {};
@@ -241,17 +297,16 @@ export const buildTopGenresFromWeights = (params: {
 	const weightedScores = new Map<string, number>();
 	for (const artist of weightedArtists) {
 		if (artist.weight <= 0) continue;
-		const tags = artistTopTags[artist.key.toLowerCase()] ?? [];
-		for (const tag of tags.slice(0, artistTagLimit)) {
-			const normalized = normalizeGenreTag(tag.name);
-			if (!normalized) continue;
-			const tagWeight = Math.max(1, tag.count);
-			const score = artist.weight * tagWeight;
-			weightedScores.set(
-				normalized,
-				(weightedScores.get(normalized) ?? 0) + score,
-			);
-		}
+		const primary = getPrimaryArtistGenre({
+			artist,
+			artistTopTags,
+			artistTagLimit,
+		});
+		if (!primary) continue;
+		weightedScores.set(
+			primary.genre,
+			(weightedScores.get(primary.genre) ?? 0) + primary.score,
+		);
 	}
 
 	const grouped = groupGenresBySimilarity({
