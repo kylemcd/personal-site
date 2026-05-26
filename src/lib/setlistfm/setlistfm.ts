@@ -246,6 +246,33 @@ const computeRecords = (
 
 const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 	const showGroups = groupByShow(setlists);
+	const canonicalArtistKeyByName = new Map<string, string>();
+	const canonicalArtistKeyByMbid = new Map<string, string>();
+	const resolveArtistKey = (artist: SetlistArtist): string => {
+		const nameKey = artist.name.toLowerCase().trim();
+		const mbidKey =
+			artist.mbid && artist.mbid.trim().length > 0 ? artist.mbid.trim() : null;
+		if (!mbidKey) {
+			const byName = canonicalArtistKeyByName.get(nameKey);
+			if (byName) return byName;
+			canonicalArtistKeyByName.set(nameKey, nameKey);
+			return nameKey;
+		}
+		const byMbid = canonicalArtistKeyByMbid.get(mbidKey);
+		if (byMbid) {
+			canonicalArtistKeyByName.set(nameKey, byMbid);
+			return byMbid;
+		}
+		const byName = canonicalArtistKeyByName.get(nameKey);
+		if (byName) {
+			canonicalArtistKeyByMbid.set(mbidKey, byName);
+			return byName;
+		}
+		const created = mbidKey;
+		canonicalArtistKeyByName.set(nameKey, created);
+		canonicalArtistKeyByMbid.set(mbidKey, created);
+		return created;
+	};
 
 	// Track distinct shows per artist so openers + headliners aren't double-counted
 	// when an artist plays the same date+venue twice.
@@ -307,7 +334,7 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 		const songsSeenPerArtistInShow = new Map<string, Set<string>>();
 		const closersCountedPerArtistInShow = new Map<string, Set<string>>();
 		for (const setlist of group.setlists) {
-			const artistKey = getArtistKey(setlist.artist);
+			const artistKey = resolveArtistKey(setlist.artist);
 			const artistMbid =
 				setlist.artist.mbid && setlist.artist.mbid.trim().length > 0
 					? setlist.artist.mbid.trim()
@@ -456,7 +483,7 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 		};
 		entry.count += 1;
 		for (const setlist of group.setlists) {
-			entry.artists.add(getArtistKey(setlist.artist));
+			entry.artists.add(resolveArtistKey(setlist.artist));
 			entry.totalSongs += songCount(setlist);
 		}
 		yearAggs.set(year, entry);
@@ -480,7 +507,7 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 	const yearArtistSets = new Map<number, Set<string>>();
 	for (const { s, iso } of sortedSetlists) {
 		const year = Number.parseInt(iso.slice(0, 4), 10);
-		const key = getArtistKey(s.artist);
+		const key = resolveArtistKey(s.artist);
 		if (!firstYearByArtist.has(key)) firstYearByArtist.set(key, year);
 		const seen = yearArtistSets.get(year) ?? new Set<string>();
 		seen.add(key);

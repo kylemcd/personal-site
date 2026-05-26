@@ -115,6 +115,45 @@ describe("setlistfm aggregation", () => {
 		},
 	);
 
+	it("merges artist song counts when mbid is present on only some setlists", async () => {
+		const { __setlistfmTestUtils } = await import("./setlistfm");
+		const withMbid = (
+			setlist: Setlist,
+			mbid: string,
+		): Setlist => ({
+			...setlist,
+			artist: { ...setlist.artist, mbid },
+		});
+		const core = __setlistfmTestUtils.aggregateCore([
+			withMbid(
+				makeSetlist({
+					id: "mixed-1",
+					eventDate: "01-02-2026",
+					artist: "The Starting Line",
+					songs: ["Best of Me"],
+				}),
+				"artist-mbid-123",
+			),
+			makeSetlist({
+				id: "mixed-2",
+				eventDate: "01-03-2026",
+				artist: "The Starting Line",
+				songs: ["Best of Me"],
+			}),
+			makeSetlist({
+				id: "mixed-3",
+				eventDate: "01-04-2026",
+				artist: "The Starting Line",
+				songs: ["Best of Me"],
+			}),
+		]);
+		const topSong = core.topSongs.find(
+			(song) =>
+				song.artist === "The Starting Line" && song.name === "Best of Me",
+		);
+		expect(topSong?.count).toBe(3);
+	});
+
 	it("computes busiest week as latest tied rolling 7-day window", async () => {
 		const { __setlistfmTestUtils } = await import("./setlistfm");
 		const core = __setlistfmTestUtils.aggregateCore([
