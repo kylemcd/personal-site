@@ -3,9 +3,11 @@ import { Result, TaggedError } from "better-result";
 import { env } from "@/lib/env";
 import {
 	buildArtistTagMap,
+	getPrimaryGenreAssignments,
 	buildSimilarTagMap,
 	buildTopGenresFromWeights,
 } from "@/lib/lastfm/genres";
+import { recordObservedArtistGenresBatch } from "@/lib/lastfm/genre-taxonomy";
 import { getOrComputeJson, refreshJson } from "@/lib/store";
 
 import {
@@ -578,6 +580,18 @@ const buildConcertGenres = async (
 		weightedArtists: tagWeighted,
 		artistTopTags,
 	});
+	const assignments = getPrimaryGenreAssignments({
+		weightedArtists: tagWeighted,
+		artistTopTags,
+	});
+	await recordObservedArtistGenresBatch(
+		assignments.map((entry) => ({
+			artistKey: entry.artistKey,
+			artistName: entry.artistName,
+			genre: entry.genre,
+			source: "genre-rollup:setlistfm",
+		})),
+	);
 	return buildTopGenresFromWeights({
 		weightedArtists: tagWeighted,
 		artistTopTags,

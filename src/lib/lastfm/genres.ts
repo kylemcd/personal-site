@@ -8,7 +8,6 @@ import {
 	getArtistGenreOverride,
 	loadAliasMap,
 	loadArtistGenreOverrides,
-	recordObservedArtistGenre,
 	recordObservedAndSuggestion,
 } from "./genre-taxonomy";
 
@@ -301,12 +300,6 @@ export const buildTopGenresFromWeights = (params: {
 			artistTagLimit,
 		});
 		if (!primary) continue;
-		void recordObservedArtistGenre({
-			artistKey: artist.key,
-			artistName: artist.name ?? artist.key,
-			genre: primary.genre,
-			source: "genre-rollup",
-		});
 		weightedScores.set(
 			primary.genre,
 			(weightedScores.get(primary.genre) ?? 0) + primary.score,
@@ -326,4 +319,29 @@ export const buildTopGenresFromWeights = (params: {
 			name: formatGenreLabel(tag),
 			share: Math.max(1, Math.round((score / total) * 100)),
 		}));
+};
+
+export const getPrimaryGenreAssignments = (params: {
+	weightedArtists: ReadonlyArray<WeightedArtist>;
+	artistTopTags: ArtistTagMap;
+	artistTagLimit?: number;
+}): Array<{ artistKey: string; artistName: string; genre: string }> => {
+	const { weightedArtists, artistTopTags, artistTagLimit = ARTIST_TAG_LIMIT_DEFAULT } =
+		params;
+	const assignments: Array<{ artistKey: string; artistName: string; genre: string }> = [];
+	for (const artist of weightedArtists) {
+		if (artist.weight <= 0) continue;
+		const primary = getPrimaryArtistGenre({
+			artist,
+			artistTopTags,
+			artistTagLimit,
+		});
+		if (!primary) continue;
+		assignments.push({
+			artistKey: artist.key,
+			artistName: artist.name ?? artist.key,
+			genre: primary.genre,
+		});
+	}
+	return assignments;
 };

@@ -8,10 +8,12 @@ import { LASTFM_USERNAME } from "@/lib/config";
 import {
 	type ArtistTagMap,
 	buildArtistTagMap,
+	getPrimaryGenreAssignments,
 	buildSimilarTagMap,
 	buildTopGenresFromWeights,
 	type SimilarTagMap,
 } from "./genres";
+import { recordObservedArtistGenresBatch } from "./genre-taxonomy";
 import {
 	type Album,
 	type ListeningData,
@@ -742,6 +744,19 @@ const monthlyTopData = () => {
 				artistTagLimit: ARTIST_TAG_LIMIT,
 				seedLimit: GENRE_SIMILAR_TAG_SAMPLE_LIMIT,
 			});
+			const assignments = getPrimaryGenreAssignments({
+				weightedArtists,
+				artistTopTags,
+				artistTagLimit: ARTIST_TAG_LIMIT,
+			});
+			await recordObservedArtistGenresBatch(
+				assignments.map((entry) => ({
+					artistKey: entry.artistKey,
+					artistName: entry.artistName,
+					genre: entry.genre,
+					source: "genre-rollup:lastfm",
+				})),
+			);
 
 			return Result.ok({
 				topTracks: topTracksRes.value.data.toptracks.track,

@@ -384,6 +384,40 @@ export const recordObservedArtistGenre = async (params: {
 	);
 };
 
+export const recordObservedArtistGenresBatch = async (
+	entries: Array<{
+		artistKey: string;
+		artistName: string;
+		genre: string;
+		source: string;
+	}>,
+): Promise<void> => {
+	if (entries.length === 0) return;
+	const nowIso = new Date().toISOString();
+	await upsertJson<ObservedArtistMap>(
+		GENRE_ARTIST_OBSERVED_KV_KEY,
+		(current) => {
+			let next = current;
+			for (const entry of entries) {
+				const artistKey = keyForArtist(entry.artistKey);
+				const artistName = entry.artistName.trim();
+				const genre = normalizeRawGenreTag(entry.genre);
+				if (!artistKey || !artistName || !genre) continue;
+				next = nextObservedArtistMap({
+					current: next,
+					artistKey,
+					artistName,
+					genre,
+					source: entry.source,
+					nowIso,
+				});
+			}
+			return next;
+		},
+		{},
+	);
+};
+
 export const taxonomyAdmin = {
 	loadAliasMap,
 	loadArtistGenreOverrides,
