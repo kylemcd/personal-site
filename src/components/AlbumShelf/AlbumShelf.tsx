@@ -65,8 +65,17 @@ type CoverArtProps = {
 
 function CoverArt({ src, alt, className }: CoverArtProps) {
 	const [failed, setFailed] = useState(false);
+	const imageRef = useRef<HTMLImageElement>(null);
 
-	if (failed) {
+	useEffect(() => {
+		const img = imageRef.current;
+		if (!img) return;
+		if (img.complete && img.naturalWidth === 0) {
+			setFailed(true);
+		}
+	}, [src]);
+
+	if (failed || !src.trim()) {
 		return (
 			<div className={`${className} cover-art-fallback`} aria-label={`${alt} cover unavailable`}>
 				<Text as="span" size="0" color="2">
@@ -78,6 +87,7 @@ function CoverArt({ src, alt, className }: CoverArtProps) {
 
 	return (
 		<img
+			ref={imageRef}
 			src={src}
 			alt={alt}
 			className={className}
