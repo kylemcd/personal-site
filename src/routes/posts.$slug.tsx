@@ -13,7 +13,7 @@ import "@/styles/prism.css";
 import "@/styles/routes/posts.css";
 
 const getPost = createServerFn({ method: "GET" })
-	.inputValidator((data: { slug: string }) => data)
+	.validator((data: { slug: string }) => data)
 	.handler(async ({ data: { slug } }) => {
 		const result = markdown.fromPath<{
 			title: string;

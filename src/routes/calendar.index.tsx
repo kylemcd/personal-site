@@ -40,7 +40,7 @@ const getData = createServerFn({ method: "GET" }).handler(
 );
 
 const signInToCalendar = createServerFn({ method: "POST" })
-	.inputValidator(z.object({ password: z.string() }))
+	.validator(z.object({ password: z.string() }))
 	.handler(async ({ data }): Promise<{ ok: boolean }> => {
 		const expected = env.CALENDAR_AUTH;
 		if (!expected) return { ok: true };
