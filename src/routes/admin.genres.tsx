@@ -96,7 +96,7 @@ const getData = createServerFn({ method: "GET" }).handler(async (): Promise<Load
 });
 
 const signInToGenreAdmin = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ password: z.string() }))
+  .validator(z.object({ password: z.string() }))
   .handler(async ({ data }): Promise<{ ok: boolean }> => {
     const expected = getExpectedAuth();
     if (!expected) return { ok: true };
@@ -112,7 +112,7 @@ const signInToGenreAdmin = createServerFn({ method: "POST" })
   });
 
 const setAlias = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ rawTag: z.string(), canonicalGenre: z.string() }))
+  .validator(z.object({ rawTag: z.string(), canonicalGenre: z.string() }))
   .handler(async ({ data }) => {
     if (!isAuthCookieValid()) return { ok: false };
     const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
@@ -121,7 +121,7 @@ const setAlias = createServerFn({ method: "POST" })
   });
 
 const removeAlias = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ rawTag: z.string() }))
+  .validator(z.object({ rawTag: z.string() }))
   .handler(async ({ data }) => {
     if (!isAuthCookieValid()) return { ok: false };
     const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
@@ -130,7 +130,7 @@ const removeAlias = createServerFn({ method: "POST" })
   });
 
 const setSuggestionStatus = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       rawTag: z.string(),
       status: z.enum(["pending", "accepted", "rejected", "dismissed"]),
@@ -144,7 +144,7 @@ const setSuggestionStatus = createServerFn({ method: "POST" })
   });
 
 const promoteSuggestion = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ rawTag: z.string(), canonicalGenre: z.string().optional() }))
+  .validator(z.object({ rawTag: z.string(), canonicalGenre: z.string().optional() }))
   .handler(async ({ data }) => {
     if (!isAuthCookieValid()) return { ok: false };
     const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
@@ -153,7 +153,7 @@ const promoteSuggestion = createServerFn({ method: "POST" })
   });
 
 const setArtistOverride = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ artistKey: z.string(), canonicalGenre: z.string() }))
+  .validator(z.object({ artistKey: z.string(), canonicalGenre: z.string() }))
   .handler(async ({ data }) => {
     if (!isAuthCookieValid()) return { ok: false };
     const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
@@ -162,7 +162,7 @@ const setArtistOverride = createServerFn({ method: "POST" })
   });
 
 const removeArtistOverride = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ artistKey: z.string() }))
+  .validator(z.object({ artistKey: z.string() }))
   .handler(async ({ data }) => {
     if (!isAuthCookieValid()) return { ok: false };
     const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
