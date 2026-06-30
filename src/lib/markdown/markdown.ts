@@ -2,7 +2,7 @@
 // import nodePath from "node:path";
 import markdocPkg from "@markdoc/markdoc";
 import { Result, TaggedError } from "better-result";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 
 import { toComparableTimestampInCentral } from "@/lib/dates";
 import { toErrorDetails } from "@/lib/error-details";
