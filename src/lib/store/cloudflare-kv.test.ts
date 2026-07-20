@@ -28,6 +28,7 @@ const keyFor = (name: string) => `test:${name}:${Date.now()}:${Math.random()}`;
 describe("cloudflare-kv result cache", () => {
 	beforeEach(() => {
 		vi.resetModules();
+		delete (globalThis as { APP_STORE?: unknown }).APP_STORE;
 	});
 
 	it("supports refresh + getJson + cached getOrCompute", async () => {
@@ -116,5 +117,32 @@ describe("cloudflare-kv result cache", () => {
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+
+	it("does not write lookup status entries during normal computes by default", async () => {
+		const values = new Map<string, string>();
+		const puts: string[] = [];
+		(globalThis as { APP_STORE?: unknown }).APP_STORE = {
+			get: async (key: string) => values.get(key) ?? null,
+			put: async (key: string, value: string) => {
+				puts.push(key);
+				values.set(key, value);
+			},
+			delete: async (key: string) => {
+				values.delete(key);
+			},
+		};
+
+		const { getOrComputeJson } = await import("./cloudflare-kv");
+		const key = keyFor("no-lookup-status");
+
+		const result = await getOrComputeJson<number, TestComputeError>({
+			key,
+			ttlSeconds: 60,
+			compute: async () => Result.ok(7),
+		});
+
+		expect(Result.isOk(result)).toBe(true);
+		expect(puts).toEqual([`v1:${key}`]);
 	});
 });

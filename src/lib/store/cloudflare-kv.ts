@@ -305,6 +305,7 @@ const writeLookupStatus = async (
 	key: string,
 	status: Record<string, unknown>,
 ): Promise<void> => {
+	if (!env.KV_ENABLE_LOOKUP_STATUS_WRITES) return;
 	await putJson({
 		key: toLookupStatusKey(key),
 		value: status,
@@ -398,12 +399,16 @@ const refreshJson = async <A, E>({
 	const valueResult = await computeWithStatus(key, compute);
 	if (Result.isError(valueResult)) return valueResult;
 
-	const putResult = await putJson({ key, value: valueResult.value, ttlSeconds });
+	const putResult = await putJson({
+		key,
+		value: valueResult.value,
+		ttlSeconds,
+	});
 	if (Result.isError(putResult)) {
 		console.error("[kv] put failed after refresh", putResult.error);
 	}
 	return valueResult;
 };
 
-export { getJson, getOrComputeJson, refreshJson };
 export type { KvPutError };
+export { getJson, getOrComputeJson, refreshJson };

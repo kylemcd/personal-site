@@ -16,6 +16,14 @@ const EnvSchema = z
 			.enum(["", "true", "false", "1", "0"])
 			.optional()
 			.default(""),
+		KV_ENABLE_GENRE_OBSERVATION_WRITES: z
+			.enum(["", "true", "false", "1", "0"])
+			.optional()
+			.default(""),
+		KV_ENABLE_LOOKUP_STATUS_WRITES: z
+			.enum(["", "true", "false", "1", "0"])
+			.optional()
+			.default(""),
 		NODE_ENV: z
 			.enum(["development", "test", "production"])
 			.optional()
@@ -37,5 +45,11 @@ export const env = {
 	KV_READ_ONLY_CACHE:
 		parsed.data.KV_READ_ONLY_CACHE === "true" ||
 		parsed.data.KV_READ_ONLY_CACHE === "1",
+	KV_ENABLE_GENRE_OBSERVATION_WRITES:
+		parsed.data.KV_ENABLE_GENRE_OBSERVATION_WRITES === "true" ||
+		parsed.data.KV_ENABLE_GENRE_OBSERVATION_WRITES === "1",
+	KV_ENABLE_LOOKUP_STATUS_WRITES:
+		parsed.data.KV_ENABLE_LOOKUP_STATUS_WRITES === "true" ||
+		parsed.data.KV_ENABLE_LOOKUP_STATUS_WRITES === "1",
 	KV_CACHE_VERSION: parsed.data.KV_CACHE_VERSION || "",
 } as const;

@@ -1,5 +1,5 @@
 import { Result } from "better-result";
-
+import { env } from "@/lib/env";
 import { getJson, refreshJson } from "@/lib/store";
 
 export const GENRE_ALIAS_MAP_KV_KEY = "lastfm:genre:alias-map:v1";
@@ -13,7 +13,11 @@ export const GENRE_ARTIST_OVERRIDE_KV_KEY = "lastfm:genre:artist-override:v1";
 const TAXONOMY_TTL_SECONDS = 365 * 24 * 60 * 60;
 
 export type GenreAliasMap = Record<string, string>;
-export type GenreSuggestionStatus = "pending" | "accepted" | "rejected" | "dismissed";
+export type GenreSuggestionStatus =
+	| "pending"
+	| "accepted"
+	| "rejected"
+	| "dismissed";
 export type GenreReviewState = Record<string, GenreSuggestionStatus>;
 
 export type ObservedGenreTag = {
@@ -96,7 +100,8 @@ export const heuristicCanonicalGenre = (tag: string): string => {
 
 	const compact = compactGenre(normalized);
 	if (compact === "powerpop" || compact === "poppunk") return "pop punk";
-	if (compact === "altrock" || compact === "indierock") return "alternative rock";
+	if (compact === "altrock" || compact === "indierock")
+		return "alternative rock";
 
 	if (normalized.includes("pop punk")) return "pop punk";
 	if (normalized.includes("power pop")) return "pop punk";
@@ -117,15 +122,23 @@ const confidenceForSuggestion = (
 ): "high" | "medium" | "low" => {
 	if (!normalizedTag || !suggestedCanonical) return "low";
 	if (normalizedTag === suggestedCanonical) return "high";
-	if (compactGenre(normalizedTag) === compactGenre(suggestedCanonical)) return "high";
-	if (suggestedCanonical === "pop punk" || suggestedCanonical === "alternative rock") {
+	if (compactGenre(normalizedTag) === compactGenre(suggestedCanonical))
+		return "high";
+	if (
+		suggestedCanonical === "pop punk" ||
+		suggestedCanonical === "alternative rock"
+	) {
 		return "medium";
 	}
 	return "low";
 };
 
-const reasonForSuggestion = (normalizedTag: string, suggestedCanonical: string): string => {
-	if (normalizedTag === suggestedCanonical) return "Already canonical after normalization.";
+const reasonForSuggestion = (
+	normalizedTag: string,
+	suggestedCanonical: string,
+): string => {
+	if (normalizedTag === suggestedCanonical)
+		return "Already canonical after normalization.";
 	if (compactGenre(normalizedTag) === compactGenre(suggestedCanonical)) {
 		return "Compact token match.";
 	}
@@ -141,8 +154,15 @@ const nextObservedMap = (params: {
 	nowIso: string;
 	suggestedCanonical: string;
 }): ObservedMap => {
-	const { current, key, rawTag, normalizedTag, source, nowIso, suggestedCanonical } =
-		params;
+	const {
+		current,
+		key,
+		rawTag,
+		normalizedTag,
+		source,
+		nowIso,
+		suggestedCanonical,
+	} = params;
 	const existing = current[key];
 	if (!existing) {
 		return {
@@ -182,7 +202,8 @@ const nextSuggestionMap = (params: {
 	suggestedCanonical: string;
 	nowIso: string;
 }): SuggestionMap => {
-	const { current, key, rawTag, normalizedTag, suggestedCanonical, nowIso } = params;
+	const { current, key, rawTag, normalizedTag, suggestedCanonical, nowIso } =
+		params;
 	const existing = current[key];
 	if (!existing) {
 		return {
@@ -279,22 +300,27 @@ let inMemoryAliasMap: GenreAliasMap | null = null;
 let inMemoryArtistOverrideMap: ArtistGenreOverrideMap | null = null;
 
 export const loadAliasMap = async (): Promise<GenreAliasMap> => {
-	const kvAliases = await readJsonOrDefault<GenreAliasMap>(GENRE_ALIAS_MAP_KV_KEY, {});
+	const kvAliases = await readJsonOrDefault<GenreAliasMap>(
+		GENRE_ALIAS_MAP_KV_KEY,
+		{},
+	);
 	const merged = { ...DEFAULT_ALIAS_MAP, ...kvAliases };
 	inMemoryAliasMap = merged;
 	return merged;
 };
 
-export const loadArtistGenreOverrides = async (): Promise<ArtistGenreOverrideMap> => {
-	const overrides = await readJsonOrDefault<ArtistGenreOverrideMap>(
-		GENRE_ARTIST_OVERRIDE_KV_KEY,
-		{},
-	);
-	inMemoryArtistOverrideMap = overrides;
-	return overrides;
-};
+export const loadArtistGenreOverrides =
+	async (): Promise<ArtistGenreOverrideMap> => {
+		const overrides = await readJsonOrDefault<ArtistGenreOverrideMap>(
+			GENRE_ARTIST_OVERRIDE_KV_KEY,
+			{},
+		);
+		inMemoryArtistOverrideMap = overrides;
+		return overrides;
+	};
 
-const getAliasMapSync = (): GenreAliasMap => inMemoryAliasMap ?? DEFAULT_ALIAS_MAP;
+const getAliasMapSync = (): GenreAliasMap =>
+	inMemoryAliasMap ?? DEFAULT_ALIAS_MAP;
 const getArtistOverrideMapSync = (): ArtistGenreOverrideMap =>
 	inMemoryArtistOverrideMap ?? {};
 
@@ -318,6 +344,7 @@ export const recordObservedAndSuggestion = async (params: {
 	rawTag: string;
 	source: string;
 }): Promise<void> => {
+	if (!env.KV_ENABLE_GENRE_OBSERVATION_WRITES) return;
 	const rawTag = params.rawTag.trim();
 	if (!rawTag) return;
 	const normalizedTag = normalizeRawGenreTag(rawTag);
@@ -364,6 +391,7 @@ export const recordObservedArtistGenre = async (params: {
 	genre: string;
 	source: string;
 }): Promise<void> => {
+	if (!env.KV_ENABLE_GENRE_OBSERVATION_WRITES) return;
 	const artistKey = keyForArtist(params.artistKey);
 	const artistName = params.artistName.trim();
 	const genre = normalizeRawGenreTag(params.genre);
@@ -392,6 +420,7 @@ export const recordObservedArtistGenresBatch = async (
 		source: string;
 	}>,
 ): Promise<void> => {
+	if (!env.KV_ENABLE_GENRE_OBSERVATION_WRITES) return;
 	if (entries.length === 0) return;
 	const nowIso = new Date().toISOString();
 	await upsertJson<ObservedArtistMap>(
