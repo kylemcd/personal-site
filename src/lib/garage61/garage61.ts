@@ -4,7 +4,7 @@ import { env } from "@/lib/env";
 import { fetchFresh } from "@/lib/fetch";
 import { fnv1a32 } from "@/lib/hash";
 import { forEachAsyncResult } from "@/lib/result";
-import { getJson, refreshJson } from "@/lib/store";
+import { getJson, refreshJson, type KvPutError } from "@/lib/store";
 
 import type { Garage61Summary } from "./schema";
 import {
@@ -1580,7 +1580,7 @@ const summaryUncached = async (
 	}
 };
 
-const summary = async (): Promise<Result<Garage61Summary, Garage61Error>> => {
+const summary = async (): Promise<Result<Garage61Summary, Garage61Error | KvPutError>> => {
 	const latestCachedResult = await getJson<Garage61Summary>({
 		key: GARAGE61_SUMMARY_CACHE_KEY,
 	});
@@ -1607,7 +1607,7 @@ const summary = async (): Promise<Result<Garage61Summary, Garage61Error>> => {
 };
 
 const refreshSummary = async (): Promise<
-	Result<Garage61Summary, Garage61Error>
+	Result<Garage61Summary, Garage61Error | KvPutError>
 > => {
 	const garage61ApiKey = env.GARAGE61_API_KEY || "";
 	return refreshJson<Garage61Summary, Garage61Error>({

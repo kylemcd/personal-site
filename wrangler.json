@@ -4,6 +4,11 @@
 	"preview_urls": true,
 	"compatibility_date": "2025-09-02",
 	"compatibility_flags": ["nodejs_compat"],
+	"vars": {
+		"KV_READ_ONLY_CACHE": "false",
+		"KV_ENABLE_GENRE_OBSERVATION_WRITES": "false",
+		"KV_ENABLE_LOOKUP_STATUS_WRITES": "false"
+	},
 	"main": "./worker.ts",
 	"routes": [
 		{ "pattern": "kpm.sh", "custom_domain": true },
@@ -53,6 +58,20 @@
 			"binding": "GENRE_REVIEW_DIGEST_WORKFLOW",
 			"name": "genre-review-digest",
 			"class_name": "GenreReviewDigestWorkflow"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "GENRE_OBSERVATION_COLLECTOR",
+				"class_name": "GenreObservationCollector"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["GenreObservationCollector"]
 		}
 	],
 	"triggers": {

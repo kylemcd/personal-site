@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { Result } from "better-result";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 (
 	vi.mock as unknown as (
@@ -9,6 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 )(
 	"cloudflare:workers",
 	() => ({
+		DurableObject: class {},
 		env: {},
 	}),
 	{ virtual: true },
@@ -24,6 +26,13 @@ import {
 	heuristicCanonicalGenre,
 	normalizeRawGenreTag,
 } from "./genre-taxonomy";
+
+afterEach(() => {
+	vi.resetModules();
+	delete (globalThis as { APP_STORE?: unknown }).APP_STORE;
+	delete (globalThis as { GENRE_OBSERVATION_COLLECTOR?: unknown })
+		.GENRE_OBSERVATION_COLLECTOR;
+});
 
 describe("genre taxonomy normalization", () => {
 	it("normalizes raw tag shape deterministically", () => {
@@ -65,7 +74,10 @@ describe("genre taxonomy state reducers", () => {
 		expect(second[key]?.count).toBe(2);
 		expect(second[key]?.firstSeenIso).toBe("2026-05-01T00:00:00.000Z");
 		expect(second[key]?.lastSeenIso).toBe("2026-05-02T00:00:00.000Z");
-		expect(second[key]?.sources.sort()).toEqual(["artist.gettoptags", "tag.getsimilar"]);
+		expect(second[key]?.sources.sort()).toEqual([
+			"artist.gettoptags",
+			"tag.getsimilar",
+		]);
 	});
 
 	it("increments suggestions and updates status metadata fields", () => {
@@ -113,5 +125,53 @@ describe("genre taxonomy state reducers", () => {
 		expect(second["the maine"]?.genre).toBe("alternative rock");
 		expect(second["the maine"]?.firstSeenIso).toBe("2026-05-01T00:00:00.000Z");
 		expect(second["the maine"]?.lastSeenIso).toBe("2026-05-04T00:00:00.000Z");
+	});
+});
+
+describe("genre taxonomy administration", () => {
+	it("promotes a suggestion stored in the observation collector", async () => {
+		const values = new Map<string, string>();
+		(globalThis as { APP_STORE?: unknown }).APP_STORE = {
+			get: async (key: string) => values.get(key) ?? null,
+			put: async (key: string, value: string) => {
+				values.set(key, value);
+			},
+			delete: async () => undefined,
+		};
+		(
+			globalThis as { GENRE_OBSERVATION_COLLECTOR?: unknown }
+		).GENRE_OBSERVATION_COLLECTOR = {
+			getByName: () => ({
+				getSnapshot: async () =>
+					Result.ok({
+						observed: {},
+						suggestions: {
+							powerpop: {
+								rawTag: "PowerPop",
+								normalizedTag: "powerpop",
+								suggestedCanonical: "pop punk",
+								confidence: "high" as const,
+								reason: "Compact token match.",
+								firstSuggestedIso: "2026-01-01T00:00:00.000Z",
+								lastSuggestedIso: "2026-01-01T00:00:00.000Z",
+								count: 1,
+							},
+						},
+						artists: {},
+					}),
+			}),
+		};
+		vi.resetModules();
+		const { taxonomyAdmin } = await import("./genre-taxonomy");
+
+		const result = await taxonomyAdmin.promoteSuggestion("PowerPop");
+
+		expect(Result.isOk(result)).toBe(true);
+		expect(values.get("v1:lastfm:genre:alias-map:v1")).toContain(
+			'"powerpop":"pop punk"',
+		);
+		expect(values.get("v1:lastfm:genre:review-state:v1")).toContain(
+			'"powerpop":"accepted"',
+		);
 	});
 });

@@ -11,6 +11,7 @@ export type StaleMonitorParams = {
 export type StaleMonitorWorkflowEnv = {
 	APP_STORE?: KVNamespace;
 	KV_CACHE_VERSION?: string;
+	KV_READ_ONLY_CACHE?: string;
 	EMAIL?: SendEmail;
 	STALE_ALERT_EMAIL_TO?: string;
 	STALE_ALERT_EMAIL_FROM?: string;
@@ -29,6 +30,7 @@ type MonitoredKey = {
 
 const DEFAULT_CACHE_VERSION = "v1";
 const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
+const ALERT_RETRY_DELAY_MS = 30 * 60 * 1000;
 const MONITORED_KEYS: ReadonlyArray<MonitoredKey> = [
 	{ key: GARAGE61_SUMMARY_CACHE_KEY, label: "Garage61 summary" },
 	{ key: GOODREADS_SHELF_CACHE_KEY, label: "Goodreads shelf" },
@@ -87,6 +89,47 @@ const getAlertStateKey = (
 const getLookupStatusKey = (key: string): string =>
 	`monitor:lookup-status:${key}`;
 
+type AlertState = {
+	attemptedAt?: number;
+	retryAfter?: number;
+};
+
+const shouldAttemptAlert = (raw: string | null, nowMs: number): boolean => {
+	if (!raw) return true;
+	try {
+		const parsed = JSON.parse(raw) as unknown;
+		const record = asRecord(parsed);
+		return typeof record?.retryAfter === "number" && record.retryAfter <= nowMs;
+	} catch {
+		return false;
+	}
+};
+
+const reserveAlert = async (
+	store: KVNamespace,
+	key: string,
+	nowMs: number,
+): Promise<void> =>
+	kvPut(
+		store,
+		key,
+		JSON.stringify({ attemptedAt: nowMs } satisfies AlertState),
+	);
+
+const recordFailedAlert = async (
+	store: KVNamespace,
+	key: string,
+	nowMs: number,
+): Promise<void> =>
+	kvPut(
+		store,
+		key,
+		JSON.stringify({
+			attemptedAt: nowMs,
+			retryAfter: nowMs + ALERT_RETRY_DELAY_MS,
+		} satisfies AlertState),
+	);
+
 const sendCloudflareEmail = async (
 	email: SendEmail,
 	to: string,
@@ -102,46 +145,34 @@ const sendCloudflareEmail = async (
 	});
 };
 
-const kvGet = async (
-	store: KVNamespace,
-	key: string,
-): Promise<string | null> => {
-	try {
-		return await store.get(key, "text");
-	} catch {
-		return null;
-	}
-};
+const kvGet = async (store: KVNamespace, key: string): Promise<string | null> =>
+	store.get(key, "text");
 
 const kvPut = async (
 	store: KVNamespace,
 	key: string,
 	value: string,
 ): Promise<void> => {
-	try {
-		await store.put(key, value);
-	} catch {
-		// Ignore KV failures in stale monitor side effects.
-	}
+	await store.put(key, value);
 };
 
 const kvDelete = async (store: KVNamespace, key: string): Promise<void> => {
-	try {
-		await store.delete(key);
-	} catch {
-		// Ignore KV failures in stale monitor side effects.
-	}
+	await store.delete(key);
 };
 
-const sendCloudflareEmailSafe = async (
+const isWriteDisabled = (value: string | undefined): boolean =>
+	value === "true" || value === "1";
+
+const sendCloudflareEmailOnce = async (
 	email: SendEmail,
 	to: string,
 	from: string,
 	subject: string,
 	text: string,
-): Promise<void> => {
+): Promise<boolean> => {
 	try {
 		await sendCloudflareEmail(email, to, from, subject, text);
+		return true;
 	} catch (error) {
 		const errorCode =
 			typeof error === "object" &&
@@ -157,6 +188,7 @@ const sendCloudflareEmailSafe = async (
 			errorMessage,
 			error,
 		});
+		return false;
 	}
 };
 
@@ -222,6 +254,12 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 			console.error("[monitor] APP_STORE binding missing");
 			return;
 		}
+		if (isWriteDisabled(this.env.KV_READ_ONLY_CACHE)) {
+			console.warn(
+				"[monitor] skipping stale checks while KV writes are disabled",
+			);
+			return;
+		}
 
 		const nowMs = Date.now();
 		const cacheVersion = this.env.KV_CACHE_VERSION;
@@ -258,8 +296,10 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 				if (!envelope || envelope.refreshAfter === null) {
 					const existingAlert = await kvGet(store, alertStateKey);
 					let emailSent = false;
-					if (!existingAlert && canSendEmail && email) {
-						await sendCloudflareEmailSafe(
+					const shouldAttempt = shouldAttemptAlert(existingAlert, nowMs);
+					if (shouldAttempt && canSendEmail && email) {
+						await reserveAlert(store, alertStateKey, nowMs);
+						emailSent = await sendCloudflareEmailOnce(
 							email,
 							emailTo,
 							emailFrom,
@@ -276,12 +316,9 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 								`Last error: ${lookupStatus?.lastError ?? "n/a"}`,
 							].join("\n"),
 						);
-						await kvPut(
-							store,
-							alertStateKey,
-							JSON.stringify({ sentAt: nowMs }),
-						);
-						emailSent = true;
+						if (!emailSent) {
+							await recordFailedAlert(store, alertStateKey, nowMs);
+						}
 					}
 					return {
 						key: item.key,
@@ -292,7 +329,7 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 						staleForMinutes: null,
 						refreshAfter: null,
 						emailSent,
-						alertAlreadyActive: Boolean(existingAlert),
+						alertAlreadyActive: Boolean(existingAlert) && !shouldAttempt,
 						emailConfigured: canSendEmail,
 						lastError: lookupStatus?.lastError ?? null,
 					} satisfies StaleCheckOutput;
@@ -300,7 +337,8 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 
 				const staleForMs = nowMs - envelope.refreshAfter;
 				if (staleForMs < STALE_THRESHOLD_MS) {
-					await kvDelete(store, alertStateKey);
+					const existingAlert = await kvGet(store, alertStateKey);
+					if (existingAlert) await kvDelete(store, alertStateKey);
 					return {
 						key: item.key,
 						label: item.label,
@@ -317,7 +355,8 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 				}
 
 				const existingAlert = await kvGet(store, alertStateKey);
-				if (existingAlert) {
+				const shouldAttempt = shouldAttemptAlert(existingAlert, nowMs);
+				if (existingAlert && !shouldAttempt) {
 					return {
 						key: item.key,
 						label: item.label,
@@ -381,7 +420,8 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 					} satisfies StaleCheckOutput;
 				}
 
-				await sendCloudflareEmailSafe(
+				await reserveAlert(store, alertStateKey, nowMs);
+				const emailSent = await sendCloudflareEmailOnce(
 					email,
 					emailTo,
 					emailFrom,
@@ -401,7 +441,9 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 						`Last error: ${lookupStatus?.lastError ?? "n/a"}`,
 					].join("\n"),
 				);
-				await kvPut(store, alertStateKey, JSON.stringify({ sentAt: nowMs }));
+				if (!emailSent) {
+					await recordFailedAlert(store, alertStateKey, nowMs);
+				}
 				return {
 					key: item.key,
 					label: item.label,
@@ -410,7 +452,7 @@ export class StaleDataMonitorWorkflow extends WorkflowEntrypoint<
 					thresholdMinutes: STALE_THRESHOLD_MS / (60 * 1000),
 					staleForMinutes: Math.floor(staleForMs / (60 * 1000)),
 					refreshAfter: new Date(envelope.refreshAfter).toISOString(),
-					emailSent: true,
+					emailSent,
 					alertAlreadyActive: false,
 					emailConfigured: true,
 					lastError: lookupStatus?.lastError ?? null,

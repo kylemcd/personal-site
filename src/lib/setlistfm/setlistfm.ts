@@ -1,21 +1,21 @@
 import { Result, TaggedError } from "better-result";
 
 import { env } from "@/lib/env";
+import { recordObservedArtistGenresBatch } from "@/lib/lastfm/genre-taxonomy";
 import {
 	buildArtistTagMap,
-	getPrimaryGenreAssignments,
 	buildSimilarTagMap,
 	buildTopGenresFromWeights,
+	getPrimaryGenreAssignments,
 } from "@/lib/lastfm/genres";
-import { recordObservedArtistGenresBatch } from "@/lib/lastfm/genre-taxonomy";
-import { getOrComputeJson, refreshJson } from "@/lib/store";
+import { getOrComputeJson, type KvPutError, refreshJson } from "@/lib/store";
 
 import {
+	type ConcertsFile,
 	loadConcertEntries,
 	loadConcertsWithSource,
 	SETLIST_FM_CONCERTS_BACKUP_KV_KEY,
 	SETLIST_FM_CONCERTS_KV_KEY,
-	type ConcertsFile,
 } from "./concerts-data";
 import type { ConcertsData, Setlist, SetlistArtist } from "./schema";
 import { scrapeConcertEntriesDiff } from "./scrape";
@@ -76,7 +76,10 @@ const normalizeSongKey = (name: string): string =>
 		.replace(/[‘’ʼ`´']/g, "'")
 		.replace(/[.,!?]+$/, "");
 
-const getOrCreateSet = (map: Map<string, Set<string>>, key: string): Set<string> => {
+const getOrCreateSet = (
+	map: Map<string, Set<string>>,
+	key: string,
+): Set<string> => {
 	const existing = map.get(key);
 	if (existing) return existing;
 	const created = new Set<string>();
@@ -542,9 +545,7 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 	}
 	const setlistStats: ConcertsData["setlistStats"] = {
 		averageLength:
-			setlistsWithSongs > 0
-				? totalSongsAcrossSetlists / setlistsWithSongs
-				: 0,
+			setlistsWithSongs > 0 ? totalSongsAcrossSetlists / setlistsWithSongs : 0,
 		longestSetlist,
 	};
 
@@ -584,7 +585,7 @@ const buildConcertGenres = async (
 		weightedArtists: tagWeighted,
 		artistTopTags,
 	});
-	await recordObservedArtistGenresBatch(
+	const observationResult = await recordObservedArtistGenresBatch(
 		assignments.map((entry) => ({
 			artistKey: entry.artistKey,
 			artistName: entry.artistName,
@@ -592,6 +593,12 @@ const buildConcertGenres = async (
 			source: "genre-rollup:setlistfm",
 		})),
 	);
+	if (Result.isError(observationResult)) {
+		console.error(
+			"[setlistfm] failed to record artist genre observations",
+			observationResult.error,
+		);
+	}
 	return buildTopGenresFromWeights({
 		weightedArtists: tagWeighted,
 		artistTopTags,
@@ -630,21 +637,32 @@ const computeAttendedConcerts = async (): Promise<
 	return Result.ok(await buildConcertsData(setlists));
 };
 
-const refreshConcertsFromSetlistProfile = async (params?: {
+type SetlistRefreshParams = {
 	user?: string;
 	lookbackDays?: number;
 	fullRescan?: boolean;
-}): Promise<
-	Result<
-		{
-			totalConcerts: number;
-			addedConcerts: number;
-			updatedConcerts: number;
-			discoveredLinks: number;
-		},
-		SetlistFmDataError
-	>
-> => {
+};
+
+type SetlistRefreshSummary = {
+	totalConcerts: number;
+	addedConcerts: number;
+	updatedConcerts: number;
+	discoveredLinks: number;
+};
+
+const refreshConcertsBackup = async () => {
+	const existing = await loadConcertEntries();
+	const backupPayload: ConcertsFile = { concerts: existing.entries };
+	return refreshJson<ConcertsFile, SetlistFmDataError>({
+		key: SETLIST_FM_CONCERTS_BACKUP_KV_KEY,
+		ttlSeconds: RAW_CONCERTS_TTL_SECONDS,
+		compute: async () => Result.ok(backupPayload),
+	});
+};
+
+const refreshConcertsRaw = async (
+	params?: SetlistRefreshParams,
+): Promise<Result<SetlistRefreshSummary, SetlistFmDataError | KvPutError>> => {
 	const existing = await loadConcertEntries();
 	const scrapeResult = await scrapeConcertEntriesDiff({
 		...(params?.user ? { user: params.user } : {}),
@@ -659,38 +677,44 @@ const refreshConcertsFromSetlistProfile = async (params?: {
 	}
 
 	const rawPayload: ConcertsFile = { concerts: scrapeResult.value.concerts };
-	const backupPayload: ConcertsFile = { concerts: existing.entries };
-	const backupWrite = await refreshJson<ConcertsFile, SetlistFmDataError>({
-		key: SETLIST_FM_CONCERTS_BACKUP_KV_KEY,
-		ttlSeconds: RAW_CONCERTS_TTL_SECONDS,
-		compute: async () => Result.ok(backupPayload),
-	});
-	if (Result.isError(backupWrite)) return backupWrite;
-
 	const rawWrite = await refreshJson<ConcertsFile, SetlistFmDataError>({
 		key: SETLIST_FM_CONCERTS_KV_KEY,
 		ttlSeconds: RAW_CONCERTS_TTL_SECONDS,
 		compute: async () => Result.ok(rawPayload),
 	});
-	if (Result.isError(rawWrite)) return rawWrite;
-
-	const aggregateWrite = await refreshJson<ConcertsData, SetlistFmDataError>({
-		key: SETLIST_FM_CACHE_KEY,
-		ttlSeconds: CACHE_TTL_SECONDS,
-		compute: computeAttendedConcerts,
-	});
-	if (Result.isError(aggregateWrite)) return aggregateWrite;
-
+	if (Result.isError(rawWrite)) return Result.err(rawWrite.error);
 	return Result.ok({
 		totalConcerts: scrapeResult.value.concerts.length,
 		addedConcerts: scrapeResult.value.added,
 		updatedConcerts: scrapeResult.value.updated,
 		discoveredLinks: scrapeResult.value.discoveredLinks,
+	} satisfies SetlistRefreshSummary);
+};
+
+const refreshConcertsAggregate = async () =>
+	refreshJson<ConcertsData, SetlistFmDataError>({
+		key: SETLIST_FM_CACHE_KEY,
+		ttlSeconds: CACHE_TTL_SECONDS,
+		compute: computeAttendedConcerts,
 	});
+
+const refreshConcertsFromSetlistProfile = async (
+	params?: SetlistRefreshParams,
+): Promise<Result<SetlistRefreshSummary, SetlistFmDataError | KvPutError>> => {
+	const backupWrite = await refreshConcertsBackup();
+	if (Result.isError(backupWrite)) return Result.err(backupWrite.error);
+
+	const rawWrite = await refreshConcertsRaw(params);
+	if (Result.isError(rawWrite)) return Result.err(rawWrite.error);
+
+	const aggregateWrite = await refreshConcertsAggregate();
+	if (Result.isError(aggregateWrite)) return Result.err(aggregateWrite.error);
+
+	return Result.ok(rawWrite.value);
 };
 
 const attendedConcerts = (): Promise<
-	Result<ConcertsData, SetlistFmDataError>
+	Result<ConcertsData, SetlistFmDataError | KvPutError>
 > => {
 	return getOrComputeJson<ConcertsData, SetlistFmDataError>({
 		key: SETLIST_FM_CACHE_KEY,
@@ -702,6 +726,9 @@ const attendedConcerts = (): Promise<
 const setlistfm = {
 	attendedConcerts,
 	refreshConcertsFromSetlistProfile,
+	refreshConcertsBackup,
+	refreshConcertsRaw,
+	refreshConcertsAggregate,
 };
 
 // Test-only exports for deterministic unit coverage of aggregation behavior.
@@ -710,4 +737,4 @@ export const __setlistfmTestUtils = {
 	computeRecords,
 };
 
-export { setlistfm, SetlistFmDataError };
+export { SetlistFmDataError, setlistfm };

@@ -1,6 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
+import { Result } from "better-result";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 
@@ -78,22 +79,31 @@ type LoaderData =
       };
     };
 
-const getData = createServerFn({ method: "GET" }).handler(async (): Promise<LoaderData> => {
-  if (!isAuthCookieValid()) return { authRequired: true };
-  const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
-  const [observed, suggestions, reviewState, aliases, observedArtists, artistOverrides] = await Promise.all([
-    taxonomyAdmin.listObserved(),
-    taxonomyAdmin.listSuggestions(),
-    taxonomyAdmin.listReviewState(),
-    taxonomyAdmin.loadAliasMap(),
-    taxonomyAdmin.listObservedArtists(),
-    taxonomyAdmin.loadArtistGenreOverrides(),
-  ]);
-  return {
-    authRequired: false,
-    data: { aliases, observed, suggestions, reviewState, observedArtists, artistOverrides },
-  };
-});
+const getData = createServerFn({ method: "GET" }).handler(
+  async (): Promise<LoaderData> => {
+    if (!isAuthCookieValid()) return { authRequired: true };
+    const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
+    const [snapshot, reviewState, aliases, artistOverrides] = await Promise.all(
+      [
+        taxonomyAdmin.getObservationSnapshot(),
+        taxonomyAdmin.listReviewState(),
+        taxonomyAdmin.loadAliasMap(),
+        taxonomyAdmin.loadArtistGenreOverrides(),
+      ],
+    );
+    return {
+      authRequired: false,
+      data: {
+        aliases,
+        observed: snapshot.observed,
+        suggestions: snapshot.suggestions,
+        reviewState,
+        observedArtists: snapshot.artists,
+        artistOverrides,
+      },
+    };
+  },
+);
 
 const signInToGenreAdmin = createServerFn({ method: "POST" })
   .validator(z.object({ password: z.string() }))
@@ -116,7 +126,11 @@ const setAlias = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!isAuthCookieValid()) return { ok: false };
     const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
-    await taxonomyAdmin.setAlias(data.rawTag, data.canonicalGenre);
+    const result = await taxonomyAdmin.setAlias(
+      data.rawTag,
+      data.canonicalGenre,
+    );
+    if (Result.isError(result)) throw result.error;
     return { ok: true };
   });
 
@@ -125,7 +139,8 @@ const removeAlias = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!isAuthCookieValid()) return { ok: false };
     const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
-    await taxonomyAdmin.removeAlias(data.rawTag);
+    const result = await taxonomyAdmin.removeAlias(data.rawTag);
+    if (Result.isError(result)) throw result.error;
     return { ok: true };
   });
 
@@ -139,16 +154,26 @@ const setSuggestionStatus = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!isAuthCookieValid()) return { ok: false };
     const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
-    await taxonomyAdmin.setSuggestionStatus(data.rawTag, data.status);
+    const result = await taxonomyAdmin.setSuggestionStatus(
+      data.rawTag,
+      data.status,
+    );
+    if (Result.isError(result)) throw result.error;
     return { ok: true };
   });
 
 const promoteSuggestion = createServerFn({ method: "POST" })
-  .validator(z.object({ rawTag: z.string(), canonicalGenre: z.string().optional() }))
+  .validator(
+    z.object({ rawTag: z.string(), canonicalGenre: z.string().optional() }),
+  )
   .handler(async ({ data }) => {
     if (!isAuthCookieValid()) return { ok: false };
     const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
-    await taxonomyAdmin.promoteSuggestion(data.rawTag, data.canonicalGenre);
+    const result = await taxonomyAdmin.promoteSuggestion(
+      data.rawTag,
+      data.canonicalGenre,
+    );
+    if (Result.isError(result)) throw result.error;
     return { ok: true };
   });
 
@@ -157,7 +182,11 @@ const setArtistOverride = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!isAuthCookieValid()) return { ok: false };
     const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
-    await taxonomyAdmin.setArtistOverride(data.artistKey, data.canonicalGenre);
+    const result = await taxonomyAdmin.setArtistOverride(
+      data.artistKey,
+      data.canonicalGenre,
+    );
+    if (Result.isError(result)) throw result.error;
     return { ok: true };
   });
 
@@ -166,7 +195,8 @@ const removeArtistOverride = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!isAuthCookieValid()) return { ok: false };
     const { taxonomyAdmin } = await import("@/lib/lastfm/genre-taxonomy");
-    await taxonomyAdmin.removeArtistOverride(data.artistKey);
+    const result = await taxonomyAdmin.removeArtistOverride(data.artistKey);
+    if (Result.isError(result)) throw result.error;
     return { ok: true };
   });
 
@@ -256,16 +286,20 @@ function GenreAdminDashboard(props: {
   const [rawTag, setRawTag] = useState("");
   const [canonicalGenre, setCanonicalGenre] = useState("");
   const [activeTab, setActiveTab] = useState<"tags" | "artists">("tags");
-  const [artistGenreDrafts, setArtistGenreDrafts] = useState<Record<string, string>>({});
+  const [artistGenreDrafts, setArtistGenreDrafts] = useState<
+    Record<string, string>
+  >({});
 
   const aliasesEntries = useMemo(
-    () => Object.entries(props.aliases).sort((a, b) => a[0].localeCompare(b[0])),
+    () =>
+      Object.entries(props.aliases).sort((a, b) => a[0].localeCompare(b[0])),
     [props.aliases],
   );
   const observedArtistEntries = useMemo(
     () =>
       Object.values(props.observedArtists).sort((a, b) => {
-        const lastSeenDiff = new Date(b.lastSeenIso).getTime() - new Date(a.lastSeenIso).getTime();
+        const lastSeenDiff =
+          new Date(b.lastSeenIso).getTime() - new Date(a.lastSeenIso).getTime();
         if (lastSeenDiff !== 0) return lastSeenDiff;
         if (b.count !== a.count) return b.count - a.count;
         return a.artistName.localeCompare(b.artistName);
@@ -275,7 +309,8 @@ function GenreAdminDashboard(props: {
   const suggestionEntries = useMemo(() => {
     return Object.values(props.suggestions)
       .filter((suggestion) => {
-        const status = props.reviewState[normalizeRawTag(suggestion.rawTag)] ?? "pending";
+        const status =
+          props.reviewState[normalizeRawTag(suggestion.rawTag)] ?? "pending";
         return status === "pending";
       })
       .sort((a, b) => b.count - a.count);
@@ -303,7 +338,10 @@ function GenreAdminDashboard(props: {
   };
 
   const onAcceptSuggestion = async (suggestion: SuggestionEntry) => {
-    if (normalizeRawTag(suggestion.rawTag) !== normalizeRawTag(suggestion.suggestedCanonical)) {
+    if (
+      normalizeRawTag(suggestion.rawTag) !==
+      normalizeRawTag(suggestion.suggestedCanonical)
+    ) {
       await runAndRefresh(() =>
         promoteSuggestion({
           data: {
@@ -315,19 +353,25 @@ function GenreAdminDashboard(props: {
       return;
     }
     await runAndRefresh(() =>
-      setSuggestionStatus({ data: { rawTag: suggestion.rawTag, status: "accepted" } }),
+      setSuggestionStatus({
+        data: { rawTag: suggestion.rawTag, status: "accepted" },
+      }),
     );
   };
 
   const onRejectSuggestion = async (suggestion: SuggestionEntry) => {
     await runAndRefresh(() =>
-      setSuggestionStatus({ data: { rawTag: suggestion.rawTag, status: "rejected" } }),
+      setSuggestionStatus({
+        data: { rawTag: suggestion.rawTag, status: "rejected" },
+      }),
     );
   };
 
   return (
     <div className="section-container calendar-page-section">
-      <Text as="h2" size="3">Genre Admin</Text>
+      <Text as="h2" size="3">
+        Genre Admin
+      </Text>
       <Text as="p" size="1" color="2">
         Manage alias mappings and review auto-suggested genre buckets.
       </Text>
@@ -349,7 +393,9 @@ function GenreAdminDashboard(props: {
       {activeTab === "tags" ? (
         <>
           <form className="calendar-auth-form" onSubmit={onSetAlias}>
-            <Text as="label" size="1" color="2">Set alias</Text>
+            <Text as="label" size="1" color="2">
+              Set alias
+            </Text>
             <div className="calendar-auth-form-row">
               <input
                 className="calendar-auth-input"
@@ -365,17 +411,22 @@ function GenreAdminDashboard(props: {
                 onChange={(e) => setCanonicalGenre(e.target.value)}
                 required
               />
-              <button className="calendar-auth-submit" type="submit">Save</button>
+              <button className="calendar-auth-submit" type="submit">
+                Save
+              </button>
             </div>
           </form>
 
-          <Text as="h3" size="2">Suggestions ({suggestionEntries.length})</Text>
+          <Text as="h3" size="2">
+            Suggestions ({suggestionEntries.length})
+          </Text>
           <ul>
             {suggestionEntries.slice(0, 200).map((suggestion) => {
               return (
                 <li key={suggestion.normalizedTag}>
                   <Text as="p" size="1">
-                    {suggestion.rawTag} {"->"} {suggestion.suggestedCanonical} ({suggestion.confidence})
+                    {suggestion.rawTag} {"->"} {suggestion.suggestedCanonical} (
+                    {suggestion.confidence})
                   </Text>
                   <Text as="p" size="0" color="2">
                     {suggestion.reason} | count {suggestion.count}
@@ -401,7 +452,9 @@ function GenreAdminDashboard(props: {
             })}
           </ul>
 
-          <Text as="h3" size="2">Aliases ({aliasesEntries.length})</Text>
+          <Text as="h3" size="2">
+            Aliases ({aliasesEntries.length})
+          </Text>
           <ul>
             {aliasesEntries.map(([raw, canonical]) => (
               <li key={raw}>
@@ -411,7 +464,9 @@ function GenreAdminDashboard(props: {
                 <button
                   type="button"
                   className="calendar-auth-submit"
-                  onClick={() => runAndRefresh(() => removeAlias({ data: { rawTag: raw } }))}
+                  onClick={() =>
+                    runAndRefresh(() => removeAlias({ data: { rawTag: raw } }))
+                  }
                 >
                   Remove
                 </button>
@@ -421,45 +476,72 @@ function GenreAdminDashboard(props: {
         </>
       ) : (
         <>
-          <Text as="h3" size="2">Artists ({observedArtistEntries.length})</Text>
+          <Text as="h3" size="2">
+            Artists ({observedArtistEntries.length})
+          </Text>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", padding: "8px 4px" }}>Artist</th>
-                  <th style={{ textAlign: "left", padding: "8px 4px" }}>Current Genre</th>
-                  <th style={{ textAlign: "left", padding: "8px 4px" }}>Status</th>
-                  <th style={{ textAlign: "left", padding: "8px 4px" }}>Count</th>
-                  <th style={{ textAlign: "left", padding: "8px 4px" }}>Last Seen</th>
-                  <th style={{ textAlign: "left", padding: "8px 4px" }}>Override</th>
+                  <th style={{ textAlign: "left", padding: "8px 4px" }}>
+                    Artist
+                  </th>
+                  <th style={{ textAlign: "left", padding: "8px 4px" }}>
+                    Current Genre
+                  </th>
+                  <th style={{ textAlign: "left", padding: "8px 4px" }}>
+                    Status
+                  </th>
+                  <th style={{ textAlign: "left", padding: "8px 4px" }}>
+                    Count
+                  </th>
+                  <th style={{ textAlign: "left", padding: "8px 4px" }}>
+                    Last Seen
+                  </th>
+                  <th style={{ textAlign: "left", padding: "8px 4px" }}>
+                    Override
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {observedArtistEntries.slice(0, 300).map((artist) => {
-                  const override = props.artistOverrides[artist.artistKey] ?? "";
+                  const override =
+                    props.artistOverrides[artist.artistKey] ?? "";
                   return (
                     <tr key={artist.artistKey}>
                       <td style={{ padding: "8px 4px", verticalAlign: "top" }}>
-                        <Text as="p" size="1">{artist.artistName}</Text>
+                        <Text as="p" size="1">
+                          {artist.artistName}
+                        </Text>
                       </td>
                       <td style={{ padding: "8px 4px", verticalAlign: "top" }}>
-                        <Text as="p" size="1">{override || artist.genre}</Text>
+                        <Text as="p" size="1">
+                          {override || artist.genre}
+                        </Text>
                       </td>
                       <td style={{ padding: "8px 4px", verticalAlign: "top" }}>
-                        <Text as="p" size="0" color="2">{override ? "override" : "observed"}</Text>
+                        <Text as="p" size="0" color="2">
+                          {override ? "override" : "observed"}
+                        </Text>
                       </td>
                       <td style={{ padding: "8px 4px", verticalAlign: "top" }}>
-                        <Text as="p" size="0" color="2">{artist.count}</Text>
+                        <Text as="p" size="0" color="2">
+                          {artist.count}
+                        </Text>
                       </td>
                       <td style={{ padding: "8px 4px", verticalAlign: "top" }}>
-                        <Text as="p" size="0" color="2">{artist.lastSeenIso}</Text>
+                        <Text as="p" size="0" color="2">
+                          {artist.lastSeenIso}
+                        </Text>
                       </td>
                       <td style={{ padding: "8px 4px", verticalAlign: "top" }}>
                         <div className="calendar-auth-form-row">
                           <input
                             className="calendar-auth-input"
                             placeholder="set canonical genre"
-                            value={artistGenreDrafts[artist.artistKey] ?? override}
+                            value={
+                              artistGenreDrafts[artist.artistKey] ?? override
+                            }
                             onChange={(e) =>
                               setArtistGenreDrafts((prev) => ({
                                 ...prev,
@@ -470,7 +552,9 @@ function GenreAdminDashboard(props: {
                           <button
                             type="button"
                             className="calendar-auth-submit"
-                            onClick={() => onSetArtistOverride(artist.artistKey)}
+                            onClick={() =>
+                              onSetArtistOverride(artist.artistKey)
+                            }
                           >
                             Save
                           </button>
@@ -479,7 +563,9 @@ function GenreAdminDashboard(props: {
                             className="calendar-auth-submit"
                             onClick={() =>
                               runAndRefresh(() =>
-                                removeArtistOverride({ data: { artistKey: artist.artistKey } }),
+                                removeArtistOverride({
+                                  data: { artistKey: artist.artistKey },
+                                }),
                               )
                             }
                           >

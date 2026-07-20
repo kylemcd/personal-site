@@ -5,7 +5,7 @@ import { goodreads } from "@/lib/goodreads";
 import { lastfm } from "@/lib/lastfm";
 import { markdown } from "@/lib/markdown";
 import { setlistfm } from "@/lib/setlistfm";
-import { getOrComputeJson } from "@/lib/store";
+import { getOrComputeJson, type KvPutError } from "@/lib/store";
 
 import {
 	normalizeConcertEvents,
@@ -87,7 +87,7 @@ const computeCalendarData = async (): Promise<
 	});
 };
 
-const lastSevenDays = (): Promise<Result<CalendarData, CalendarError>> => {
+const lastSevenDays = (): Promise<Result<CalendarData, CalendarError | KvPutError>> => {
 	return getOrComputeJson<CalendarData, CalendarError>({
 		key: CALENDAR_CACHE_KEY,
 		ttlSeconds: CALENDAR_CACHE_TTL_SECONDS,

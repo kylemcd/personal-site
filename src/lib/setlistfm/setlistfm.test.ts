@@ -12,6 +12,7 @@ import type { Setlist } from "./schema";
 )(
 	"cloudflare:workers",
 	() => ({
+		DurableObject: class {},
 		env: {},
 	}),
 	{ virtual: true },

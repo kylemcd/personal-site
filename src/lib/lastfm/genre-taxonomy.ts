@@ -1,6 +1,7 @@
-import { Result } from "better-result";
+import { env as cloudflareEnv, DurableObject } from "cloudflare:workers";
+import { Result, TaggedError } from "better-result";
 import { env } from "@/lib/env";
-import { getJson, refreshJson } from "@/lib/store";
+import { getJson, type KvPutError, refreshJson } from "@/lib/store";
 
 export const GENRE_ALIAS_MAP_KV_KEY = "lastfm:genre:alias-map:v1";
 export const GENRE_OBSERVED_KV_KEY = "lastfm:genre:observed:v1";
@@ -11,6 +12,9 @@ export const GENRE_ARTIST_OBSERVED_KV_KEY = "lastfm:genre:artist-observed:v1";
 export const GENRE_ARTIST_OVERRIDE_KV_KEY = "lastfm:genre:artist-override:v1";
 
 const TAXONOMY_TTL_SECONDS = 365 * 24 * 60 * 60;
+const OBSERVATION_SHARD_COUNT = 16;
+const MAX_OBSERVED_TAGS_PER_SHARD = 128;
+const MAX_OBSERVED_ARTISTS_PER_SHARD = 256;
 
 export type GenreAliasMap = Record<string, string>;
 export type GenreSuggestionStatus =
@@ -56,6 +60,52 @@ export type ArtistGenreOverrideMap = Record<string, string>;
 type ObservedMap = Record<string, ObservedGenreTag>;
 type SuggestionMap = Record<string, GenreSuggestion>;
 type ObservedArtistMap = Record<string, ObservedArtistGenre>;
+
+type GenreObservationInput = {
+	rawTag: string;
+	source: string;
+};
+
+type GenreObservation = GenreObservationInput & {
+	suggestedCanonical: string;
+};
+
+type ArtistGenreObservation = {
+	artistKey: string;
+	artistName: string;
+	genre: string;
+	source: string;
+};
+
+type ObservationSnapshot = {
+	observed: ObservedMap;
+	suggestions: SuggestionMap;
+	artists: ObservedArtistMap;
+};
+
+type GenreObservationCollectorStub = {
+	recordTags: (
+		entries: GenreObservation[],
+	) => Promise<Result<void, GenreObservationError>>;
+	recordArtists: (
+		entries: ArtistGenreObservation[],
+	) => Promise<Result<void, GenreObservationError>>;
+	getSnapshot: () => Promise<
+		Result<ObservationSnapshot, GenreObservationError>
+	>;
+};
+
+type GenreObservationCollectorNamespace = {
+	getByName: (name: string) => GenreObservationCollectorStub;
+};
+
+export class GenreObservationError extends TaggedError(
+	"GenreObservationError",
+)<{
+	readonly error: unknown;
+}>() {
+	override message = "Failed to update genre observations";
+}
 
 const DEFAULT_ALIAS_MAP: GenreAliasMap = {
 	"pop-punk": "pop punk",
@@ -275,6 +325,202 @@ const nextObservedArtistMap = (params: {
 	};
 };
 
+const shardFor = (key: string): string => {
+	let hash = 5381;
+	for (const char of key) {
+		hash = (hash * 33) ^ char.charCodeAt(0);
+	}
+	return `genre-observations:${(hash >>> 0) % OBSERVATION_SHARD_COUNT}`;
+};
+
+const trimMap = <T extends { count: number }>(
+	map: Record<string, T>,
+	maxEntries: number,
+	lastSeen: (value: T) => string,
+): Record<string, T> => {
+	const entries = Object.entries(map);
+	if (entries.length <= maxEntries) return map;
+	return Object.fromEntries(
+		entries
+			.sort(([, left], [, right]) => {
+				const recent = lastSeen(right).localeCompare(lastSeen(left));
+				if (recent !== 0) return recent;
+				return right.count - left.count;
+			})
+			.slice(0, maxEntries),
+	);
+};
+
+const emptyObservationSnapshot = (): ObservationSnapshot => ({
+	observed: {},
+	suggestions: {},
+	artists: {},
+});
+
+const resolveObservationCollector =
+	(): GenreObservationCollectorNamespace | null => {
+		const imported = cloudflareEnv as unknown as Record<string, unknown>;
+		const candidate = imported.GENRE_OBSERVATION_COLLECTOR;
+		if (
+			candidate &&
+			typeof candidate === "object" &&
+			"getByName" in candidate &&
+			typeof candidate.getByName === "function"
+		) {
+			return candidate as GenreObservationCollectorNamespace;
+		}
+
+		const globalCandidate = (globalThis as Record<string, unknown>)
+			.GENRE_OBSERVATION_COLLECTOR;
+		if (
+			globalCandidate &&
+			typeof globalCandidate === "object" &&
+			"getByName" in globalCandidate &&
+			typeof globalCandidate.getByName === "function"
+		) {
+			return globalCandidate as GenreObservationCollectorNamespace;
+		}
+
+		return null;
+	};
+
+const groupByShard = <T>(
+	entries: ReadonlyArray<T>,
+	keyForEntry: (entry: T) => string,
+): Map<string, T[]> => {
+	const grouped = new Map<string, T[]>();
+	for (const entry of entries) {
+		const shard = shardFor(keyForEntry(entry));
+		const bucket = grouped.get(shard) ?? [];
+		bucket.push(entry);
+		grouped.set(shard, bucket);
+	}
+	return grouped;
+};
+
+const recordTags = async (
+	entries: GenreObservationInput[],
+): Promise<Result<void, GenreObservationError>> => {
+	if (!env.KV_ENABLE_GENRE_OBSERVATION_WRITES || entries.length === 0) {
+		return Result.ok();
+	}
+	const prepared = entries.flatMap((entry): GenreObservation[] => {
+		const rawTag = entry.rawTag.trim();
+		const suggestedCanonical = canonicalizeGenreTag(rawTag);
+		if (!rawTag || !suggestedCanonical) return [];
+		return [{ ...entry, rawTag, suggestedCanonical }];
+	});
+	if (prepared.length === 0) return Result.ok();
+	const collector = resolveObservationCollector();
+	if (!collector) {
+		return Result.err(
+			new GenreObservationError({
+				error: new Error("Observation collector binding missing"),
+			}),
+		);
+	}
+	const calls = await Result.tryPromise({
+		try: () =>
+			Promise.all(
+				[...groupByShard(prepared, (entry) => keyForTag(entry.rawTag))].map(
+					([shard, shardEntries]) =>
+						collector.getByName(shard).recordTags(shardEntries),
+				),
+			),
+		catch: (error) => new GenreObservationError({ error }),
+	});
+	if (Result.isError(calls)) return calls;
+	const results = calls.value;
+	for (const result of results) {
+		if (Result.isError(result)) return result;
+	}
+	return Result.ok();
+};
+
+const recordArtists = async (
+	entries: ArtistGenreObservation[],
+): Promise<Result<void, GenreObservationError>> => {
+	if (!env.KV_ENABLE_GENRE_OBSERVATION_WRITES || entries.length === 0) {
+		return Result.ok();
+	}
+	const collector = resolveObservationCollector();
+	if (!collector) {
+		return Result.err(
+			new GenreObservationError({
+				error: new Error("Observation collector binding missing"),
+			}),
+		);
+	}
+	const calls = await Result.tryPromise({
+		try: () =>
+			Promise.all(
+				[
+					...groupByShard(entries, (entry) => keyForArtist(entry.artistKey)),
+				].map(([shard, shardEntries]) =>
+					collector.getByName(shard).recordArtists(shardEntries),
+				),
+			),
+		catch: (error) => new GenreObservationError({ error }),
+	});
+	if (Result.isError(calls)) return calls;
+	const results = calls.value;
+	for (const result of results) {
+		if (Result.isError(result)) return result;
+	}
+	return Result.ok();
+};
+
+const loadObservationSnapshot = async (): Promise<ObservationSnapshot> => {
+	const collector = resolveObservationCollector();
+	if (!collector) {
+		return {
+			observed: await readJsonOrDefault<ObservedMap>(GENRE_OBSERVED_KV_KEY, {}),
+			suggestions: await readJsonOrDefault<SuggestionMap>(
+				GENRE_SUGGESTIONS_KV_KEY,
+				{},
+			),
+			artists: await readJsonOrDefault<ObservedArtistMap>(
+				GENRE_ARTIST_OBSERVED_KV_KEY,
+				{},
+			),
+		};
+	}
+
+	const calls = await Result.tryPromise({
+		try: () =>
+			Promise.all(
+				Array.from({ length: OBSERVATION_SHARD_COUNT }, (_, index) =>
+					collector.getByName(`genre-observations:${index}`).getSnapshot(),
+				),
+			),
+		catch: (error) => new GenreObservationError({ error }),
+	});
+	if (Result.isError(calls)) {
+		console.error(
+			"[genre-taxonomy] failed to load observation shards",
+			calls.error,
+		);
+		return emptyObservationSnapshot();
+	}
+	const results = calls.value;
+	const snapshots = results.flatMap((result) => {
+		if (Result.isOk(result)) return [result.value];
+		console.error(
+			"[genre-taxonomy] failed to load observation shard",
+			result.error,
+		);
+		return [];
+	});
+	return snapshots.reduce<ObservationSnapshot>(
+		(current, snapshot) => ({
+			observed: { ...current.observed, ...snapshot.observed },
+			suggestions: { ...current.suggestions, ...snapshot.suggestions },
+			artists: { ...current.artists, ...snapshot.artists },
+		}),
+		emptyObservationSnapshot(),
+	);
+};
+
 const readJsonOrDefault = async <T>(key: string, fallback: T): Promise<T> => {
 	const current = await getJson<T>({ key });
 	if (Result.isError(current) || !current.value) return fallback;
@@ -285,8 +531,8 @@ const upsertJson = async <T>(
 	key: string,
 	updater: (current: T) => T,
 	fallback: T,
-): Promise<void> => {
-	await refreshJson<T, Error>({
+): Promise<Result<T, KvPutError>> => {
+	return refreshJson<T, never>({
 		key,
 		ttlSeconds: TAXONOMY_TTL_SECONDS,
 		compute: async () => {
@@ -343,74 +589,18 @@ export const getArtistGenreOverride = (artistKey: string): string | null => {
 export const recordObservedAndSuggestion = async (params: {
 	rawTag: string;
 	source: string;
-}): Promise<void> => {
-	if (!env.KV_ENABLE_GENRE_OBSERVATION_WRITES) return;
-	const rawTag = params.rawTag.trim();
-	if (!rawTag) return;
-	const normalizedTag = normalizeRawGenreTag(rawTag);
-	if (!normalizedTag) return;
-	const suggestedCanonical = canonicalizeGenreTag(rawTag);
-	if (!suggestedCanonical) return;
-	const key = keyForTag(rawTag);
-	const nowIso = new Date().toISOString();
+}): Promise<Result<void, GenreObservationError>> => recordTags([params]);
 
-	await Promise.all([
-		upsertJson<ObservedMap>(
-			GENRE_OBSERVED_KV_KEY,
-			(current) =>
-				nextObservedMap({
-					current,
-					key,
-					rawTag,
-					normalizedTag,
-					source: params.source,
-					nowIso,
-					suggestedCanonical,
-				}),
-			{},
-		),
-		upsertJson<SuggestionMap>(
-			GENRE_SUGGESTIONS_KV_KEY,
-			(current) =>
-				nextSuggestionMap({
-					current,
-					key,
-					rawTag,
-					normalizedTag,
-					suggestedCanonical,
-					nowIso,
-				}),
-			{},
-		),
-	]);
-};
+export const recordObservedAndSuggestionsBatch = async (
+	entries: GenreObservationInput[],
+): Promise<Result<void, GenreObservationError>> => recordTags(entries);
 
 export const recordObservedArtistGenre = async (params: {
 	artistKey: string;
 	artistName: string;
 	genre: string;
 	source: string;
-}): Promise<void> => {
-	if (!env.KV_ENABLE_GENRE_OBSERVATION_WRITES) return;
-	const artistKey = keyForArtist(params.artistKey);
-	const artistName = params.artistName.trim();
-	const genre = normalizeRawGenreTag(params.genre);
-	if (!artistKey || !artistName || !genre) return;
-	const nowIso = new Date().toISOString();
-	await upsertJson<ObservedArtistMap>(
-		GENRE_ARTIST_OBSERVED_KV_KEY,
-		(current) =>
-			nextObservedArtistMap({
-				current,
-				artistKey,
-				artistName,
-				genre,
-				source: params.source,
-				nowIso,
-			}),
-		{},
-	);
-};
+}): Promise<Result<void, GenreObservationError>> => recordArtists([params]);
 
 export const recordObservedArtistGenresBatch = async (
 	entries: Array<{
@@ -419,60 +609,167 @@ export const recordObservedArtistGenresBatch = async (
 		genre: string;
 		source: string;
 	}>,
-): Promise<void> => {
-	if (!env.KV_ENABLE_GENRE_OBSERVATION_WRITES) return;
-	if (entries.length === 0) return;
-	const nowIso = new Date().toISOString();
-	await upsertJson<ObservedArtistMap>(
-		GENRE_ARTIST_OBSERVED_KV_KEY,
-		(current) => {
-			let next = current;
-			for (const entry of entries) {
-				const artistKey = keyForArtist(entry.artistKey);
-				const artistName = entry.artistName.trim();
-				const genre = normalizeRawGenreTag(entry.genre);
-				if (!artistKey || !artistName || !genre) continue;
-				next = nextObservedArtistMap({
-					current: next,
-					artistKey,
-					artistName,
-					genre,
-					source: entry.source,
-					nowIso,
-				});
-			}
-			return next;
-		},
-		{},
-	);
-};
+): Promise<Result<void, GenreObservationError>> => recordArtists(entries);
+
+export class GenreObservationCollector extends DurableObject {
+	async recordTags(
+		entries: GenreObservation[],
+	): Promise<Result<void, GenreObservationError>> {
+		try {
+			await this.recordTagsUnsafe(entries);
+			return Result.ok();
+		} catch (error) {
+			return Result.err(new GenreObservationError({ error }));
+		}
+	}
+
+	private async recordTagsUnsafe(entries: GenreObservation[]): Promise<void> {
+		if (entries.length === 0) return;
+		const snapshot = await this.loadSnapshot();
+		const nowIso = new Date().toISOString();
+		let observed = snapshot.observed;
+		let suggestions = snapshot.suggestions;
+
+		for (const entry of entries) {
+			const rawTag = entry.rawTag.trim();
+			const normalizedTag = normalizeRawGenreTag(rawTag);
+			const suggestedCanonical = entry.suggestedCanonical;
+			if (!rawTag || !normalizedTag || !suggestedCanonical) continue;
+			const key = keyForTag(rawTag);
+			observed = nextObservedMap({
+				current: observed,
+				key,
+				rawTag,
+				normalizedTag,
+				source: entry.source,
+				nowIso,
+				suggestedCanonical,
+			});
+			suggestions = nextSuggestionMap({
+				current: suggestions,
+				key,
+				rawTag,
+				normalizedTag,
+				suggestedCanonical,
+				nowIso,
+			});
+		}
+
+		await this.ctx.storage.put({
+			observed: trimMap(
+				observed,
+				MAX_OBSERVED_TAGS_PER_SHARD,
+				(value) => value.lastSeenIso,
+			),
+			suggestions: trimMap(
+				suggestions,
+				MAX_OBSERVED_TAGS_PER_SHARD,
+				(value) => value.lastSuggestedIso,
+			),
+		});
+	}
+
+	async recordArtists(
+		entries: ArtistGenreObservation[],
+	): Promise<Result<void, GenreObservationError>> {
+		try {
+			await this.recordArtistsUnsafe(entries);
+			return Result.ok();
+		} catch (error) {
+			return Result.err(new GenreObservationError({ error }));
+		}
+	}
+
+	private async recordArtistsUnsafe(
+		entries: ArtistGenreObservation[],
+	): Promise<void> {
+		if (entries.length === 0) return;
+		const snapshot = await this.loadSnapshot();
+		const nowIso = new Date().toISOString();
+		let artists = snapshot.artists;
+
+		for (const entry of entries) {
+			const artistKey = keyForArtist(entry.artistKey);
+			const artistName = entry.artistName.trim();
+			const genre = normalizeRawGenreTag(entry.genre);
+			if (!artistKey || !artistName || !genre) continue;
+			artists = nextObservedArtistMap({
+				current: artists,
+				artistKey,
+				artistName,
+				genre,
+				source: entry.source,
+				nowIso,
+			});
+		}
+
+		await this.ctx.storage.put({
+			artists: trimMap(
+				artists,
+				MAX_OBSERVED_ARTISTS_PER_SHARD,
+				(value) => value.lastSeenIso,
+			),
+		});
+	}
+
+	async getSnapshot(): Promise<
+		Result<ObservationSnapshot, GenreObservationError>
+	> {
+		try {
+			return Result.ok(await this.loadSnapshot());
+		} catch (error) {
+			return Result.err(new GenreObservationError({ error }));
+		}
+	}
+
+	private async loadSnapshot(): Promise<ObservationSnapshot> {
+		const snapshot = emptyObservationSnapshot();
+		const [observed, suggestions, artists] = await Promise.all([
+			this.ctx.storage.get<ObservedMap>("observed"),
+			this.ctx.storage.get<SuggestionMap>("suggestions"),
+			this.ctx.storage.get<ObservedArtistMap>("artists"),
+		]);
+		return {
+			observed: observed ?? snapshot.observed,
+			suggestions: suggestions ?? snapshot.suggestions,
+			artists: artists ?? snapshot.artists,
+		};
+	}
+}
 
 export const taxonomyAdmin = {
+	getObservationSnapshot: loadObservationSnapshot,
 	loadAliasMap,
 	loadArtistGenreOverrides,
 	listObserved: async (): Promise<ObservedMap> =>
-		readJsonOrDefault<ObservedMap>(GENRE_OBSERVED_KV_KEY, {}),
+		(await loadObservationSnapshot()).observed,
 	listObservedArtists: async (): Promise<ObservedArtistMap> =>
-		readJsonOrDefault<ObservedArtistMap>(GENRE_ARTIST_OBSERVED_KV_KEY, {}),
+		(await loadObservationSnapshot()).artists,
 	listSuggestions: async (): Promise<SuggestionMap> =>
-		readJsonOrDefault<SuggestionMap>(GENRE_SUGGESTIONS_KV_KEY, {}),
+		(await loadObservationSnapshot()).suggestions,
 	listReviewState: async (): Promise<GenreReviewState> =>
 		readJsonOrDefault<GenreReviewState>(GENRE_REVIEW_STATE_KV_KEY, {}),
-	setAlias: async (rawTag: string, canonicalGenre: string): Promise<void> => {
+	setAlias: async (
+		rawTag: string,
+		canonicalGenre: string,
+	): Promise<Result<GenreAliasMap, KvPutError>> => {
 		const key = keyForTag(rawTag);
 		const value = normalizeRawGenreTag(canonicalGenre);
-		if (!key || !value) return;
-		await upsertJson<GenreAliasMap>(
+		if (!key || !value) return Result.ok({});
+		const result = await upsertJson<GenreAliasMap>(
 			GENRE_ALIAS_MAP_KV_KEY,
 			(current) => ({ ...current, [key]: value }),
 			{},
 		);
-		inMemoryAliasMap = null;
+		if (Result.isOk(result)) inMemoryAliasMap = null;
+		return result;
 	},
-	removeAlias: async (rawTag: string): Promise<void> => {
+	removeAlias: async (
+		rawTag: string,
+	): Promise<Result<GenreAliasMap, KvPutError>> => {
 		const key = keyForTag(rawTag);
-		if (!key) return;
-		await upsertJson<GenreAliasMap>(
+		if (!key) return Result.ok({});
+		const result = await upsertJson<GenreAliasMap>(
 			GENRE_ALIAS_MAP_KV_KEY,
 			(current) => {
 				const next = { ...current };
@@ -481,26 +778,30 @@ export const taxonomyAdmin = {
 			},
 			{},
 		);
-		inMemoryAliasMap = null;
+		if (Result.isOk(result)) inMemoryAliasMap = null;
+		return result;
 	},
 	setArtistOverride: async (
 		artistKey: string,
 		canonicalGenre: string,
-	): Promise<void> => {
+	): Promise<Result<ArtistGenreOverrideMap, KvPutError>> => {
 		const key = keyForArtist(artistKey);
 		const value = normalizeRawGenreTag(canonicalGenre);
-		if (!key || !value) return;
-		await upsertJson<ArtistGenreOverrideMap>(
+		if (!key || !value) return Result.ok({});
+		const result = await upsertJson<ArtistGenreOverrideMap>(
 			GENRE_ARTIST_OVERRIDE_KV_KEY,
 			(current) => ({ ...current, [key]: value }),
 			{},
 		);
-		inMemoryArtistOverrideMap = null;
+		if (Result.isOk(result)) inMemoryArtistOverrideMap = null;
+		return result;
 	},
-	removeArtistOverride: async (artistKey: string): Promise<void> => {
+	removeArtistOverride: async (
+		artistKey: string,
+	): Promise<Result<ArtistGenreOverrideMap, KvPutError>> => {
 		const key = keyForArtist(artistKey);
-		if (!key) return;
-		await upsertJson<ArtistGenreOverrideMap>(
+		if (!key) return Result.ok({});
+		const result = await upsertJson<ArtistGenreOverrideMap>(
 			GENRE_ARTIST_OVERRIDE_KV_KEY,
 			(current) => {
 				const next = { ...current };
@@ -509,15 +810,16 @@ export const taxonomyAdmin = {
 			},
 			{},
 		);
-		inMemoryArtistOverrideMap = null;
+		if (Result.isOk(result)) inMemoryArtistOverrideMap = null;
+		return result;
 	},
 	setSuggestionStatus: async (
 		rawTag: string,
 		status: GenreSuggestionStatus,
-	): Promise<void> => {
+	): Promise<Result<GenreReviewState, KvPutError>> => {
 		const key = keyForTag(rawTag);
-		if (!key) return;
-		await upsertJson<GenreReviewState>(
+		if (!key) return Result.ok({});
+		return upsertJson<GenreReviewState>(
 			GENRE_REVIEW_STATE_KV_KEY,
 			(current) => ({ ...current, [key]: status }),
 			{},
@@ -526,18 +828,16 @@ export const taxonomyAdmin = {
 	promoteSuggestion: async (
 		rawTag: string,
 		canonicalGenre?: string,
-	): Promise<void> => {
+	): Promise<Result<GenreReviewState, KvPutError>> => {
 		const key = keyForTag(rawTag);
-		if (!key) return;
-		const suggestions = await readJsonOrDefault<SuggestionMap>(
-			GENRE_SUGGESTIONS_KV_KEY,
-			{},
-		);
+		if (!key) return Result.ok({});
+		const suggestions = (await loadObservationSnapshot()).suggestions;
 		const suggested = suggestions[key]?.suggestedCanonical ?? "";
 		const canonical = normalizeRawGenreTag(canonicalGenre ?? suggested);
-		if (!canonical) return;
-		await taxonomyAdmin.setAlias(rawTag, canonical);
-		await taxonomyAdmin.setSuggestionStatus(rawTag, "accepted");
+		if (!canonical) return Result.ok({});
+		const aliasResult = await taxonomyAdmin.setAlias(rawTag, canonical);
+		if (Result.isError(aliasResult)) return Result.err(aliasResult.error);
+		return taxonomyAdmin.setSuggestionStatus(rawTag, "accepted");
 	},
 };
 

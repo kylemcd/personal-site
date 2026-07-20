@@ -1,19 +1,17 @@
 import { Result, TaggedError } from "better-result";
-
+import { LASTFM_USERNAME } from "@/lib/config";
 import { env } from "@/lib/env";
 import { fetchFresh } from "@/lib/fetch";
 import { getOrComputeJson } from "@/lib/store";
-import { LASTFM_USERNAME } from "@/lib/config";
-
+import { recordObservedArtistGenresBatch } from "./genre-taxonomy";
 import {
 	type ArtistTagMap,
 	buildArtistTagMap,
-	getPrimaryGenreAssignments,
 	buildSimilarTagMap,
 	buildTopGenresFromWeights,
+	getPrimaryGenreAssignments,
 	type SimilarTagMap,
 } from "./genres";
-import { recordObservedArtistGenresBatch } from "./genre-taxonomy";
 import {
 	type Album,
 	type ListeningData,
@@ -90,12 +88,11 @@ const buildTopGenres = (params: {
 	similarGenreTags: SimilarTagMap;
 }): Array<{ name: string; share: number }> => {
 	const { topArtists, artistTopTags, similarGenreTags } = params;
-	const weightedArtists = topArtists
-		.map((artist) => ({
-			key: getPrimaryArtist(artist.name).toLowerCase(),
-			name: getPrimaryArtist(artist.name),
-			weight: parsePlayCount(artist.playcount),
-		}));
+	const weightedArtists = topArtists.map((artist) => ({
+		key: getPrimaryArtist(artist.name).toLowerCase(),
+		name: getPrimaryArtist(artist.name),
+		weight: parsePlayCount(artist.playcount),
+	}));
 	return buildTopGenresFromWeights({
 		weightedArtists,
 		artistTopTags,
@@ -494,7 +491,8 @@ const buildFunFacts = (params: {
 	if (orderedFacts.length === 0) return orderedFacts;
 
 	const [firstFact, ...restFacts] = orderedFacts;
-	if (firstFact === undefined) return restFacts.filter((f): f is string => f !== undefined);
+	if (firstFact === undefined)
+		return restFacts.filter((f): f is string => f !== undefined);
 	const normalizedFirstFact = firstFact
 		.replace(/^This month,\s+he\b/i, "This month, Kyle")
 		.replace(/^This month,\s+his\b/i, "This month, Kyle's")
@@ -735,31 +733,27 @@ const monthlyTopData = () => {
 			]);
 
 			if (Result.isError(topTracksRes)) {
-				return Result.err(
-					new LastFmDataError({ error: topTracksRes.error }),
-				);
+				return Result.err(new LastFmDataError({ error: topTracksRes.error }));
 			}
 			if (Result.isError(topArtistsRes)) {
-				return Result.err(
-					new LastFmDataError({ error: topArtistsRes.error }),
-				);
+				return Result.err(new LastFmDataError({ error: topArtistsRes.error }));
 			}
 			if (Result.isError(topAlbumsRes)) {
-				return Result.err(
-					new LastFmDataError({ error: topAlbumsRes.error }),
-				);
+				return Result.err(new LastFmDataError({ error: topAlbumsRes.error }));
 			}
 
-			const primaryArtists = topArtistsRes.value.data.topartists.artist
-				.map((artist) => getPrimaryArtist(artist.name));
+			const primaryArtists = topArtistsRes.value.data.topartists.artist.map(
+				(artist) => getPrimaryArtist(artist.name),
+			);
 			const artistTopTags = await buildArtistTagMap(primaryArtists);
 
-			const weightedArtists = topArtistsRes.value.data.topartists.artist
-				.map((artist) => ({
+			const weightedArtists = topArtistsRes.value.data.topartists.artist.map(
+				(artist) => ({
 					key: getPrimaryArtist(artist.name).toLowerCase(),
 					name: getPrimaryArtist(artist.name),
 					weight: parsePlayCount(artist.playcount),
-				}));
+				}),
+			);
 			const similarGenreTags = await buildSimilarTagMap({
 				weightedArtists,
 				artistTopTags,
@@ -771,7 +765,7 @@ const monthlyTopData = () => {
 				artistTopTags,
 				artistTagLimit: ARTIST_TAG_LIMIT,
 			});
-			await recordObservedArtistGenresBatch(
+			const observationResult = await recordObservedArtistGenresBatch(
 				assignments.map((entry) => ({
 					artistKey: entry.artistKey,
 					artistName: entry.artistName,
@@ -779,6 +773,12 @@ const monthlyTopData = () => {
 					source: "genre-rollup:lastfm",
 				})),
 			);
+			if (Result.isError(observationResult)) {
+				console.error(
+					"[lastfm] failed to record artist genre observations",
+					observationResult.error,
+				);
+			}
 
 			return Result.ok({
 				topTracks: topTracksRes.value.data.toptracks.track,
@@ -810,14 +810,10 @@ const recentActivity = async (): Promise<
 	]);
 
 	if (Result.isError(recentTracksRes)) {
-		return Result.err(
-			new LastFmDataError({ error: recentTracksRes.error }),
-		);
+		return Result.err(new LastFmDataError({ error: recentTracksRes.error }));
 	}
 	if (Result.isError(monthlyTopRes)) {
-		return Result.err(
-			new LastFmDataError({ error: monthlyTopRes.error }),
-		);
+		return Result.err(new LastFmDataError({ error: monthlyTopRes.error }));
 	}
 
 	const listening = extractListeningData(
@@ -877,8 +873,9 @@ const recentSessions = async (params: {
 
 	const cutoffMs = Date.now() - params.withinDays * 24 * 60 * 60 * 1000;
 	const tracks = res.value.data.recenttracks.track
-		.filter((track): track is Track & { date: { uts: string; "#text": string } } =>
-			Boolean(track.date?.uts),
+		.filter(
+			(track): track is Track & { date: { uts: string; "#text": string } } =>
+				Boolean(track.date?.uts),
 		)
 		.map((track) => ({
 			track,

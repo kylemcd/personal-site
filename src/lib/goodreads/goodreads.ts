@@ -4,7 +4,7 @@ import { XMLParser } from "fast-xml-parser";
 import type { Book } from "./schema";
 import { GOODREADS_USER_ID } from "@/lib/config";
 import { toErrorDetails } from "@/lib/error-details";
-import { getJson, refreshJson } from "@/lib/store";
+import { getJson, refreshJson, type KvPutError } from "@/lib/store";
 // NOTE: when extending ShelfBook with new fields, keep them optional/nullable so
 // old cached entries (without the field) keep deserializing cleanly. Bumping
 // this key to invalidate old data triggers a stale-data alert in prod between
@@ -235,7 +235,7 @@ const getBooks = async ({
 };
 
 const shelf = async (): Promise<
-	Result<ShelfData, FetchGoodreadsError | ParseGoodreadsError>
+	Result<ShelfData, FetchGoodreadsError | ParseGoodreadsError | KvPutError>
 > => {
 	const cachedResult = await getJson<ShelfData>({
 		key: GOODREADS_SHELF_CACHE_KEY,
@@ -275,7 +275,7 @@ const refreshShelf = () =>
 const recentReadingEvents = async (params: {
 	withinDays: number;
 }): Promise<
-	Result<ReadingEvent[], FetchGoodreadsError | ParseGoodreadsError>
+	Result<ReadingEvent[], FetchGoodreadsError | ParseGoodreadsError | KvPutError>
 > => {
 	const shelfResult = await shelf();
 	if (Result.isError(shelfResult)) return shelfResult;

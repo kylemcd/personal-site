@@ -2,10 +2,7 @@ import { WorkflowEntrypoint } from "cloudflare:workers";
 
 import {
 	GENRE_DIGEST_LAST_SENT_KV_KEY,
-	GENRE_OBSERVED_KV_KEY,
-	GENRE_REVIEW_STATE_KV_KEY,
-	GENRE_SUGGESTIONS_KV_KEY,
-	type GenreSuggestionStatus,
+	taxonomyAdmin,
 } from "@/lib/lastfm/genre-taxonomy";
 
 export type GenreReviewDigestParams = {
@@ -15,6 +12,7 @@ export type GenreReviewDigestParams = {
 export type GenreReviewDigestWorkflowEnv = {
 	APP_STORE?: KVNamespace;
 	KV_CACHE_VERSION?: string;
+	KV_READ_ONLY_CACHE?: string;
 	EMAIL?: SendEmail;
 	STALE_ALERT_EMAIL_TO?: string;
 	STALE_ALERT_EMAIL_FROM?: string;
@@ -22,6 +20,10 @@ export type GenreReviewDigestWorkflowEnv = {
 
 const DEFAULT_CACHE_VERSION = "v1";
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const DIGEST_RETRY_DELAY_MS = 30 * 60 * 1000;
+
+const isWriteDisabled = (value: string | undefined): boolean =>
+	value === "true" || value === "1";
 
 const normalizeCacheVersion = (value: string | undefined): string =>
 	typeof value === "string" &&
@@ -34,7 +36,10 @@ const normalizeCacheVersion = (value: string | undefined): string =>
 const toScopedKey = (cacheVersion: string | undefined, key: string): string =>
 	`${normalizeCacheVersion(cacheVersion)}:${key}`;
 
-const kvGet = async (store: KVNamespace, key: string): Promise<string | null> => {
+const kvGet = async (
+	store: KVNamespace,
+	key: string,
+): Promise<string | null> => {
 	try {
 		return await store.get(key, "text");
 	} catch {
@@ -42,13 +47,11 @@ const kvGet = async (store: KVNamespace, key: string): Promise<string | null> =>
 	}
 };
 
-const kvPut = async (store: KVNamespace, key: string, value: string): Promise<void> => {
-	try {
-		await store.put(key, value);
-	} catch {
-		// ignore
-	}
-};
+const kvPut = async (
+	store: KVNamespace,
+	key: string,
+	value: string,
+): Promise<void> => store.put(key, value);
 
 const parseJsonRecord = (raw: string | null): Record<string, unknown> => {
 	if (!raw) return {};
@@ -62,20 +65,24 @@ const parseJsonRecord = (raw: string | null): Record<string, unknown> => {
 	}
 };
 
-const getValue = <T>(record: Record<string, unknown>): T | null => {
-	const envelope =
-		typeof record.__cacheEnvelope === "number" &&
-		"value" in record &&
-		record.value &&
-		typeof record.value === "object"
-			? (record.value as T)
-			: null;
-	return envelope;
-};
-
-const asStatusMap = (value: unknown): Record<string, GenreSuggestionStatus> => {
-	if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-	return value as Record<string, GenreSuggestionStatus>;
+const sendEmailOnce = async (params: {
+	email: SendEmail;
+	from: string;
+	to: string;
+	text: string;
+}): Promise<boolean> => {
+	try {
+		await params.email.send({
+			from: params.from,
+			to: [params.to],
+			subject: "[genre-review] Weekly taxonomy items needing attention",
+			text: params.text,
+		});
+		return true;
+	} catch (error) {
+		console.error("[genre-digest] failed to send review digest", error);
+		return false;
+	}
 };
 
 export class GenreReviewDigestWorkflow extends WorkflowEntrypoint<
@@ -94,6 +101,12 @@ export class GenreReviewDigestWorkflow extends WorkflowEntrypoint<
 			console.error("[genre-digest] APP_STORE binding missing");
 			return;
 		}
+		if (isWriteDisabled(this.env.KV_READ_ONLY_CACHE)) {
+			console.warn(
+				"[genre-digest] skipping digest while KV writes are disabled",
+			);
+			return;
+		}
 		const email = this.env.EMAIL;
 		const to = this.env.STALE_ALERT_EMAIL_TO?.trim() || "";
 		const from = this.env.STALE_ALERT_EMAIL_FROM?.trim() || "";
@@ -103,36 +116,34 @@ export class GenreReviewDigestWorkflow extends WorkflowEntrypoint<
 		}
 
 		await steps.do("send-genre-review-digest", async () => {
-			const digestKey = toScopedKey(this.env.KV_CACHE_VERSION, GENRE_DIGEST_LAST_SENT_KV_KEY);
+			const digestKey = toScopedKey(
+				this.env.KV_CACHE_VERSION,
+				GENRE_DIGEST_LAST_SENT_KV_KEY,
+			);
 			const lastSentRaw = await kvGet(store, digestKey);
 			const lastSentPayload = parseJsonRecord(lastSentRaw);
-			const lastSentMs =
-				typeof lastSentPayload.sentAtMs === "number" ? lastSentPayload.sentAtMs : 0;
 			const nowMs = Date.now();
+			const lastSentMs =
+				typeof lastSentPayload.sentAtMs === "number"
+					? lastSentPayload.sentAtMs
+					: 0;
 			if (nowMs - lastSentMs < ONE_WEEK_MS) return;
+			const retryAfterMs =
+				typeof lastSentPayload.retryAfterMs === "number"
+					? lastSentPayload.retryAfterMs
+					: null;
+			if (
+				typeof lastSentPayload.attemptedAtMs === "number" &&
+				(retryAfterMs === null || retryAfterMs > nowMs)
+			) {
+				return;
+			}
 
-			const observedRaw = await kvGet(
-				store,
-				toScopedKey(this.env.KV_CACHE_VERSION, GENRE_OBSERVED_KV_KEY),
-			);
-			const suggestionsRaw = await kvGet(
-				store,
-				toScopedKey(this.env.KV_CACHE_VERSION, GENRE_SUGGESTIONS_KV_KEY),
-			);
-			const reviewRaw = await kvGet(
-				store,
-				toScopedKey(this.env.KV_CACHE_VERSION, GENRE_REVIEW_STATE_KV_KEY),
-			);
-
-			const observed = getValue<Record<string, { rawTag: string; count: number; lastSeenIso: string }>>(
-				parseJsonRecord(observedRaw),
-			) ?? {};
-			const suggestions = getValue<
-				Record<string, { rawTag: string; suggestedCanonical: string; count: number; confidence: string }>
-			>(parseJsonRecord(suggestionsRaw)) ?? {};
-			const reviewState = asStatusMap(
-				getValue<Record<string, GenreSuggestionStatus>>(parseJsonRecord(reviewRaw)) ?? {},
-			);
+			const [snapshot, reviewState] = await Promise.all([
+				taxonomyAdmin.getObservationSnapshot(),
+				taxonomyAdmin.listReviewState(),
+			]);
+			const { observed, suggestions } = snapshot;
 
 			const pendingSuggestions = Object.entries(suggestions).filter(([key]) => {
 				const status = reviewState[key] ?? "pending";
@@ -149,7 +160,9 @@ export class GenreReviewDigestWorkflow extends WorkflowEntrypoint<
 				.slice(0, 15);
 
 			if (pendingSuggestions.length === 0 && topObservedUnmapped.length === 0) {
-				console.log("[genre-digest] no pending genre review items; skipping email");
+				console.log(
+					"[genre-digest] no pending genre review items; skipping email",
+				);
 				return;
 			}
 
@@ -171,13 +184,25 @@ export class GenreReviewDigestWorkflow extends WorkflowEntrypoint<
 				),
 			].join("\n");
 
-			await email.send({
+			await kvPut(store, digestKey, JSON.stringify({ attemptedAtMs: nowMs }));
+			const emailSent = await sendEmailOnce({
+				email,
 				from,
-				to: [to],
-				subject: "[genre-review] Weekly taxonomy items needing attention",
+				to,
 				text: lines,
 			});
-			await kvPut(store, digestKey, JSON.stringify({ sentAtMs: nowMs }));
+			if (emailSent) {
+				await kvPut(store, digestKey, JSON.stringify({ sentAtMs: nowMs }));
+			} else {
+				await kvPut(
+					store,
+					digestKey,
+					JSON.stringify({
+						attemptedAtMs: nowMs,
+						retryAfterMs: nowMs + DIGEST_RETRY_DELAY_MS,
+					}),
+				);
+			}
 		});
 	}
 }

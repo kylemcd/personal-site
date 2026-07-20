@@ -1,5 +1,11 @@
 import server from "@tanstack/react-start/server-entry";
+import { GenreObservationCollector } from "./src/lib/lastfm/genre-taxonomy";
 import { createBlogRssFeed, RSS_PATH } from "./src/lib/rss";
+import type {
+	GenreReviewDigestParams,
+	GenreReviewDigestWorkflowEnv,
+} from "./workflows/genre-review-digest";
+import { GenreReviewDigestWorkflow } from "./workflows/genre-review-digest";
 import type {
 	RefreshWorkflowParams as Garage61RefreshParams,
 	RefreshGarage61WorkflowEnv,
@@ -16,21 +22,16 @@ import type {
 } from "./workflows/refresh-lastfm";
 import { RefreshLastFmWorkflow } from "./workflows/refresh-lastfm";
 import type {
-	SetlistRefreshWorkflowParams as SetlistFmRefreshParams,
 	RefreshSetlistFmWorkflowEnv,
+	SetlistRefreshWorkflowParams as SetlistFmRefreshParams,
 } from "./workflows/refresh-setlistfm";
 import { RefreshSetlistFmWorkflow } from "./workflows/refresh-setlistfm";
+import { applyBaseRuntimeEnv } from "./workflows/shared";
 import type {
 	StaleMonitorParams,
 	StaleMonitorWorkflowEnv,
 } from "./workflows/stale-data-monitor";
 import { StaleDataMonitorWorkflow } from "./workflows/stale-data-monitor";
-import type {
-	GenreReviewDigestParams,
-	GenreReviewDigestWorkflowEnv,
-} from "./workflows/genre-review-digest";
-import { GenreReviewDigestWorkflow } from "./workflows/genre-review-digest";
-import { applyBaseRuntimeEnv } from "./workflows/shared";
 
 type WorkerEnv = StaleMonitorWorkflowEnv &
 	RefreshGarage61WorkflowEnv &
@@ -39,50 +40,63 @@ type WorkerEnv = StaleMonitorWorkflowEnv &
 	RefreshSetlistFmWorkflowEnv &
 	GenreReviewDigestWorkflowEnv & {
 		GARAGE61_REFRESH_WORKFLOW?: {
-			create: (options?: {
-				id?: string;
-				params?: Garage61RefreshParams;
-			}) => Promise<unknown>;
+			createBatch: (
+				options: Array<{
+					id?: string;
+					params?: Garage61RefreshParams;
+				}>,
+			) => Promise<unknown>;
 		};
 		GOODREADS_REFRESH_WORKFLOW?: {
-			create: (options?: {
-				id?: string;
-				params?: GoodreadsRefreshParams;
-			}) => Promise<unknown>;
+			createBatch: (
+				options: Array<{
+					id?: string;
+					params?: GoodreadsRefreshParams;
+				}>,
+			) => Promise<unknown>;
 		};
 		LASTFM_REFRESH_WORKFLOW?: {
-			create: (options?: {
-				id?: string;
-				params?: LastFmRefreshParams;
-			}) => Promise<unknown>;
+			createBatch: (
+				options: Array<{
+					id?: string;
+					params?: LastFmRefreshParams;
+				}>,
+			) => Promise<unknown>;
 		};
 		SETLISTFM_REFRESH_WORKFLOW?: {
-			create: (options?: {
-				id?: string;
-				params?: SetlistFmRefreshParams;
-			}) => Promise<unknown>;
+			createBatch: (
+				options: Array<{
+					id?: string;
+					params?: SetlistFmRefreshParams;
+				}>,
+			) => Promise<unknown>;
 		};
 		STALE_MONITOR_WORKFLOW?: {
-			create: (options?: {
-				id?: string;
-				params?: StaleMonitorParams;
-			}) => Promise<unknown>;
+			createBatch: (
+				options: Array<{
+					id?: string;
+					params?: StaleMonitorParams;
+				}>,
+			) => Promise<unknown>;
 		};
 		GENRE_REVIEW_DIGEST_WORKFLOW?: {
-			create: (options?: {
-				id?: string;
-				params?: GenreReviewDigestParams;
-			}) => Promise<unknown>;
+			createBatch: (
+				options: Array<{
+					id?: string;
+					params?: GenreReviewDigestParams;
+				}>,
+			) => Promise<unknown>;
 		};
 	};
 
 export {
+	GenreObservationCollector,
+	GenreReviewDigestWorkflow,
 	RefreshGarage61Workflow,
 	RefreshGoodreadsWorkflow,
 	RefreshLastFmWorkflow,
 	RefreshSetlistFmWorkflow,
 	StaleDataMonitorWorkflow,
-	GenreReviewDigestWorkflow,
 };
 
 const applyRuntimeEnv = (env: WorkerEnv) => {
@@ -114,25 +128,27 @@ const respondWithRssFeed = async (): Promise<Response> => {
 	}
 };
 
-type RefreshWorkflowBinding = {
-	create: (options?: {
-		id?: string;
-		params?: { triggeredAt: string };
-	}) => Promise<unknown>;
+type WorkflowBinding<P> = {
+	createBatch: (
+		options: Array<{
+			id?: string;
+			params?: P;
+		}>,
+	) => Promise<unknown>;
 };
 
-const triggerRefreshWorkflow = (
+const triggerWorkflow = <P>(
 	ctx: ExecutionContext,
-	binding: RefreshWorkflowBinding | undefined,
+	binding: WorkflowBinding<P> | undefined,
 	name: string,
 	id: string,
-	triggeredAt: string,
+	params: P,
 ) => {
 	if (!binding) {
 		console.error(`[refresh] ${name} binding missing`);
 		return;
 	}
-	ctx.waitUntil(binding.create({ id: `${id}-${Date.now()}`, params: { triggeredAt } }));
+	ctx.waitUntil(binding.createBatch([{ id, params }]));
 };
 
 export default {
@@ -155,17 +171,36 @@ export default {
 		const scheduledAt = new Date(controller.scheduledTime);
 		const minute = scheduledAt.getUTCMinutes();
 		const triggeredAt = new Date().toISOString();
+		const scheduleId = Math.floor(controller.scheduledTime).toString();
 
-		triggerRefreshWorkflow(ctx, env.GARAGE61_REFRESH_WORKFLOW, "GARAGE61_REFRESH_WORKFLOW", "refresh-garage61", triggeredAt);
-		triggerRefreshWorkflow(ctx, env.GOODREADS_REFRESH_WORKFLOW, "GOODREADS_REFRESH_WORKFLOW", "refresh-goodreads", triggeredAt);
-		triggerRefreshWorkflow(ctx, env.LASTFM_REFRESH_WORKFLOW, "LASTFM_REFRESH_WORKFLOW", "refresh-lastfm", triggeredAt);
+		triggerWorkflow(
+			ctx,
+			env.GARAGE61_REFRESH_WORKFLOW,
+			"GARAGE61_REFRESH_WORKFLOW",
+			`refresh-garage61-${scheduleId}`,
+			{ triggeredAt },
+		);
+		triggerWorkflow(
+			ctx,
+			env.GOODREADS_REFRESH_WORKFLOW,
+			"GOODREADS_REFRESH_WORKFLOW",
+			`refresh-goodreads-${scheduleId}`,
+			{ triggeredAt },
+		);
+		triggerWorkflow(
+			ctx,
+			env.LASTFM_REFRESH_WORKFLOW,
+			"LASTFM_REFRESH_WORKFLOW",
+			`refresh-lastfm-${scheduleId}`,
+			{ triggeredAt },
+		);
 		if (scheduledAt.getUTCHours() === 0 && minute === 0) {
-			triggerRefreshWorkflow(
+			triggerWorkflow(
 				ctx,
 				env.SETLISTFM_REFRESH_WORKFLOW,
 				"SETLISTFM_REFRESH_WORKFLOW",
-				"refresh-setlistfm",
-				triggeredAt,
+				`refresh-setlistfm-${scheduleId}`,
+				{ triggeredAt },
 			);
 		}
 
@@ -175,22 +210,24 @@ export default {
 			return;
 		}
 
-		ctx.waitUntil(
-			env.STALE_MONITOR_WORKFLOW.create({
-				id: `stale-monitor-${Date.now()}`,
-				params: { triggeredAt: new Date().toISOString() },
-			}),
+		triggerWorkflow(
+			ctx,
+			env.STALE_MONITOR_WORKFLOW,
+			"STALE_MONITOR_WORKFLOW",
+			`stale-monitor-${scheduleId}`,
+			{ triggeredAt: new Date().toISOString() },
 		);
 		if (
 			scheduledAt.getUTCDay() === 1 &&
-			scheduledAt.getUTCHours() === 14 &&
+			scheduledAt.getUTCHours() >= 14 &&
 			env.GENRE_REVIEW_DIGEST_WORKFLOW
 		) {
-			ctx.waitUntil(
-				env.GENRE_REVIEW_DIGEST_WORKFLOW.create({
-					id: `genre-review-digest-${Date.now()}`,
-					params: { triggeredAt: new Date().toISOString() },
-				}),
+			triggerWorkflow(
+				ctx,
+				env.GENRE_REVIEW_DIGEST_WORKFLOW,
+				"GENRE_REVIEW_DIGEST_WORKFLOW",
+				`genre-review-digest-${scheduleId}`,
+				{ triggeredAt: new Date().toISOString() },
 			);
 		}
 	},

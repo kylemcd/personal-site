@@ -1,5 +1,4 @@
-import { describe, expect, it } from "vitest";
-import { vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { buildTopGenresFromWeights, normalizeGenreTag } from "./genres";
 
@@ -12,6 +11,7 @@ import { buildTopGenresFromWeights, normalizeGenreTag } from "./genres";
 )(
 	"cloudflare:workers",
 	() => ({
+		DurableObject: class {},
 		env: {},
 	}),
 	{ virtual: true },

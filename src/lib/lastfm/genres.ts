@@ -8,7 +8,7 @@ import {
 	getArtistGenreOverride,
 	loadAliasMap,
 	loadArtistGenreOverrides,
-	recordObservedAndSuggestion,
+	recordObservedAndSuggestionsBatch,
 } from "./genre-taxonomy";
 
 import {
@@ -120,14 +120,6 @@ export const fetchSimilarGenreTags = async (
 	const normalized = res.value.data.similartags.tag
 		.map((item) => normalizeGenreTag(item.name))
 		.filter((item) => item.length > 0);
-	void Promise.all(
-		res.value.data.similartags.tag.map((item) =>
-			recordObservedAndSuggestion({
-				rawTag: item.name,
-				source: "tag.getsimilar",
-			}),
-		),
-	);
 	return Result.ok(normalized);
 };
 
@@ -215,6 +207,7 @@ export const buildArtistTagMap = async (
 		})),
 	);
 	const artistTopTags: ArtistTagMap = {};
+	const observations: Array<{ rawTag: string; source: string }> = [];
 	for (const tagResult of tagResults) {
 		if (Result.isError(tagResult.result)) continue;
 		const normalizedTags = tagResult.result.value.map((tag) => ({
@@ -222,13 +215,19 @@ export const buildArtistTagMap = async (
 			name: normalizeGenreTag(tag.name),
 		}));
 		artistTopTags[tagResult.artist.toLowerCase()] = normalizedTags;
-		void Promise.all(
-			tagResult.result.value.map((tag) =>
-				recordObservedAndSuggestion({
-					rawTag: tag.name,
-					source: "artist.gettoptags",
-				}),
-			),
+		observations.push(
+			...tagResult.result.value.map((tag) => ({
+				rawTag: tag.name,
+				source: "artist.gettoptags",
+			})),
+		);
+	}
+	const observationResult =
+		await recordObservedAndSuggestionsBatch(observations);
+	if (Result.isError(observationResult)) {
+		console.error(
+			"[lastfm] failed to record artist tag observations",
+			observationResult.error,
 		);
 	}
 	return artistTopTags;
@@ -269,9 +268,21 @@ export const buildSimilarTagMap = async (params: {
 		})),
 	);
 	const map: SimilarTagMap = {};
+	const observations: Array<{ rawTag: string; source: string }> = [];
 	for (const r of results) {
 		if (Result.isError(r.result)) continue;
 		map[r.tag] = r.result.value;
+		observations.push(
+			...r.result.value.map((rawTag) => ({ rawTag, source: "tag.getsimilar" })),
+		);
+	}
+	const observationResult =
+		await recordObservedAndSuggestionsBatch(observations);
+	if (Result.isError(observationResult)) {
+		console.error(
+			"[lastfm] failed to record similar tag observations",
+			observationResult.error,
+		);
 	}
 	return map;
 };
@@ -326,9 +337,16 @@ export const getPrimaryGenreAssignments = (params: {
 	artistTopTags: ArtistTagMap;
 	artistTagLimit?: number;
 }): Array<{ artistKey: string; artistName: string; genre: string }> => {
-	const { weightedArtists, artistTopTags, artistTagLimit = ARTIST_TAG_LIMIT_DEFAULT } =
-		params;
-	const assignments: Array<{ artistKey: string; artistName: string; genre: string }> = [];
+	const {
+		weightedArtists,
+		artistTopTags,
+		artistTagLimit = ARTIST_TAG_LIMIT_DEFAULT,
+	} = params;
+	const assignments: Array<{
+		artistKey: string;
+		artistName: string;
+		genre: string;
+	}> = [];
 	for (const artist of weightedArtists) {
 		if (artist.weight <= 0) continue;
 		const primary = getPrimaryArtistGenre({
