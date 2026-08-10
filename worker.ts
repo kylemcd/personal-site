@@ -1,5 +1,6 @@
 import server from "@tanstack/react-start/server-entry";
 import { GenreObservationCollector } from "./src/lib/lastfm/genre-taxonomy";
+import { invalidatePublishedContentCache } from "./src/lib/posts/published-content";
 import {
 	RSS_PATH,
 	readCachedBlogRssFeed,
@@ -272,6 +273,9 @@ export default {
 		env: WorkerEnv,
 	): Promise<void> => {
 		applyRuntimeEnv(env);
+		await invalidatePublishedContentCache({ store: env.APP_STORE });
+
+		// Rebuild after invalidation so the feed uses the newly published content.
 		await refreshRssOrThrow({ store: env.APP_STORE });
 	},
 } satisfies ExportedHandler<WorkerEnv, PublishedContentUpdate>;

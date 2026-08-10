@@ -10,6 +10,13 @@ import {
 	publishedManifestSchema,
 } from "./published-content-contract";
 
+const PUBLISHED_CONTENT_CACHE_PREFIX = "published-content:response:v1:";
+
+type PublishedContentCacheStore = Pick<
+	KVNamespace,
+	"delete" | "get" | "list" | "put"
+>;
+
 const errorEnvelopeSchema = z.object({
 	ok: z.literal(false),
 	error: z.object({
@@ -46,6 +53,55 @@ const binding = (): Result<Fetcher, PublishedContentError> => {
 			);
 };
 
+const cacheKey = ({ path }: { path: string }) =>
+	`${PUBLISHED_CONTENT_CACHE_PREFIX}${path}`;
+
+const readCached = async <T>({
+	path,
+	schema,
+}: {
+	path: string;
+	schema: ZodType<T>;
+}): Promise<T | undefined> => {
+	const store = cloudflareEnv.APP_STORE;
+	if (!store) return undefined;
+
+	try {
+		const cached = await store.get<unknown>(cacheKey({ path }), "json");
+		if (cached === null) return undefined;
+
+		const parsed = schema.safeParse(cached);
+		if (parsed.success) return parsed.data;
+
+		console.error("[published-content] Ignoring invalid cached response", {
+			path,
+			error: parsed.error,
+		});
+		await store.delete(cacheKey({ path }));
+	} catch (cause) {
+		console.error("[published-content] Cache read failed", { path, cause });
+	}
+
+	return undefined;
+};
+
+const writeCached = async <T>({
+	path,
+	value,
+}: {
+	path: string;
+	value: T;
+}): Promise<void> => {
+	const store = cloudflareEnv.APP_STORE;
+	if (!store) return;
+
+	try {
+		await store.put(cacheKey({ path }), JSON.stringify(value));
+	} catch (cause) {
+		console.error("[published-content] Cache write failed", { path, cause });
+	}
+};
+
 const fetchPublished = async <T>({
 	path,
 	schema,
@@ -53,6 +109,9 @@ const fetchPublished = async <T>({
 	path: string;
 	schema: ZodType<T>;
 }): Promise<Result<T, PublishedContentError>> => {
+	const cached = await readCached({ path, schema });
+	if (cached !== undefined) return Result.ok(cached);
+
 	const service = binding();
 	if (Result.isError(service)) return service;
 
@@ -94,22 +153,45 @@ const fetchPublished = async <T>({
 					? parsedError.data.error.retryable
 					: responseResult.value.status >= 500,
 				status: responseResult.value.status,
-				code: parsedError.success ? parsedError.data.error.code : undefined,
+				...(parsedError.success ? { code: parsedError.data.error.code } : {}),
 				cause: bodyResult.value,
 			}),
 		);
 	}
 
 	const parsed = envelopeSchema(schema).safeParse(bodyResult.value);
-	return parsed.success
-		? Result.ok(parsed.data.data)
-		: Result.err(
-				new PublishedContentError({
-					message: "Published content response has an invalid shape",
-					retryable: false,
-					cause: parsed.error,
-				}),
-			);
+	if (!parsed.success) {
+		return Result.err(
+			new PublishedContentError({
+				message: "Published content response has an invalid shape",
+				retryable: false,
+				cause: parsed.error,
+			}),
+		);
+	}
+
+	await writeCached({ path, value: parsed.data.data });
+	return Result.ok(parsed.data.data);
+};
+
+const invalidatePublishedContentCache = async ({
+	store,
+}: {
+	store: PublishedContentCacheStore;
+}): Promise<void> => {
+	let cursor: string | undefined;
+	const keys: string[] = [];
+
+	do {
+		const page = await store.list({
+			prefix: PUBLISHED_CONTENT_CACHE_PREFIX,
+			...(cursor ? { cursor } : {}),
+		});
+		keys.push(...page.keys.map(({ name }) => name));
+		cursor = page.list_complete ? undefined : page.cursor;
+	} while (cursor);
+
+	await Promise.all(keys.map((key) => store.delete(key)));
 };
 
 const list = async (): Promise<
@@ -145,4 +227,9 @@ const all = async (): Promise<
 
 const publishedContent = { all, find, list };
 
-export { PublishedContentError, publishedContent };
+export {
+	invalidatePublishedContentCache,
+	PUBLISHED_CONTENT_CACHE_PREFIX,
+	PublishedContentError,
+	publishedContent,
+};
