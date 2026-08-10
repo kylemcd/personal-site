@@ -3,7 +3,7 @@ import { Result, TaggedError } from "better-result";
 import { garage61 } from "@/lib/garage61";
 import { goodreads } from "@/lib/goodreads";
 import { lastfm } from "@/lib/lastfm";
-import { markdown } from "@/lib/markdown";
+import { posts } from "@/lib/posts/posts";
 import { setlistfm } from "@/lib/setlistfm";
 import { getOrComputeJson, type KvPutError } from "@/lib/store";
 
@@ -46,12 +46,14 @@ const computeCalendarData = async (): Promise<
 		racingResult,
 		readingEventsResult,
 		shelfResult,
+		postsResult,
 	] = await Promise.all([
 		lastfm.recentSessions({ withinDays: WINDOW_DAYS }),
 		setlistfm.attendedConcerts(),
 		garage61.summary(),
 		goodreads.recentReadingEvents({ withinDays: WINDOW_DAYS }),
 		goodreads.shelf(),
+		posts.all(),
 	]);
 
 	const events = [
@@ -64,12 +66,9 @@ const computeCalendarData = async (): Promise<
 		...(Result.isOk(racingResult)
 			? normalizeRacingEvents(racingResult.value, window)
 			: []),
-		...(() => {
-			const postsResult = markdown.all();
-			return Result.isOk(postsResult)
-				? normalizePostEvents(postsResult.value, window)
-				: [];
-		})(),
+		...(Result.isOk(postsResult)
+			? normalizePostEvents(postsResult.value, window)
+			: []),
 		...(Result.isOk(readingEventsResult)
 			? normalizeReadingMilestoneEvents(readingEventsResult.value, window)
 			: []),
@@ -87,7 +86,9 @@ const computeCalendarData = async (): Promise<
 	});
 };
 
-const lastSevenDays = (): Promise<Result<CalendarData, CalendarError | KvPutError>> => {
+const lastSevenDays = (): Promise<
+	Result<CalendarData, CalendarError | KvPutError>
+> => {
 	return getOrComputeJson<CalendarData, CalendarError>({
 		key: CALENDAR_CACHE_KEY,
 		ttlSeconds: CALENDAR_CACHE_TTL_SECONDS,
@@ -99,4 +100,4 @@ const calendar = {
 	lastSevenDays,
 };
 
-export { calendar, CalendarError };
+export { CalendarError, calendar };

@@ -1,12 +1,15 @@
-import { Result } from "better-result";
+import { Result, TaggedError } from "better-result";
 import { XMLBuilder } from "fast-xml-parser";
 
 import { toComparableTimestampInCentral } from "@/lib/dates";
 import { markdown } from "@/lib/markdown";
+import { publishedContent } from "@/lib/posts/published-content";
+import { combineResults } from "@/lib/result";
 
 const SITE_URL = "https://kylemcd.com";
 const RSS_PATH = "/rss.xml";
 const FEED_URL = `${SITE_URL}${RSS_PATH}`;
+const RSS_CACHE_KEY = "rss:blog:v1";
 const rssXmlBuilder = new XMLBuilder({
 	ignoreAttributes: false,
 	attributeNamePrefix: "@_",
@@ -56,26 +59,35 @@ type FeedPost = {
 	content: string;
 };
 
-const createBlogRssFeed = async (): Promise<string> => {
-	const postsResult = markdown.all();
-	if (Result.isError(postsResult)) {
-		throw postsResult.error;
-	}
-	const posts = postsResult.value;
-	const feedPosts = posts
-		.map((post) => {
-			const postResult = markdown.fromPath<{ title: string; date: string }>({
-				path: `./posts/${post.slug}.md`,
-			});
-			if (Result.isError(postResult)) return null;
-			return {
-				title: postResult.value.frontmatter.title,
-				slug: post.slug,
-				date: postResult.value.frontmatter.date,
-				content: postResult.value.content,
-			} satisfies FeedPost;
-		})
-		.filter((post): post is FeedPost => post !== null);
+type RssStore = {
+	get: (key: string, type: "text") => Promise<string | null>;
+	put: (key: string, value: string) => Promise<void>;
+};
+
+class RssCacheError extends TaggedError("RssCacheError")<{
+	readonly message: string;
+	readonly cause: unknown;
+}>() {}
+
+const createBlogRssFeed = async () => {
+	const documentsResult = await publishedContent.all();
+	if (Result.isError(documentsResult)) return documentsResult;
+
+	const feedPostsResult = combineResults(
+		documentsResult.value.map((document) =>
+			markdown.fromRaw({ rawMarkdown: document.markdown }).map(
+				({ content }) =>
+					({
+						title: document.title,
+						slug: document.slug,
+						date: document.date,
+						content,
+					}) satisfies FeedPost,
+			),
+		),
+	);
+	if (Result.isError(feedPostsResult)) return feedPostsResult;
+	const feedPosts = feedPostsResult.value;
 
 	const lastBuildDate = feedPosts[0]
 		? toUtcDateString(feedPosts[0].date)
@@ -118,7 +130,40 @@ const createBlogRssFeed = async (): Promise<string> => {
 		},
 	});
 
-	return `<?xml version="1.0" encoding="UTF-8"?>\n${xmlBody}`;
+	return Result.ok(`<?xml version="1.0" encoding="UTF-8"?>\n${xmlBody}`);
 };
 
-export { createBlogRssFeed, RSS_PATH };
+const readCachedBlogRssFeed = ({ store }: { store: RssStore }) => {
+	return Result.tryPromise<string | null, RssCacheError>({
+		try: () => store.get(RSS_CACHE_KEY, "text"),
+		catch: (cause) =>
+			new RssCacheError({
+				message: "Unable to read the cached RSS feed",
+				cause,
+			}),
+	});
+};
+
+const refreshCachedBlogRssFeed = async ({ store }: { store: RssStore }) => {
+	const feedResult = await createBlogRssFeed();
+	if (Result.isError(feedResult)) return feedResult;
+
+	const writeResult = await Result.tryPromise<void, RssCacheError>({
+		try: () => store.put(RSS_CACHE_KEY, feedResult.value),
+		catch: (cause) =>
+			new RssCacheError({
+				message: "Unable to cache the RSS feed",
+				cause,
+			}),
+	});
+	return writeResult.map(() => feedResult.value);
+};
+
+export {
+	createBlogRssFeed,
+	RSS_CACHE_KEY,
+	RSS_PATH,
+	RssCacheError,
+	readCachedBlogRssFeed,
+	refreshCachedBlogRssFeed,
+};

@@ -16,19 +16,20 @@ import { WritingList } from "@/components/WritingList";
 import { garage61 } from "@/lib/garage61";
 import { goodreads } from "@/lib/goodreads";
 import { lastfm } from "@/lib/lastfm";
-import { markdown } from "@/lib/markdown";
 import { buildMeta } from "@/lib/meta";
+import { posts } from "@/lib/posts/posts";
 import { setlistfm } from "@/lib/setlistfm";
 import "@/styles/routes/home.css";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
-	const [listeningRes, booksRes, racingRes, concertsRes] = await Promise.all([
-		lastfm.recentActivity(),
-		goodreads.shelf(),
-		garage61.summary(),
-		setlistfm.attendedConcerts(),
-	]);
-	const writingRes = markdown.all();
+	const [listeningRes, booksRes, racingRes, concertsRes, writingRes] =
+		await Promise.all([
+			lastfm.recentActivity(),
+			goodreads.shelf(),
+			garage61.summary(),
+			setlistfm.attendedConcerts(),
+			posts.all(),
+		]);
 
 	const listening = Result.isOk(listeningRes) ? listeningRes.value : null;
 	const writing = Result.isOk(writingRes) ? writingRes.value : [];

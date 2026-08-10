@@ -6,15 +6,17 @@ class MarkdownTestError extends TaggedError("MarkdownTestError")<{
 	readonly message: string;
 }>() {}
 
-vi.mock("@/lib/markdown", () => ({
-	markdown: {
-		all: vi.fn(() => Result.err(new MarkdownTestError({ message: "fail" }))),
+vi.mock("@/lib/posts/published-content", () => ({
+	publishedContent: {
+		list: vi.fn(async () =>
+			Result.err(new MarkdownTestError({ message: "unavailable" })),
+		),
 	},
 }));
 
 describe("posts route loader fallback", () => {
-	it("returns an empty writing list when markdown loading fails", () => {
-		const data = getPostsWritingData();
+	it("returns an empty writing list when published content is unavailable", async () => {
+		const data = await getPostsWritingData();
 		expect(data.writing).toEqual([]);
 	});
 });

@@ -1,19 +1,9 @@
-// import nodeFs from "node:fs";
-// import nodePath from "node:path";
 import markdocPkg from "@markdoc/markdoc";
 import { Result, TaggedError } from "better-result";
 import * as yaml from "js-yaml";
 
-import { toComparableTimestampInCentral } from "@/lib/dates";
 import { toErrorDetails } from "@/lib/error-details";
-import { combineResults } from "@/lib/result";
 import { nodes } from "./nodes";
-
-const POSTS = import.meta.glob(`../../../posts/*.md`, {
-	query: "?raw",
-	import: "default",
-	eager: true,
-}) as Record<string, string>;
 
 // We need to import like this to avoid weird server / client boundary cjs issues.
 const { transform, parse, renderers } = markdocPkg;
@@ -119,11 +109,13 @@ export type TableOfContentsItem = {
 const toTableOfContents = (html: string): Array<TableOfContentsItem> => {
 	// Use regex to find all headings and their IDs
 	const headingRegex = /<h([1-6])[^>]*?id="([^"]*?)"[^>]*?>([^<]*?)<\/h[1-6]>/g;
-	const headings = Array.from(html.matchAll(headingRegex)).map((match) => ({
-		level: Number.parseInt(match[1]!, 10),
-		id: match[2]!,
-		text: match[3]!.trim(),
-	}));
+	const headings = Array.from(html.matchAll(headingRegex)).map(
+		([, level = "1", id = "", text = ""]) => ({
+			level: Number.parseInt(level, 10),
+			id,
+			text: text.trim(),
+		}),
+	);
 
 	// Convert to TableOfContentsItems
 	const items = headings.map((heading) => ({
@@ -138,14 +130,16 @@ const toTableOfContents = (html: string): Array<TableOfContentsItem> => {
 	const stack: Array<TableOfContentsItem> = [];
 
 	items.forEach((item) => {
-		while (stack.length > 0 && stack[stack.length - 1]!.level >= item.level) {
+		let parent = stack.at(-1);
+		while (parent && parent.level >= item.level) {
 			stack.pop();
+			parent = stack.at(-1);
 		}
 
-		if (stack.length === 0) {
+		if (!parent) {
 			result.push(item);
 		} else {
-			stack[stack.length - 1]!.children.push(item);
+			parent.children.push(item);
 		}
 
 		stack.push(item);
@@ -172,41 +166,22 @@ const toReadingTime = ({
 	return Result.ok(Math.ceil(words / 200));
 };
 
-type FromPathParams = {
-	path: string;
+type MarkdownDocument<F extends Frontmatter> = {
+	frontmatter: F;
+	content: string;
+	tableOfContents: Array<TableOfContentsItem>;
+	readingTime: number;
+	hasMermaid: boolean;
 };
 
-const fromPath = <F extends Frontmatter = Frontmatter>({
-	path,
-}: FromPathParams): Result<
-	{
-		frontmatter: F;
-		content: string;
-		tableOfContents: Array<TableOfContentsItem>;
-		readingTime: number;
-		hasMermaid: boolean;
-	},
+const fromRaw = <F extends Frontmatter = Frontmatter>({
+	rawMarkdown,
+}: {
+	rawMarkdown: string;
+}): Result<
+	MarkdownDocument<F>,
 	InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
-	const rawMarkdownResult = Result.try<string, InvalidMarkdownError>({
-		try: () => {
-			// const __dirname = nodePath.resolve();
-			// const filePath = nodePath.join(__dirname, path);
-			// const fileContent = nodeFs.readFileSync(filePath, "utf8");
-			const filePath = `${"../../."}${path}`;
-			const raw = POSTS[filePath];
-			if (!raw) throw new Error("File not found");
-			return raw;
-		},
-		catch: (error) =>
-			new InvalidMarkdownError({
-				cause: error,
-				details: toErrorDetails(error),
-			}),
-	});
-	if (Result.isError(rawMarkdownResult)) return rawMarkdownResult;
-
-	const rawMarkdown = rawMarkdownResult.value;
 	const frontmatterResult = toFrontmatter<F>({ rawMarkdown });
 	if (Result.isError(frontmatterResult)) return frontmatterResult;
 
@@ -225,74 +200,10 @@ const fromPath = <F extends Frontmatter = Frontmatter>({
 	});
 };
 
-type AllParams = {
-	includeFuture?: boolean;
-};
-
-const all = ({
-	includeFuture = false,
-}: AllParams = {}): Result<
-	{ title: string; slug: string; date: string; "substack-link"?: string }[],
-	InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
-> => {
-	const slugsResult = Result.try<string[], InvalidMarkdownError>({
-		try: () =>
-			Object.keys(POSTS).map((p) =>
-				p.replace("../../../posts/", "").replace(/\.md$/, ""),
-			),
-		catch: (error) =>
-			new InvalidMarkdownError({
-				cause: error,
-				details: toErrorDetails(error),
-			}),
-	});
-	if (Result.isError(slugsResult)) return slugsResult;
-
-	const postsResult = combineResults(
-		slugsResult.value.map((slug) => {
-			const postResult = fromPath<{
-				title: string;
-				date: string;
-				draft: string;
-				"substack-link"?: string;
-			}>({
-				path: `./posts/${slug}.md`,
-			});
-
-			return postResult.map(({ frontmatter }) => ({
-				title: frontmatter.title,
-				slug,
-				date: frontmatter.date,
-				draft: frontmatter.draft || "false",
-				"substack-link": frontmatter["substack-link"],
-			}));
-		}),
-	);
-	if (Result.isError(postsResult)) return postsResult;
-
-	const now = Date.now();
-	const posts = postsResult.value
-		.filter((p) => String(p.draft) !== "true")
-		.filter((p) => {
-			if (includeFuture) return true;
-			const timestamp = toComparableTimestampInCentral(p.date);
-			return Number.isNaN(timestamp) || timestamp <= now;
-		})
-		.sort(
-			(a, b) =>
-				toComparableTimestampInCentral(b.date) -
-				toComparableTimestampInCentral(a.date),
-		)
-		.map(({ title, slug, date }) => ({ title, slug, date }));
-
-	return Result.ok(posts);
-};
-
 const markdown = {
 	toFrontmatter,
 	toHtml,
-	fromPath,
-	all,
+	fromRaw,
 };
 
 export { markdown };

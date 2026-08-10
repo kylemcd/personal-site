@@ -7,7 +7,7 @@ import { buildMeta } from "@/lib/meta";
 import { getPostsWritingData } from "@/lib/posts/posts";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
-	return getPostsWritingData();
+	return await getPostsWritingData();
 });
 
 export const Route = createFileRoute("/posts/")({
@@ -26,10 +26,10 @@ function PostsRoute() {
 
 	return (
 		<div className="section-container">
-				<Text as="h2" size="2">
-					Writing
-				</Text>
-				<WritingList writing={writing} />
+			<Text as="h2" size="2">
+				Writing
+			</Text>
+			<WritingList writing={writing} />
 		</div>
 	);
 }

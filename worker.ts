@@ -1,6 +1,10 @@
 import server from "@tanstack/react-start/server-entry";
 import { GenreObservationCollector } from "./src/lib/lastfm/genre-taxonomy";
-import { createBlogRssFeed, RSS_PATH } from "./src/lib/rss";
+import {
+	RSS_PATH,
+	readCachedBlogRssFeed,
+	refreshCachedBlogRssFeed,
+} from "./src/lib/rss";
 import type {
 	GenreReviewDigestParams,
 	GenreReviewDigestWorkflowEnv,
@@ -39,6 +43,7 @@ type WorkerEnv = StaleMonitorWorkflowEnv &
 	RefreshLastFmWorkflowEnv &
 	RefreshSetlistFmWorkflowEnv &
 	GenreReviewDigestWorkflowEnv & {
+		APP_STORE: KVNamespace;
 		GARAGE61_REFRESH_WORKFLOW?: {
 			createBatch: (
 				options: Array<{
@@ -89,6 +94,11 @@ type WorkerEnv = StaleMonitorWorkflowEnv &
 		};
 	};
 
+type PublishedContentUpdate = {
+	event: "published-content.updated";
+	occurredAt: string;
+};
+
 export {
 	GenreObservationCollector,
 	GenreReviewDigestWorkflow,
@@ -106,26 +116,51 @@ const applyRuntimeEnv = (env: WorkerEnv) => {
 	process.env.LASTFM_API_KEY = env.LASTFM_API_KEY ?? process.env.LASTFM_API_KEY;
 };
 
-const respondWithRssFeed = async (): Promise<Response> => {
-	try {
-		const feed = await createBlogRssFeed();
-		return new Response(feed, {
-			headers: {
-				"content-type": "application/rss+xml; charset=utf-8",
-				"cache-control":
-					"public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
-				"x-robots-tag": "index, follow",
-			},
-		});
-	} catch (error) {
-		console.error("[rss] Failed to generate feed", error);
-		return new Response("Unable to generate RSS feed.", {
-			status: 500,
-			headers: {
-				"content-type": "text/plain; charset=utf-8",
-			},
-		});
+const rssResponse = ({ feed }: { feed: string }): Response => {
+	return new Response(feed, {
+		headers: {
+			"content-type": "application/rss+xml; charset=utf-8",
+			"cache-control":
+				"public, max-age=0, s-maxage=60, stale-while-revalidate=300",
+			"x-robots-tag": "index, follow",
+		},
+	});
+};
+
+const respondWithRssFeed = async ({
+	store,
+}: {
+	store: KVNamespace;
+}): Promise<Response> => {
+	const cachedResult = await readCachedBlogRssFeed({ store });
+	if (cachedResult.isOk() && cachedResult.value) {
+		return rssResponse({ feed: cachedResult.value });
 	}
+	if (cachedResult.isErr()) {
+		console.error("[rss] Failed to read cached feed", cachedResult.error);
+	}
+
+	const refreshedResult = await refreshCachedBlogRssFeed({ store });
+	if (refreshedResult.isOk()) {
+		return rssResponse({ feed: refreshedResult.value });
+	}
+
+	console.error("[rss] Failed to refresh feed", refreshedResult.error);
+	return new Response("Unable to generate RSS feed.", {
+		status: 500,
+		headers: {
+			"content-type": "text/plain; charset=utf-8",
+		},
+	});
+};
+
+const refreshRssOrThrow = async ({
+	store,
+}: {
+	store: KVNamespace;
+}): Promise<void> => {
+	const result = await refreshCachedBlogRssFeed({ store });
+	if (result.isErr()) throw result.error;
 };
 
 type WorkflowBinding<P> = {
@@ -157,7 +192,7 @@ export default {
 
 		const { pathname } = new URL(request.url);
 		if (request.method === "GET" && pathname === RSS_PATH) {
-			return respondWithRssFeed();
+			return respondWithRssFeed({ store: env.APP_STORE });
 		}
 
 		return server.fetch(request);
@@ -168,6 +203,7 @@ export default {
 		ctx: ExecutionContext,
 	) => {
 		applyRuntimeEnv(env);
+		ctx.waitUntil(refreshRssOrThrow({ store: env.APP_STORE }));
 		const scheduledAt = new Date(controller.scheduledTime);
 		const minute = scheduledAt.getUTCMinutes();
 		const triggeredAt = new Date().toISOString();
@@ -231,4 +267,11 @@ export default {
 			);
 		}
 	},
-};
+	queue: async (
+		_batch: MessageBatch<PublishedContentUpdate>,
+		env: WorkerEnv,
+	): Promise<void> => {
+		applyRuntimeEnv(env);
+		await refreshRssOrThrow({ store: env.APP_STORE });
+	},
+} satisfies ExportedHandler<WorkerEnv, PublishedContentUpdate>;

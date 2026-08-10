@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Result } from "better-result";
 import { useEffect } from "react";
@@ -7,21 +7,22 @@ import { ErrorComponent } from "@/components/ErrorComponent";
 import { TableOfContents } from "@/components/TableOfContents";
 import { Text } from "@/components/Text";
 import { formatDateInCentral } from "@/lib/dates";
-import { markdown } from "@/lib/markdown";
 import { buildMeta } from "@/lib/meta";
+import { posts } from "@/lib/posts/posts";
 import "@/styles/prism.css";
 import "@/styles/routes/posts.css";
 
 const getPost = createServerFn({ method: "GET" })
-	.validator((data: { slug: string }) => data)
+	.inputValidator((data: { slug: string }) => data)
 	.handler(async ({ data: { slug } }) => {
-		const result = markdown.fromPath<{
+		const result = await posts.find<{
 			title: string;
 			date: string;
 			"substack-link"?: string;
-		}>({ path: `./posts/${slug}.md` });
+		}>({ slug });
 
 		if (Result.isError(result)) {
+			if (result.error.status === 404) throw notFound();
 			throw new Error("This post does not exist.", {
 				cause: result.error,
 			});
