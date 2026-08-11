@@ -6,7 +6,7 @@ import { ErrorComponent } from "@/components/ErrorComponent";
 import { Garage61 } from "@/components/Garage61";
 import { Text } from "@/components/Text";
 import { garage61 } from "@/lib/garage61";
-import { buildMeta } from "@/lib/meta";
+import { buildHead } from "@/lib/meta";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
 	const racingResult = await garage61.summary();
@@ -21,13 +21,12 @@ export const Route = createFileRoute("/racing/")({
 	component: RacingRoute,
 	loader: () => getData(),
 	errorComponent: ErrorComponent,
-	head: () => ({
-		meta: buildMeta({
+	head: () =>
+		buildHead({
 			title: "Racing - Kyle McDonald",
-			url: "https://kylemcd.com/racing",
-			image: "https://kylemcd.com/open-graph/racing.png",
+			url: "https://kpm.sh/racing",
+			image: "https://kpm.sh/open-graph/racing.png",
 		}),
-	}),
 });
 
 function RacingRoute() {

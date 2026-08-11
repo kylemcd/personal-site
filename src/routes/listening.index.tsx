@@ -7,7 +7,7 @@ import { ErrorComponent } from "@/components/ErrorComponent";
 import { Text } from "@/components/Text";
 import { WrappedListening } from "@/components/WrappedListening";
 import { lastfm } from "@/lib/lastfm";
-import { buildMeta } from "@/lib/meta";
+import { buildHead } from "@/lib/meta";
 import "@/styles/routes/listening.css";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
@@ -21,13 +21,12 @@ export const Route = createFileRoute("/listening/")({
 	component: ListeningRoute,
 	loader: () => getData(),
 	errorComponent: ErrorComponent,
-	head: () => ({
-		meta: buildMeta({
+	head: () =>
+		buildHead({
 			title: "Listening - Kyle McDonald",
-			url: "https://kylemcd.com/listening",
-			image: "https://kylemcd.com/open-graph/listening.png",
+			url: "https://kpm.sh/listening",
+			image: "https://kpm.sh/open-graph/listening.png",
 		}),
-	}),
 });
 
 function ListeningRoute() {

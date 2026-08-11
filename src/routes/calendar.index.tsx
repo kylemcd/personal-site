@@ -10,7 +10,7 @@ import { ErrorComponent } from "@/components/ErrorComponent";
 import { Text } from "@/components/Text";
 import { calendar, type CalendarData } from "@/lib/calendar";
 import { env } from "@/lib/env";
-import { buildMeta } from "@/lib/meta";
+import { buildHead } from "@/lib/meta";
 
 import "@/styles/routes/calendar.css";
 
@@ -59,12 +59,11 @@ export const Route = createFileRoute("/calendar/")({
 	component: CalendarRoute,
 	loader: () => getData(),
 	errorComponent: ErrorComponent,
-	head: () => ({
-		meta: buildMeta({
+	head: () =>
+		buildHead({
 			title: "Calendar - Kyle McDonald",
-			url: "https://kylemcd.com/calendar",
+			url: "https://kpm.sh/calendar",
 		}),
-	}),
 });
 
 function CalendarRoute() {

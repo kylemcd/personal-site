@@ -16,7 +16,7 @@ import { WritingList } from "@/components/WritingList";
 import { garage61 } from "@/lib/garage61";
 import { goodreads } from "@/lib/goodreads";
 import { lastfm } from "@/lib/lastfm";
-import { buildMeta } from "@/lib/meta";
+import { buildHead } from "@/lib/meta";
 import { posts } from "@/lib/posts/posts";
 import { setlistfm } from "@/lib/setlistfm";
 import "@/styles/routes/home.css";
@@ -65,9 +65,7 @@ export const Route = createFileRoute("/")({
 	component: HomeRoute,
 	loader: () => getData(),
 	errorComponent: ErrorComponent,
-	head: () => ({
-		meta: buildMeta({ title: "Kyle McDonald" }),
-	}),
+	head: () => buildHead({ title: "Kyle McDonald" }),
 });
 
 function HomeRoute() {

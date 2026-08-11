@@ -5,11 +5,11 @@ import { toComparableTimestampInCentral } from "@/lib/dates";
 import { markdown } from "@/lib/markdown";
 import { publishedContent } from "@/lib/posts/published-content";
 import { combineResults } from "@/lib/result";
+import { SITE_URL } from "@/lib/site";
 
-const SITE_URL = "https://kylemcd.com";
 const RSS_PATH = "/rss.xml";
 const FEED_URL = `${SITE_URL}${RSS_PATH}`;
-const RSS_CACHE_KEY = "rss:blog:v1";
+const RSS_CACHE_KEY = "rss:blog:v2";
 const rssXmlBuilder = new XMLBuilder({
 	ignoreAttributes: false,
 	attributeNamePrefix: "@_",

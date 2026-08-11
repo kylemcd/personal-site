@@ -3,7 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { Text } from "@/components/Text";
 import { WritingList } from "@/components/WritingList";
-import { buildMeta } from "@/lib/meta";
+import { buildHead } from "@/lib/meta";
 import { getPostsWritingData } from "@/lib/posts/posts";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
@@ -13,12 +13,11 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 export const Route = createFileRoute("/posts/")({
 	component: PostsRoute,
 	loader: () => getData(),
-	head: () => ({
-		meta: buildMeta({
+	head: () =>
+		buildHead({
 			title: "Writing - Kyle McDonald",
-			url: "https://kylemcd.com/posts",
+			url: "https://kpm.sh/posts",
 		}),
-	}),
 });
 
 function PostsRoute() {

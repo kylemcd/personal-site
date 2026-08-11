@@ -5,7 +5,7 @@ import { Result } from "better-result";
 import { ConcertsSection } from "@/components/ConcertsSection";
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { Text } from "@/components/Text";
-import { buildMeta } from "@/lib/meta";
+import { buildHead } from "@/lib/meta";
 import { setlistfm } from "@/lib/setlistfm";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
@@ -19,12 +19,11 @@ export const Route = createFileRoute("/concerts/")({
 	component: ConcertsRoute,
 	loader: () => getData(),
 	errorComponent: ErrorComponent,
-	head: () => ({
-		meta: buildMeta({
+	head: () =>
+		buildHead({
 			title: "Concerts - Kyle McDonald",
-			url: "https://kylemcd.com/concerts",
+			url: "https://kpm.sh/concerts",
 		}),
-	}),
 });
 
 function ConcertsRoute() {

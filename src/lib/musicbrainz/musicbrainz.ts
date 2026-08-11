@@ -38,7 +38,7 @@ const hasMusicBrainzCredentials = (): boolean =>
 
 const buildMusicBrainzUserAgent = (): string => {
 	const clientId = env.MUSIC_BRAINZ_CLIENT_ID || "kylemcd-personal-site";
-	return `${clientId}/1.0.0 (https://kylemcd.com)`;
+	return `${clientId}/1.0.0 (https://kpm.sh)`;
 };
 
 const quoteMusicBrainzQueryValue = (value: string): string =>

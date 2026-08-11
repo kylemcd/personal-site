@@ -1,5 +1,6 @@
+import { SITE_URL } from "@/lib/site";
+
 const SITE_NAME = "Kyle McDonald";
-const SITE_URL = "https://kylemcd.com";
 const DEFAULT_DESCRIPTION =
 	"Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.";
 const DEFAULT_OG_IMAGE = `${SITE_URL}/open-graph/home.png`;
@@ -40,3 +41,11 @@ export const buildMeta = ({
 	{ name: "twitter:image", content: image },
 	...(imageAlt ? [{ name: "twitter:image:alt", content: imageAlt }] : []),
 ];
+
+export const buildHead = (config: MetaConfig) => {
+	const canonicalUrl = config.url ?? SITE_URL;
+	return {
+		meta: buildMeta(config),
+		links: [{ rel: "canonical", href: canonicalUrl }],
+	};
+};

@@ -3,7 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { UsesTable } from "@/components/UsesTable";
-import { buildMeta } from "@/lib/meta";
+import { buildHead } from "@/lib/meta";
 import { uses } from "@/lib/uses";
 import "@/styles/routes/uses.css";
 
@@ -17,14 +17,13 @@ export const Route = createFileRoute("/uses/")({
 	component: UsesRoute,
 	loader: () => getData(),
 	errorComponent: ErrorComponent,
-	head: () => ({
-		meta: buildMeta({
+	head: () =>
+		buildHead({
 			title: "Uses - Kyle McDonald",
 			description: "All of the hardware, software, etc that I use.",
-			url: "https://kylemcd.com/uses",
-			image: "https://kylemcd.com/open-graph/uses.png",
+			url: "https://kpm.sh/uses",
+			image: "https://kpm.sh/open-graph/uses.png",
 		}),
-	}),
 });
 
 function UsesRoute() {

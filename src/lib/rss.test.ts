@@ -63,6 +63,8 @@ describe("blog RSS feed", () => {
 		expect(mocks.fromRaw).toHaveBeenCalledTimes(25);
 		expect(result.isOk() && result.value).toContain("post-0");
 		expect(result.isOk() && result.value).toContain("post-24");
+		expect(result.isOk() && result.value).toContain("https://kpm.sh/posts/");
+		expect(result.isOk() && result.value).not.toContain("kylemcd.com");
 	});
 
 	test("propagates a bulk content failure", async () => {

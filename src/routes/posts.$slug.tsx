@@ -7,7 +7,7 @@ import { ErrorComponent } from "@/components/ErrorComponent";
 import { TableOfContents } from "@/components/TableOfContents";
 import { Text } from "@/components/Text";
 import { formatDateInCentral } from "@/lib/dates";
-import { buildMeta } from "@/lib/meta";
+import { buildHead } from "@/lib/meta";
 import { posts } from "@/lib/posts/posts";
 import "@/styles/prism.css";
 import "@/styles/routes/posts.css";
@@ -40,17 +40,15 @@ export const Route = createFileRoute("/posts/$slug")({
 		const fullTitle = postTitle
 			? `${postTitle} - Kyle McDonald`
 			: "Kyle McDonald";
-		const imageUrl = `https://kylemcd.com/open-graph/${params.slug}.png`;
+		const imageUrl = `https://kpm.sh/open-graph/${params.slug}.png`;
 
-		return {
-			meta: buildMeta({
-				title: fullTitle,
-				url: `https://kylemcd.com/posts/${params.slug}`,
-				image: imageUrl,
-				imageAlt: postTitle ?? "Open graph image",
-				ogType: "article",
-			}),
-		};
+		return buildHead({
+			title: fullTitle,
+			url: `https://kpm.sh/posts/${params.slug}`,
+			image: imageUrl,
+			imageAlt: postTitle ?? "Open graph image",
+			ogType: "article",
+		});
 	},
 });
 

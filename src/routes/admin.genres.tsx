@@ -207,7 +207,7 @@ export const Route = createFileRoute("/admin/genres")({
   head: () => ({
     meta: buildMeta({
       title: "Genre Admin - Kyle McDonald",
-      url: "https://kylemcd.com/admin/genres",
+      url: "https://kpm.sh/admin/genres",
     }),
   }),
 });

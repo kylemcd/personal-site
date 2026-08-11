@@ -6,6 +6,7 @@ import {
 	readCachedBlogRssFeed,
 	refreshCachedBlogRssFeed,
 } from "./src/lib/rss";
+import { redirectToCanonicalSite } from "./src/lib/site";
 import type {
 	GenreReviewDigestParams,
 	GenreReviewDigestWorkflowEnv,
@@ -189,6 +190,9 @@ const triggerWorkflow = <P>(
 
 export default {
 	fetch: async (request: Request, env: WorkerEnv) => {
+		const canonicalRedirect = redirectToCanonicalSite(request.url);
+		if (canonicalRedirect) return canonicalRedirect;
+
 		applyRuntimeEnv(env);
 
 		const { pathname } = new URL(request.url);

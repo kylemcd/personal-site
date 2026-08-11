@@ -6,7 +6,7 @@ import { Bookshelf } from "@/components/Bookshelf";
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { Text } from "@/components/Text";
 import { goodreads } from "@/lib/goodreads";
-import { buildMeta } from "@/lib/meta";
+import { buildHead } from "@/lib/meta";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
 	const booksResult = await goodreads.shelf();
@@ -24,13 +24,12 @@ export const Route = createFileRoute("/reading/")({
 	component: ReadingRoute,
 	loader: () => getData(),
 	errorComponent: ErrorComponent,
-	head: () => ({
-		meta: buildMeta({
+	head: () =>
+		buildHead({
 			title: "Reading - Kyle McDonald",
-			url: "https://kylemcd.com/reading",
-			image: "https://kylemcd.com/open-graph/reading.png",
+			url: "https://kpm.sh/reading",
+			image: "https://kpm.sh/open-graph/reading.png",
 		}),
-	}),
 });
 
 function ReadingRoute() {
