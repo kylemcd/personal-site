@@ -179,13 +179,9 @@ export const extractSessionLapRows = (
 				typeof sessionValue === "string" && sessionValue.trim()
 					? sessionValue.trim()
 					: null;
-			// Garage61 returns `event` as the iRacing event id (a ULID string like
-			// "01KQYFGMY0FMC1DRPV4PXBMFQZ") and `session` as 0/1/2 for
-			// practice/quali/race within that event. For the calendar we want one
-			// row per event (a continuous racing session from the user's POV), so
-			// we key by event id alone and only fall back to the session index when
-			// no event id is present. Don't run the event id through getIdValue —
-			// that parseInt's the ULID and reduces every event to "1".
+			// Garage61 returns `event` as an iRacing event ULID and `session` as the
+			// practice/quali/race index. Group the laps by event when possible and do
+			// not pass the ULID through getIdValue, which would reduce it to "1".
 			const eventValue = getFirstValue(row, ["event", "eventId", "event_id"]);
 			const eventKey =
 				typeof eventValue === "string" && eventValue.trim()

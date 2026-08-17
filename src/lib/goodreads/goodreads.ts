@@ -1,32 +1,17 @@
 import { Result, TaggedError } from "better-result";
 import { XMLParser } from "fast-xml-parser";
-
-import type { Book } from "./schema";
 import { GOODREADS_USER_ID } from "@/lib/config";
 import { toErrorDetails } from "@/lib/error-details";
-import { getJson, refreshJson, type KvPutError } from "@/lib/store";
-// NOTE: when extending ShelfBook with new fields, keep them optional/nullable so
-// old cached entries (without the field) keep deserializing cleanly. Bumping
-// this key to invalidate old data triggers a stale-data alert in prod between
-// deploy and the next user request that warms the cache.
+import { getJson, type KvPutError, refreshJson } from "@/lib/store";
+import type { Book } from "./schema";
+
 export const GOODREADS_SHELF_CACHE_KEY = "goodreads:shelf:v1";
 const GOODREADS_SHELF_CACHE_TTL_SECONDS = 30 * 60;
 
-type ShelfBook = Book & {
-	dateAddedIso: string | null;
-	dateReadIso: string | null;
-};
-
 type ShelfData = {
-	reading: ReadonlyArray<ShelfBook>;
-	finished: ReadonlyArray<ShelfBook>;
-	next: ReadonlyArray<ShelfBook>;
-};
-
-export type ReadingEvent = {
-	kind: "started" | "finished";
-	dateIso: string;
-	book: ShelfBook;
+	reading: ReadonlyArray<Book>;
+	finished: ReadonlyArray<Book>;
+	next: ReadonlyArray<Book>;
 };
 
 class FetchGoodreadsError extends TaggedError("FetchGoodreadsError")<{
@@ -60,25 +45,11 @@ type RawGoodreadsItem = {
 	isbn?: string;
 	average_rating?: string;
 	book_published?: string;
-	user_read_at?: string;
-	user_date_added?: string;
-	user_date_created?: string;
-};
-
-/**
- * Goodreads RSS dates are RFC-2822 strings like "Mon, 01 Apr 2024 12:34:56 +0000".
- * Returns null if the string is missing/unparseable.
- */
-const parseGoodreadsDate = (value: string | undefined): string | null => {
-	if (!value || !value.trim()) return null;
-	const ms = Date.parse(value);
-	if (!Number.isFinite(ms)) return null;
-	return new Date(ms).toISOString();
 };
 
 const parseRssToBooks = (
 	xml: string,
-): Result<ReadonlyArray<ShelfBook>, ParseGoodreadsError> => {
+): Result<ReadonlyArray<Book>, ParseGoodreadsError> => {
 	const result = Result.try(() => {
 		const parser = new XMLParser({
 			ignoreAttributes: false,
@@ -107,10 +78,6 @@ const parseRssToBooks = (
 				return "";
 			};
 
-			const dateAddedRaw =
-				extractValue(item.user_date_added) ||
-				extractValue(item.user_date_created);
-			const dateReadRaw = extractValue(item.user_read_at);
 			return {
 				title: cleanHtmlEntities(extractValue(item.title) || "Unknown Title"),
 				subtitle: null,
@@ -129,8 +96,6 @@ const parseRssToBooks = (
 						),
 					},
 				],
-				dateAddedIso: parseGoodreadsDate(dateAddedRaw),
-				dateReadIso: parseGoodreadsDate(dateReadRaw),
 			};
 		});
 	});
@@ -163,7 +128,7 @@ const getBooks = async ({
 	sort,
 	order,
 }: GetBooksArgs): Promise<
-	Result<ReadonlyArray<ShelfBook>, FetchGoodreadsError | ParseGoodreadsError>
+	Result<ReadonlyArray<Book>, FetchGoodreadsError | ParseGoodreadsError>
 > => {
 	const params = new URLSearchParams({
 		shelf,
@@ -272,42 +237,7 @@ const refreshShelf = () =>
 		compute: fetchShelfData,
 	});
 
-const recentReadingEvents = async (params: {
-	withinDays: number;
-}): Promise<
-	Result<ReadingEvent[], FetchGoodreadsError | ParseGoodreadsError | KvPutError>
-> => {
-	const shelfResult = await shelf();
-	if (Result.isError(shelfResult)) return shelfResult;
-	const data = shelfResult.value;
-	const cutoffMs = Date.now() - params.withinDays * 24 * 60 * 60 * 1000;
-
-	const events: ReadingEvent[] = [];
-	for (const book of data.reading) {
-		if (book.dateAddedIso) {
-			const ms = Date.parse(book.dateAddedIso);
-			if (Number.isFinite(ms) && ms >= cutoffMs) {
-				events.push({ kind: "started", dateIso: book.dateAddedIso, book });
-			}
-		}
-	}
-	for (const book of data.finished) {
-		if (book.dateReadIso) {
-			const ms = Date.parse(book.dateReadIso);
-			if (Number.isFinite(ms) && ms >= cutoffMs) {
-				events.push({ kind: "finished", dateIso: book.dateReadIso, book });
-			}
-		}
-		// Books on the "read" shelf were also "started" at some point — we don't
-		// know exactly when, so only emit the finished event.
-	}
-
-	events.sort((a, b) => a.dateIso.localeCompare(b.dateIso));
-	return Result.ok(events);
-};
-
 export const goodreads = {
 	shelf,
 	refreshShelf,
-	recentReadingEvents,
 };

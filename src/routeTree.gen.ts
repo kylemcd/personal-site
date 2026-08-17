@@ -16,7 +16,6 @@ import { Route as RacingIndexRouteImport } from './routes/racing.index'
 import { Route as PostsIndexRouteImport } from './routes/posts.index'
 import { Route as ListeningIndexRouteImport } from './routes/listening.index'
 import { Route as ConcertsIndexRouteImport } from './routes/concerts.index'
-import { Route as CalendarIndexRouteImport } from './routes/calendar.index'
 import { Route as PostsSlugRouteImport } from './routes/posts.$slug'
 import { Route as AdminGenresRouteImport } from './routes/admin.genres'
 
@@ -55,11 +54,6 @@ const ConcertsIndexRoute = ConcertsIndexRouteImport.update({
   path: '/concerts/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CalendarIndexRoute = CalendarIndexRouteImport.update({
-  id: '/calendar/',
-  path: '/calendar/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PostsSlugRoute = PostsSlugRouteImport.update({
   id: '/posts/$slug',
   path: '/posts/$slug',
@@ -75,7 +69,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin/genres': typeof AdminGenresRoute
   '/posts/$slug': typeof PostsSlugRoute
-  '/calendar/': typeof CalendarIndexRoute
   '/concerts/': typeof ConcertsIndexRoute
   '/listening/': typeof ListeningIndexRoute
   '/posts/': typeof PostsIndexRoute
@@ -87,7 +80,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/genres': typeof AdminGenresRoute
   '/posts/$slug': typeof PostsSlugRoute
-  '/calendar': typeof CalendarIndexRoute
   '/concerts': typeof ConcertsIndexRoute
   '/listening': typeof ListeningIndexRoute
   '/posts': typeof PostsIndexRoute
@@ -100,7 +92,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin/genres': typeof AdminGenresRoute
   '/posts/$slug': typeof PostsSlugRoute
-  '/calendar/': typeof CalendarIndexRoute
   '/concerts/': typeof ConcertsIndexRoute
   '/listening/': typeof ListeningIndexRoute
   '/posts/': typeof PostsIndexRoute
@@ -114,7 +105,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/genres'
     | '/posts/$slug'
-    | '/calendar/'
     | '/concerts/'
     | '/listening/'
     | '/posts/'
@@ -126,7 +116,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/genres'
     | '/posts/$slug'
-    | '/calendar'
     | '/concerts'
     | '/listening'
     | '/posts'
@@ -138,7 +127,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/genres'
     | '/posts/$slug'
-    | '/calendar/'
     | '/concerts/'
     | '/listening/'
     | '/posts/'
@@ -151,7 +139,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminGenresRoute: typeof AdminGenresRoute
   PostsSlugRoute: typeof PostsSlugRoute
-  CalendarIndexRoute: typeof CalendarIndexRoute
   ConcertsIndexRoute: typeof ConcertsIndexRoute
   ListeningIndexRoute: typeof ListeningIndexRoute
   PostsIndexRoute: typeof PostsIndexRoute
@@ -211,13 +198,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConcertsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/calendar/': {
-      id: '/calendar/'
-      path: '/calendar'
-      fullPath: '/calendar/'
-      preLoaderRoute: typeof CalendarIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/posts/$slug': {
       id: '/posts/$slug'
       path: '/posts/$slug'
@@ -239,7 +219,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminGenresRoute: AdminGenresRoute,
   PostsSlugRoute: PostsSlugRoute,
-  CalendarIndexRoute: CalendarIndexRoute,
   ConcertsIndexRoute: ConcertsIndexRoute,
   ListeningIndexRoute: ListeningIndexRoute,
   PostsIndexRoute: PostsIndexRoute,

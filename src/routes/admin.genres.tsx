@@ -10,7 +10,7 @@ import { Text } from "@/components/Text";
 import { env } from "@/lib/env";
 import { buildMeta } from "@/lib/meta";
 
-import "@/styles/routes/calendar.css";
+import "@/styles/routes/admin.css";
 
 const GENRE_ADMIN_AUTH_COOKIE = "genre-admin-auth";
 
@@ -47,7 +47,8 @@ type ArtistEntry = {
   sources: string[];
 };
 
-const getExpectedAuth = (): string => env.CALENDAR_AUTH || "";
+const getExpectedAuth = (): string =>
+  env.ADMIN_AUTH || env.CALENDAR_AUTH || "";
 
 const isAuthCookieValid = (): boolean => {
   const expected = getExpectedAuth();
@@ -240,15 +241,15 @@ function GenreAdminAuthGate() {
   };
 
   return (
-    <div className="section-container calendar-page-section">
-      <form className="calendar-auth-form" onSubmit={onSubmit}>
+    <div className="section-container admin-page-section">
+      <form className="admin-auth-form" onSubmit={onSubmit}>
         <Text as="label" size="1" color="2" htmlFor="genre-admin-password">
           This page is private. Enter the password to continue.
         </Text>
-        <div className="calendar-auth-form-row">
+        <div className="admin-auth-form-row">
           <input
             id="genre-admin-password"
-            className="calendar-auth-input"
+            className="admin-auth-input"
             type="password"
             autoComplete="current-password"
             value={password}
@@ -258,14 +259,14 @@ function GenreAdminAuthGate() {
           />
           <button
             type="submit"
-            className="calendar-auth-submit"
+            className="admin-auth-submit"
             disabled={submitting || password.length === 0}
           >
             {submitting ? "Checking…" : "Continue"}
           </button>
         </div>
         {error ? (
-          <Text as="p" size="0" color="2" className="calendar-auth-error">
+          <Text as="p" size="0" color="2" className="admin-auth-error">
             {error}
           </Text>
         ) : null}
@@ -368,7 +369,7 @@ function GenreAdminDashboard(props: {
   };
 
   return (
-    <div className="section-container calendar-page-section">
+    <div className="section-container admin-page-section">
       <Text as="h2" size="3">
         Genre Admin
       </Text>
@@ -381,7 +382,7 @@ function GenreAdminDashboard(props: {
           <button
             key={tab}
             type="button"
-            className="calendar-auth-submit"
+            className="admin-auth-submit"
             onClick={() => setActiveTab(tab)}
             disabled={activeTab === tab}
           >
@@ -392,26 +393,26 @@ function GenreAdminDashboard(props: {
 
       {activeTab === "tags" ? (
         <>
-          <form className="calendar-auth-form" onSubmit={onSetAlias}>
+          <form className="admin-auth-form" onSubmit={onSetAlias}>
             <Text as="label" size="1" color="2">
               Set alias
             </Text>
-            <div className="calendar-auth-form-row">
+            <div className="admin-auth-form-row">
               <input
-                className="calendar-auth-input"
+                className="admin-auth-input"
                 placeholder="raw tag (e.g. power(pop))"
                 value={rawTag}
                 onChange={(e) => setRawTag(e.target.value)}
                 required
               />
               <input
-                className="calendar-auth-input"
+                className="admin-auth-input"
                 placeholder="canonical genre (e.g. pop punk)"
                 value={canonicalGenre}
                 onChange={(e) => setCanonicalGenre(e.target.value)}
                 required
               />
-              <button className="calendar-auth-submit" type="submit">
+              <button className="admin-auth-submit" type="submit">
                 Save
               </button>
             </div>
@@ -434,14 +435,14 @@ function GenreAdminDashboard(props: {
                   <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                     <button
                       type="button"
-                      className="calendar-auth-submit"
+                      className="admin-auth-submit"
                       onClick={() => onAcceptSuggestion(suggestion)}
                     >
                       Accept
                     </button>
                     <button
                       type="button"
-                      className="calendar-auth-submit"
+                      className="admin-auth-submit"
                       onClick={() => onRejectSuggestion(suggestion)}
                     >
                       Reject
@@ -463,7 +464,7 @@ function GenreAdminDashboard(props: {
                 </Text>
                 <button
                   type="button"
-                  className="calendar-auth-submit"
+                  className="admin-auth-submit"
                   onClick={() =>
                     runAndRefresh(() => removeAlias({ data: { rawTag: raw } }))
                   }
@@ -535,9 +536,9 @@ function GenreAdminDashboard(props: {
                         </Text>
                       </td>
                       <td style={{ padding: "8px 4px", verticalAlign: "top" }}>
-                        <div className="calendar-auth-form-row">
+                        <div className="admin-auth-form-row">
                           <input
-                            className="calendar-auth-input"
+                            className="admin-auth-input"
                             placeholder="set canonical genre"
                             value={
                               artistGenreDrafts[artist.artistKey] ?? override
@@ -551,7 +552,7 @@ function GenreAdminDashboard(props: {
                           />
                           <button
                             type="button"
-                            className="calendar-auth-submit"
+                            className="admin-auth-submit"
                             onClick={() =>
                               onSetArtistOverride(artist.artistKey)
                             }
@@ -560,7 +561,7 @@ function GenreAdminDashboard(props: {
                           </button>
                           <button
                             type="button"
-                            className="calendar-auth-submit"
+                            className="admin-auth-submit"
                             onClick={() =>
                               runAndRefresh(() =>
                                 removeArtistOverride({

@@ -7,7 +7,6 @@ import "./Navigation.styles.css";
 
 const PAGE_LINKS = [
 	{ href: "/", label: "Home" },
-	{ href: "/calendar", label: "Calendar" },
 	{ href: "/posts", label: "Writing" },
 	{ href: "/listening", label: "Listening" },
 	{ href: "/concerts", label: "Concerts" },

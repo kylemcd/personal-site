@@ -10,6 +10,7 @@ const EnvSchema = z
 		IRACING_ENCODED_PASSWORD: optionalString,
 		MUSIC_BRAINZ_CLIENT_ID: optionalString,
 		MUSIC_BRAINZ_CLIENT_SECRET: optionalString,
+		ADMIN_AUTH: optionalString,
 		CALENDAR_AUTH: optionalString,
 		KV_CACHE_VERSION: optionalString,
 		KV_READ_ONLY_CACHE: z
