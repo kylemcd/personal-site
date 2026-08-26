@@ -23,6 +23,17 @@ const buildOverview = (): Garage61Summary["derived"]["overview"] => ({
 			lapsDriven: 30,
 			lapSharePercentage: 25,
 		},
+		{
+			// Ovals are excluded from lap counting, so this track has real time on
+			// track but no countable laps. The bar must follow the duration label.
+			id: 3,
+			name: "Daytona International Speedway",
+			variant: null,
+			timeOnTrackSeconds: 17760,
+			timeSharePercentage: 13,
+			lapsDriven: 0,
+			lapSharePercentage: 0,
+		},
 	],
 	recentCars: [
 		{
@@ -85,6 +96,17 @@ describe("Garage61", () => {
 		expect(
 			screen.queryByText("Not enough lap data for chart rendering yet."),
 		).toBeNull();
+	});
+
+	it("shares time rather than laps, so oval time is not reported as <1%", () => {
+		render(<Garage61 overview={buildOverview()} />);
+
+		expect(
+			screen.getAllByText("Daytona International Speedway").length,
+		).toBeGreaterThan(0);
+		expect(screen.getAllByText("4h 56m").length).toBeGreaterThan(0);
+		expect(screen.getAllByText("13%").length).toBeGreaterThan(0);
+		expect(screen.queryByText("<1%")).toBeNull();
 	});
 
 	it("renders the cleanest combo tile from the statistics rollup", () => {

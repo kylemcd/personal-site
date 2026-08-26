@@ -60,15 +60,15 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 		key: `track-${track.id}-${track.name}`,
 		title: track.name,
 		subtitleRight: formatDuration(track.timeOnTrackSeconds),
-		percent: clampPercent(track.lapSharePercentage ?? 0),
-		percentLabel: formatPercentLabel(track.lapSharePercentage),
+		percent: clampPercent(track.timeSharePercentage ?? 0),
+		percentLabel: formatPercentLabel(track.timeSharePercentage),
 	}));
 	const recentCarRows: Array<StatBarListRow> = recentCars.map((car) => ({
 		key: `car-${car.id}-${car.name}`,
 		title: car.name,
 		subtitleRight: formatDuration(car.timeOnTrackSeconds),
-		percent: clampPercent(car.lapSharePercentage ?? 0),
-		percentLabel: formatPercentLabel(car.lapSharePercentage),
+		percent: clampPercent(car.timeSharePercentage ?? 0),
+		percentLabel: formatPercentLabel(car.timeSharePercentage),
 	}));
 
 	return (
