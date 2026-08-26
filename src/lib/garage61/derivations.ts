@@ -1,5 +1,1 @@
-export {
-	buildBestSessionChart,
-	buildFallbackTrendFromStatistics,
-	computeSharePercentage,
-} from "./shared";
+export { computeSharePercentage } from "./shared";

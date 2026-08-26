@@ -19,6 +19,10 @@ export type Garage61Summary = {
 	};
 	statistics: JsonValue;
 	sessions: JsonValue;
+	// Fingerprint of the statistics rows this summary was built from. The whole
+	// summary is derived from those rows, so an unchanged fingerprint means a
+	// rebuild would produce identical output and can be skipped.
+	statisticsFingerprint?: string;
 	derived: {
 		sessionCount: number | null;
 		trackCount: number | null;
@@ -66,60 +70,11 @@ export type Garage61Summary = {
 				lapSharePercentage: number | null;
 			}>;
 			insights: {
-				chart: {
-					sessions: Array<{
-						id: string;
-						title: string;
-						track: string;
-						car: string;
-						source: "session_laps" | "trend_fallback";
-						bestLapSeconds: number;
-						rangeSeconds: number;
-						lapCount: number;
-						laps: Array<{
-							lapNumber: number;
-							lapSeconds: number;
-						}>;
-					}>;
-					bestSession: {
-						track: string;
-						car: string;
-						source: "session_laps";
-						bestLapSeconds: number;
-						rangeSeconds: number;
-						lapCount: number;
-						laps: Array<{
-							lapNumber: number;
-							lapSeconds: number;
-						}>;
-					} | null;
-					fallbackTrend: {
-						track: string;
-						car: string;
-						source: "trend_fallback";
-						bestLapSeconds: number;
-						rangeSeconds: number;
-						lapCount: number;
-						laps: Array<{
-							lapNumber: number;
-							lapSeconds: number;
-						}>;
-					} | null;
-				};
 				sessionTimeBreakdown: {
 					practiceTimeOnTrackSeconds: number;
 					racingTimeOnTrackSeconds: number;
 					practicePercentage: number;
 					racingPercentage: number;
-				} | null;
-				secondsOffRecord: {
-					track: string;
-					car: string;
-					bestLapSeconds: number;
-					recordLapSeconds: number;
-					secondsOffRecord: number;
-					isFastestInTeam: boolean;
-					onlyMyLaps: boolean;
 				} | null;
 				cleanestCombo: {
 					track: string;
@@ -128,12 +83,6 @@ export type Garage61Summary = {
 					cleanLaps: number;
 					totalLaps: number;
 				} | null;
-				paceLadder: Array<{
-					track: string;
-					car: string;
-					avgLapSeconds: number;
-					laps: number;
-				}>;
 				trackConfidence: Array<{
 					track: string;
 					laps: number;

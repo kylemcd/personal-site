@@ -35,50 +35,12 @@ const buildOverview = (): Garage61Summary["derived"]["overview"] => ({
 		},
 	],
 	insights: {
-		chart: {
-			sessions: [
-				{
-					id: "session-1",
-					title: "Long Beach Street Circuit · Porsche 911 Cup",
-					track: "Long Beach Street Circuit",
-					car: "Porsche 911 Cup",
-					source: "session_laps",
-					bestLapSeconds: 73.89,
-					rangeSeconds: 2.95,
-					lapCount: 5,
-					laps: [
-						{ lapNumber: 1, lapSeconds: 74.2 },
-						{ lapNumber: 2, lapSeconds: 73.89 },
-						{ lapNumber: 3, lapSeconds: 74.6 },
-						{ lapNumber: 4, lapSeconds: 74.4 },
-						{ lapNumber: 5, lapSeconds: 74.9 },
-					],
-				},
-			],
-			bestSession: {
-				track: "Long Beach Street Circuit",
-				car: "Porsche 911 Cup",
-				source: "session_laps",
-				bestLapSeconds: 73.89,
-				rangeSeconds: 2.95,
-				lapCount: 5,
-				laps: [
-					{ lapNumber: 1, lapSeconds: 74.2 },
-					{ lapNumber: 2, lapSeconds: 73.89 },
-					{ lapNumber: 3, lapSeconds: 74.6 },
-					{ lapNumber: 4, lapSeconds: 74.4 },
-					{ lapNumber: 5, lapSeconds: 74.9 },
-				],
-			},
-			fallbackTrend: null,
-		},
 		sessionTimeBreakdown: {
 			practiceTimeOnTrackSeconds: 14000,
 			racingTimeOnTrackSeconds: 22000,
 			practicePercentage: 39,
 			racingPercentage: 61,
 		},
-		secondsOffRecord: null,
 		cleanestCombo: {
 			track: "Long Beach Street Circuit",
 			car: "Porsche 911 Cup",
@@ -86,14 +48,6 @@ const buildOverview = (): Garage61Summary["derived"]["overview"] => ({
 			cleanLaps: 24,
 			totalLaps: 25,
 		},
-		paceLadder: [
-			{
-				track: "Long Beach Street Circuit",
-				car: "Porsche 911 Cup",
-				avgLapSeconds: 73.89,
-				laps: 25,
-			},
-		],
 		trackConfidence: [
 			{
 				track: "Long Beach Street Circuit",
@@ -107,78 +61,47 @@ const buildOverview = (): Garage61Summary["derived"]["overview"] => ({
 });
 
 describe("Garage61", () => {
-	it("renders full dashboard sections with best-session chart data", () => {
+	it("renders the statistics-derived KPIs and lists", () => {
 		render(<Garage61 overview={buildOverview()} />);
 
 		expect(screen.getByText("Racing")).not.toBeNull();
-		expect(screen.queryByText("Session trends")).toBeNull();
-		expect(screen.getByText("Fastest laps")).not.toBeNull();
-		expect(screen.getByText("Cleanest tracks")).not.toBeNull();
+		expect(screen.getByText("Time on track")).not.toBeNull();
+		expect(screen.getByText("Clean laps")).not.toBeNull();
+		expect(screen.getByText("Cleanest combo")).not.toBeNull();
+		expect(screen.getByText("Seat balance")).not.toBeNull();
 		expect(screen.getByText("Recent tracks")).not.toBeNull();
 		expect(screen.getByText("Recent cars")).not.toBeNull();
-		expect(screen.getByLabelText("Racing lap time trend chart")).not.toBeNull();
-	});
-
-	it("renders fallback empty-state copy when chart has insufficient lap points", () => {
-		const overview = buildOverview();
-		overview.insights.chart.sessions = [
-			{
-				id: "trend-fallback",
-				title: "Trend fallback",
-				track: "Fallback Track",
-				car: "Fallback Car",
-				source: "trend_fallback",
-				bestLapSeconds: 75,
-				rangeSeconds: 0,
-				lapCount: 1,
-				laps: [{ lapNumber: 1, lapSeconds: 75 }],
-			},
-		];
-		overview.insights.chart.bestSession = null;
-		overview.insights.chart.fallbackTrend = {
-			track: "Fallback Track",
-			car: "Fallback Car",
-			source: "trend_fallback",
-			bestLapSeconds: 75,
-			rangeSeconds: 0,
-			lapCount: 1,
-			laps: [{ lapNumber: 1, lapSeconds: 75 }],
-		};
-
-		render(<Garage61 overview={overview} />);
-
+		expect(screen.getByText("Cleanest tracks")).not.toBeNull();
 		expect(
-			screen.getByText("Not enough lap data for chart rendering yet."),
-		).not.toBeNull();
+			screen.getAllByText("Long Beach Street Circuit").length,
+		).toBeGreaterThan(0);
 	});
 
-	it("uses outlier-filtered laps for displayed spread and lap count", () => {
-		const overview = buildOverview();
-		overview.insights.chart.sessions = [
-			{
-				id: "session-outlier",
-				title: "Outlier Session",
-				track: "Autodromo Hermanos Rodriguez",
-				car: "Porsche 911 Cup",
-				source: "session_laps",
-				bestLapSeconds: 79.9,
-				rangeSeconds: 142.1,
-				lapCount: 8,
-				laps: [
-					{ lapNumber: 1, lapSeconds: 80.0 },
-					{ lapNumber: 2, lapSeconds: 80.2 },
-					{ lapNumber: 3, lapSeconds: 80.1 },
-					{ lapNumber: 4, lapSeconds: 79.9 },
-					{ lapNumber: 5, lapSeconds: 80.3 },
-					{ lapNumber: 6, lapSeconds: 80.0 },
-					{ lapNumber: 7, lapSeconds: 80.15 },
-					{ lapNumber: 8, lapSeconds: 222.0 },
-				],
-			},
-		];
+	it("does not render lap-derived sections that were dropped to cut API usage", () => {
+		render(<Garage61 overview={buildOverview()} />);
 
+		expect(screen.queryByText("Fastest laps")).toBeNull();
+		expect(screen.queryByLabelText("Racing lap time trend chart")).toBeNull();
+		expect(
+			screen.queryByText("Not enough lap data for chart rendering yet."),
+		).toBeNull();
+	});
+
+	it("renders the cleanest combo tile from the statistics rollup", () => {
+		const overview = buildOverview();
 		render(<Garage61 overview={overview} />);
 
-		expect(screen.getByText(/Spread 0\.40s · 7 laps/)).not.toBeNull();
+		expect(screen.getAllByText("Porsche 911 Cup").length).toBeGreaterThan(0);
+	});
+
+	it("renders nothing when there is no recent activity", () => {
+		const overview = buildOverview();
+		overview.recentTracks = [];
+		overview.recentCars = [];
+		overview.totalTimeOnTrackSeconds = 0;
+
+		const { container } = render(<Garage61 overview={overview} />);
+
+		expect(container.firstChild).toBeNull();
 	});
 });
