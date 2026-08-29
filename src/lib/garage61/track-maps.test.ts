@@ -33,9 +33,15 @@ describe("getTrackMapAssets", () => {
 		).toBeNull();
 	});
 
-	it("does not construct a broken URL for an unpublished configuration", () => {
+	it("supports temporary R2-backed aliases missing from the generated catalog", () => {
 		expect(
 			getTrackMapAssets({ platformId: 586, garage61TrackId: 504 }),
-		).toBeNull();
+		).toEqual({
+			active: "/media/racing/tracks/586/active.svg?source=r2-svg-v1",
+			inactive: "/media/racing/tracks/586/inactive.svg?source=r2-svg-v1",
+			turns: "/media/racing/tracks/586/turns.svg?source=r2-svg-v1",
+			startFinish: "/media/racing/tracks/586/start-finish.svg?source=r2-svg-v1",
+			pitroad: "/media/racing/tracks/586/pitroad.svg?source=r2-svg-v1",
+		});
 	});
 });

@@ -1,6 +1,10 @@
 import { getRacingTrackMapPath } from "../racing-media/track-maps";
 import { availableTrackMapIds } from "./track-map-ids.generated";
 
+// Temporary R2-backed aliases for layouts that are newer than the upstream
+// track-map catalog. Laguna Seca 2026 currently duplicates Full Course (47).
+const temporaryTrackMapIds = new Set<number>([586]);
+
 // Compatibility for summaries cached before Garage61 platform IDs were stored.
 const legacyPlatformIdsByGarage61Id: Readonly<Record<number, number>> = {
 	35: 95,
@@ -34,7 +38,11 @@ function getTrackMapAssets({
 }): TrackMapAssets | null {
 	const resolvedPlatformId =
 		platformId ?? legacyPlatformIdsByGarage61Id[garage61TrackId];
-	if (!resolvedPlatformId || !availableTrackMapIds.has(resolvedPlatformId)) {
+	if (
+		!resolvedPlatformId ||
+		(!availableTrackMapIds.has(resolvedPlatformId) &&
+			!temporaryTrackMapIds.has(resolvedPlatformId))
+	) {
 		return null;
 	}
 	return {
