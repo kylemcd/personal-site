@@ -8,9 +8,11 @@
 
 .site-header[data-variant="standard"] {
 	--site-header-section-gap: clamp(5rem, 9vw, 9rem);
+	--site-hero-wordmark-space: clamp(4rem, 7.2vw, 7.2rem);
 	--site-wordmark-fade-depth: clamp(2.5rem, 7vw, 5rem);
 
-	padding: var(--site-gutter) var(--site-gutter) var(--site-header-section-gap);
+	padding: var(--site-hero-wordmark-space) var(--site-gutter)
+		var(--site-header-section-gap);
 }
 
 .site-header[data-variant="compact"] {
@@ -34,7 +36,7 @@
 .site-header-details {
 	display: grid;
 	width: 100%;
-	margin-top: var(--site-header-section-gap);
+	margin-top: var(--site-hero-wordmark-space);
 	align-items: start;
 	grid-template-columns:
 		minmax(0, var(--site-readable-width))
@@ -61,7 +63,7 @@
 		top: 0;
 		left: var(--site-gutter);
 		width: calc(100vw - var(--site-gutter) - var(--site-gutter));
-		padding: var(--site-gutter) 0;
+		padding: var(--site-hero-wordmark-space) 0;
 		animation: home-wordmark-collapse 1ms linear both;
 		animation-timeline: scroll(root block);
 		animation-range: 0 var(--site-wordmark-collapse-distance);
@@ -106,7 +108,11 @@
 		--site-wordmark-fallback-width,
 		calc(100vw - var(--site-gutter) - var(--site-gutter))
 	);
-	padding: var(--site-wordmark-fallback-padding, var(--site-gutter)) 0;
+	padding: var(
+			--site-wordmark-fallback-padding,
+			var(--site-hero-wordmark-space)
+		)
+		0;
 	isolation: isolate;
 	will-change: width, padding;
 }

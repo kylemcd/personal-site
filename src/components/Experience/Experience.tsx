@@ -49,7 +49,7 @@ function Experience() {
 							as="i"
 							size="0"
 							color="3"
-							className="hn hn-external-link"
+							className="hn hn-external-link-solid"
 							aria-hidden="true"
 						/>
 					</div>

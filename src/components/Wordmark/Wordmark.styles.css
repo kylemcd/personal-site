@@ -10,6 +10,10 @@
 	width: 100%;
 }
 
+.wordmark[data-mobile-motion="true"] {
+	touch-action: pan-y;
+}
+
 .wordmark[data-variant="compact"] {
 	width: var(--wordmark-compact-width);
 }
@@ -130,6 +134,7 @@
 	z-index: 5;
 	inset: 0;
 	overflow: hidden;
+	opacity: 0;
 	transition: opacity 280ms ease-out;
 	-webkit-mask-image: radial-gradient(
 		circle clamp(2rem, 19cqi, 14rem) at var(--wordmark-pointer-x)
@@ -156,6 +161,10 @@
 		transparent 100%
 	);
 	pointer-events: none;
+}
+
+.wordmark[data-mobile-motion="true"] .wordmark-art-disturbance {
+	transition: none;
 }
 
 .wordmark-art-shader-disturbance {

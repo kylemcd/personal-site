@@ -40,6 +40,8 @@
 }
 
 .site-navigation-popup {
+	--site-navigation-item-height: 2.75rem;
+
 	display: flex;
 	width: min(16rem, calc(100vw - 2rem));
 	padding: var(--spc-2);
@@ -63,7 +65,7 @@
 
 .site-navigation-item {
 	display: flex;
-	min-height: 2.75rem;
+	min-height: var(--site-navigation-item-height);
 	align-items: center;
 	justify-content: space-between;
 	padding: 0 var(--spc-3);

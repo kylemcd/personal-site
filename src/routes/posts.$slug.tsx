@@ -95,7 +95,7 @@ function PostRoute() {
 							>
 								Read on Substack
 							</Text>
-							<i className="hn hn-external-link" data-text-size="0" />
+							<i className="hn hn-external-link-solid" data-text-size="0" />
 						</div>
 					)}
 				</div>

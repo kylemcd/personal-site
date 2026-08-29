@@ -1,6 +1,12 @@
 import { Dithering } from "@paper-design/shaders-react";
 import { Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	type PointerEvent as ReactPointerEvent,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 
 import "./Wordmark.styles.css";
 
@@ -23,6 +29,14 @@ type ShaderHost = HTMLElement & {
 type Point = {
 	x: number;
 	y: number;
+};
+
+type MobileTouch = {
+	intensity: number;
+	moved: boolean;
+	pointerId: number | null;
+	point: Point;
+	start: Point;
 };
 
 const DITHER_FOREGROUND: Record<BaseShaderLayer, Record<Appearance, string>> = {
@@ -96,17 +110,47 @@ function mixHexColors(from: string, to: string, progress: number): string {
 	return `#${channels.join("")}`;
 }
 
+function clamp(value: number, min: number, max: number): number {
+	return Math.min(Math.max(value, min), max);
+}
+
+function getPointerPoint(
+	clientX: number,
+	clientY: number,
+	element: HTMLElement,
+): Point {
+	const bounds = element.getBoundingClientRect();
+
+	return {
+		x: clamp(((clientX - bounds.left) / bounds.width) * 2 - 1, -1, 1),
+		y: clamp(((clientY - bounds.top) / bounds.height) * 2 - 1, -1, 1),
+	};
+}
+
 function useWordmarkShader(scrollLinked: boolean, allowShader: boolean) {
 	const [state, setState] = useState<{
 		appearance: Appearance;
+		ditherType: "4x4" | "8x8";
 		enabled: boolean;
+		mobileMotion: boolean;
 		progress: number;
 		resolved: boolean;
-	}>({ appearance: "dark", enabled: false, progress: 1, resolved: false });
+	}>({
+		appearance: "dark",
+		ditherType: "8x8",
+		enabled: false,
+		mobileMotion: false,
+		progress: 1,
+		resolved: false,
+	});
 
 	useEffect(() => {
 		const motionPreference = window.matchMedia(
 			"(prefers-reduced-motion: reduce)",
+		);
+		const mobileDither = window.matchMedia("(max-width: 47.9375rem)");
+		const mobileMotion = window.matchMedia(
+			"(hover: none) and (pointer: coarse)",
 		);
 		const canvas = document.createElement("canvas");
 		const context = canvas.getContext("webgl2");
@@ -123,6 +167,8 @@ function useWordmarkShader(scrollLinked: boolean, allowShader: boolean) {
 					: "dark";
 			const shaderEnabled =
 				allowShader && supportsShader && !motionPreference.matches;
+			const ditherType = mobileDither.matches ? "4x4" : "8x8";
+			const mobileMotionEnabled = shaderEnabled && mobileMotion.matches;
 			const rootFontSize =
 				Number.parseFloat(
 					window.getComputedStyle(document.documentElement).fontSize,
@@ -138,13 +184,17 @@ function useWordmarkShader(scrollLinked: boolean, allowShader: boolean) {
 
 			setState((current) =>
 				current.appearance === appearance &&
+				current.ditherType === ditherType &&
 				current.enabled === shaderEnabled &&
+				current.mobileMotion === mobileMotionEnabled &&
 				current.progress === progress &&
 				current.resolved
 					? current
 					: {
 							appearance,
+							ditherType,
 							enabled: shaderEnabled,
+							mobileMotion: mobileMotionEnabled,
 							progress,
 							resolved: true,
 						},
@@ -162,6 +212,8 @@ function useWordmarkShader(scrollLinked: boolean, allowShader: boolean) {
 			attributes: true,
 		});
 		motionPreference.addEventListener("change", requestUpdate);
+		mobileDither.addEventListener("change", requestUpdate);
+		mobileMotion.addEventListener("change", requestUpdate);
 		window.addEventListener("scroll", requestUpdate, { passive: true });
 		window.addEventListener("resize", requestUpdate);
 		requestUpdate();
@@ -169,6 +221,8 @@ function useWordmarkShader(scrollLinked: boolean, allowShader: boolean) {
 		return () => {
 			appearanceObserver.disconnect();
 			motionPreference.removeEventListener("change", requestUpdate);
+			mobileDither.removeEventListener("change", requestUpdate);
+			mobileMotion.removeEventListener("change", requestUpdate);
 			window.removeEventListener("scroll", requestUpdate);
 			window.removeEventListener("resize", requestUpdate);
 			window.cancelAnimationFrame(animationFrame);
@@ -238,20 +292,37 @@ function StaticWordmark() {
 function Wordmark({ variant = "hero" }: WordmarkProps) {
 	const [hovered, setHovered] = useState(false);
 	const [focused, setFocused] = useState(false);
+	const [touching, setTouching] = useState(false);
 	const [shaderReady, setShaderReady] = useState(false);
 	const [shaderFailed, setShaderFailed] = useState(false);
 	const [pointerDisturbance, setPointerDisturbance] = useState(0);
 	const artRef = useRef<HTMLSpanElement>(null);
+	const disturbanceRef = useRef<HTMLSpanElement>(null);
 	const disturbanceShaderHost = useRef<ShaderHost | null>(null);
 	const pointerTarget = useRef<Point>({ x: 0, y: 0 });
 	const pointerCurrent = useRef<Point>({ x: 0, y: 0 });
 	const pointerAnimation = useRef(0);
+	const mobileAnimation = useRef(0);
+	const requestMobileAnimation = useRef<() => void>(() => undefined);
+	const mobileTouch = useRef<MobileTouch>({
+		intensity: 0,
+		moved: false,
+		pointerId: null,
+		point: { x: 0, y: 0 },
+		start: { x: 0, y: 0 },
+	});
+	const suppressNextClick = useRef(false);
 	const disturbanceDecay = useRef(0);
 	const shader = useWordmarkShader(variant === "hero", true);
+	const shaderProgress = useRef(shader.progress);
+	shaderProgress.current = shader.progress;
 	const showStaticWordmark =
 		variant === "compact" ||
 		(shader.resolved && (!shader.enabled || shaderFailed));
-	const hoverReveal = useHoverReveal(hovered || focused, shader.enabled);
+	const hoverReveal = useHoverReveal(
+		hovered || focused || touching,
+		shader.enabled,
+	);
 	const displayProgress = Math.min(shader.progress, 1 - hoverReveal);
 	const layerColor = (layer: BaseShaderLayer) => {
 		const flat = FLAT_COLORS[layer][shader.appearance];
@@ -284,11 +355,11 @@ function Wordmark({ variant = "hero" }: WordmarkProps) {
 	}, []);
 
 	const applyPointerOffsets = useCallback((point: Point) => {
-		artRef.current?.style.setProperty(
+		disturbanceRef.current?.style.setProperty(
 			"--wordmark-pointer-x",
 			`${(point.x + 1) * 50}%`,
 		);
-		artRef.current?.style.setProperty(
+		disturbanceRef.current?.style.setProperty(
 			"--wordmark-pointer-y",
 			`${(point.y + 1) * 50}%`,
 		);
@@ -328,6 +399,124 @@ function Wordmark({ variant = "hero" }: WordmarkProps) {
 	}, [applyPointerOffsets]);
 
 	useEffect(() => {
+		if (!shader.enabled || !shader.mobileMotion || variant !== "hero") return;
+
+		const disturbance = disturbanceRef.current;
+		if (!disturbance) return;
+
+		window.cancelAnimationFrame(pointerAnimation.current);
+		pointerAnimation.current = 0;
+
+		let lastFrameTime = 0;
+		let lastScrollTime = performance.now();
+		let lastScrollY = window.scrollY;
+		let scrollEnergy = 0;
+		let scrollOffset = 0;
+
+		const animate = (time: number) => {
+			mobileAnimation.current = 0;
+			const deltaTime = lastFrameTime
+				? Math.min(time - lastFrameTime, 50)
+				: 1000 / 60;
+			const frameScale = deltaTime / (1000 / 60);
+			const progress = shaderProgress.current;
+			const heroAmount = 1 - clamp((progress - 0.62) / 0.36, 0, 1);
+			const touch = mobileTouch.current;
+			const touchTarget = touch.pointerId === null ? 0 : 1;
+			const touchResponse = 1 - 0.8 ** frameScale;
+
+			lastFrameTime = time;
+			scrollOffset *= 0.88 ** frameScale;
+			scrollEnergy *= 0.86 ** frameScale;
+			touch.intensity += (touchTarget - touch.intensity) * touchResponse;
+
+			const ambientTarget: Point = {
+				x: Math.sin(time * 0.00028) * 0.24,
+				y: Math.cos(time * 0.00022) * 0.14 + scrollOffset,
+			};
+			const target =
+				touch.pointerId === null
+					? heroAmount > 0
+						? ambientTarget
+						: { x: 0, y: 0 }
+					: touch.point;
+			const current = pointerCurrent.current;
+			const pointerResponse = 1 - 0.84 ** frameScale;
+
+			pointerTarget.current = target;
+			pointerCurrent.current = {
+				x: current.x + (target.x - current.x) * pointerResponse,
+				y: current.y + (target.y - current.y) * pointerResponse,
+			};
+			applyPointerOffsets(pointerCurrent.current);
+
+			const opacity =
+				heroAmount *
+				clamp(0.1 + scrollEnergy * 0.34 + touch.intensity * 0.58, 0, 0.88);
+			disturbance.style.opacity = opacity.toFixed(3);
+
+			const settlingAtRest =
+				heroAmount === 0 &&
+				touch.pointerId === null &&
+				touch.intensity < 0.002 &&
+				scrollEnergy < 0.002 &&
+				Math.abs(pointerCurrent.current.x) < 0.002 &&
+				Math.abs(pointerCurrent.current.y) < 0.002;
+
+			if (!settlingAtRest) {
+				mobileAnimation.current = window.requestAnimationFrame(animate);
+			}
+		};
+
+		const startAnimation = () => {
+			if (mobileAnimation.current !== 0) return;
+			mobileAnimation.current = window.requestAnimationFrame(animate);
+		};
+
+		const handleScroll = () => {
+			const now = performance.now();
+			const nextScrollY = window.scrollY;
+			const elapsed = Math.max(now - lastScrollTime, 16);
+			const velocity = clamp((nextScrollY - lastScrollY) / elapsed, -2, 2);
+
+			scrollOffset = clamp(scrollOffset + velocity * 0.16, -0.34, 0.34);
+			scrollEnergy = Math.max(
+				scrollEnergy,
+				Math.min(Math.abs(velocity) * 0.7, 1),
+			);
+			lastScrollTime = now;
+			lastScrollY = nextScrollY;
+			startAnimation();
+		};
+
+		requestMobileAnimation.current = startAnimation;
+		window.addEventListener("scroll", handleScroll, { passive: true });
+		startAnimation();
+
+		return () => {
+			window.removeEventListener("scroll", handleScroll);
+			window.cancelAnimationFrame(mobileAnimation.current);
+			mobileAnimation.current = 0;
+			requestMobileAnimation.current = () => undefined;
+			disturbance.style.removeProperty("opacity");
+			pointerTarget.current = { x: 0, y: 0 };
+			pointerCurrent.current = { x: 0, y: 0 };
+			applyPointerOffsets(pointerCurrent.current);
+		};
+	}, [applyPointerOffsets, shader.enabled, shader.mobileMotion, variant]);
+
+	useEffect(() => {
+		if (
+			shader.enabled &&
+			shader.mobileMotion &&
+			variant === "hero" &&
+			shader.progress < 0.98
+		) {
+			requestMobileAnimation.current();
+		}
+	}, [shader.enabled, shader.mobileMotion, shader.progress, variant]);
+
+	useEffect(() => {
 		if (!shader.enabled || !artRef.current) {
 			setShaderReady(false);
 			setShaderFailed(false);
@@ -363,6 +552,7 @@ function Wordmark({ variant = "hero" }: WordmarkProps) {
 	useEffect(() => {
 		return () => {
 			window.cancelAnimationFrame(pointerAnimation.current);
+			window.cancelAnimationFrame(mobileAnimation.current);
 			window.clearTimeout(disturbanceDecay.current);
 		};
 	}, []);
@@ -383,19 +573,75 @@ function Wordmark({ variant = "hero" }: WordmarkProps) {
 	) => {
 		if (!shader.enabled) return;
 
-		const bounds = element.getBoundingClientRect();
-		pointerTarget.current = {
-			x: Math.min(
-				Math.max(((clientX - bounds.left) / bounds.width) * 2 - 1, -1),
-				1,
-			),
-			y: Math.min(
-				Math.max(((clientY - bounds.top) / bounds.height) * 2 - 1, -1),
-				1,
-			),
-		};
+		pointerTarget.current = getPointerPoint(clientX, clientY, element);
 		excitePointerDisturbance();
 		requestPointerAnimation();
+	};
+
+	const beginMobileTouch = (event: ReactPointerEvent<HTMLAnchorElement>) => {
+		if (
+			event.pointerType !== "touch" ||
+			!shader.enabled ||
+			!shader.mobileMotion ||
+			variant !== "hero" ||
+			mobileTouch.current.pointerId !== null
+		) {
+			return;
+		}
+
+		const point = getPointerPoint(
+			event.clientX,
+			event.clientY,
+			event.currentTarget,
+		);
+		mobileTouch.current = {
+			...mobileTouch.current,
+			moved: false,
+			pointerId: event.pointerId,
+			point,
+			start: { x: event.clientX, y: event.clientY },
+		};
+		suppressNextClick.current = false;
+		setTouching(true);
+		event.currentTarget.setPointerCapture(event.pointerId);
+		requestMobileAnimation.current();
+	};
+
+	const updateMobileTouch = (event: ReactPointerEvent<HTMLAnchorElement>) => {
+		const touch = mobileTouch.current;
+		if (event.pointerType !== "touch" || touch.pointerId !== event.pointerId) {
+			return;
+		}
+
+		const distance = Math.hypot(
+			event.clientX - touch.start.x,
+			event.clientY - touch.start.y,
+		);
+		touch.moved ||= distance > 8;
+		touch.point = getPointerPoint(
+			event.clientX,
+			event.clientY,
+			event.currentTarget,
+		);
+		requestMobileAnimation.current();
+	};
+
+	const endMobileTouch = (
+		event: ReactPointerEvent<HTMLAnchorElement>,
+		cancelled = false,
+	) => {
+		const touch = mobileTouch.current;
+		if (event.pointerType !== "touch" || touch.pointerId !== event.pointerId) {
+			return;
+		}
+
+		if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+			event.currentTarget.releasePointerCapture(event.pointerId);
+		}
+		suppressNextClick.current = !cancelled && touch.moved;
+		touch.pointerId = null;
+		setTouching(false);
+		requestMobileAnimation.current();
 	};
 
 	const resetPointerTarget = () => {
@@ -412,16 +658,34 @@ function Wordmark({ variant = "hero" }: WordmarkProps) {
 			className="wordmark"
 			data-variant={variant}
 			data-shader={shader.enabled ? "active" : "inactive"}
+			data-mobile-motion={
+				shader.mobileMotion && variant === "hero" ? "true" : "false"
+			}
 			aria-label="Kyle McDonald — Home"
+			onPointerDown={beginMobileTouch}
 			onPointerEnter={(event) => {
 				if (event.pointerType !== "touch") setHovered(true);
 			}}
-			onPointerMove={(event) =>
-				updatePointerTarget(event.clientX, event.clientY, event.currentTarget)
-			}
-			onPointerLeave={() => {
+			onPointerMove={(event) => {
+				if (event.pointerType === "touch") {
+					updateMobileTouch(event);
+					return;
+				}
+
+				updatePointerTarget(event.clientX, event.clientY, event.currentTarget);
+			}}
+			onPointerUp={(event) => endMobileTouch(event)}
+			onPointerCancel={(event) => endMobileTouch(event, true)}
+			onPointerLeave={(event) => {
+				if (event.pointerType === "touch") return;
 				setHovered(false);
 				resetPointerTarget();
+			}}
+			onClick={(event) => {
+				if (!suppressNextClick.current) return;
+
+				event.preventDefault();
+				suppressNextClick.current = false;
 			}}
 			onFocus={() => setFocused(true)}
 			onBlur={() => {
@@ -446,11 +710,14 @@ function Wordmark({ variant = "hero" }: WordmarkProps) {
 							colorBack={borderColor.back}
 							colorFront={borderColor.front}
 							shape="simplex"
-							type="8x8"
+							type={shader.ditherType}
 							size={2.4}
 							speed={layerSpeed("border")}
 							frame={2_200}
+							fit="contain"
 							scale={0.82}
+							worldWidth={1595}
+							worldHeight={628}
 							minPixelRatio={1}
 							maxPixelCount={1_100_000}
 							webGlContextAttributes={SHADER_CONTEXT_ATTRIBUTES}
@@ -462,12 +729,15 @@ function Wordmark({ variant = "hero" }: WordmarkProps) {
 							colorBack={sideColor.back}
 							colorFront={sideColor.front}
 							shape="wave"
-							type="8x8"
+							type={shader.ditherType}
 							size={2}
 							speed={layerSpeed("side")}
 							frame={4_800}
+							fit="contain"
 							scale={1.15}
 							rotation={8}
+							worldWidth={1595}
+							worldHeight={628}
 							minPixelRatio={1}
 							maxPixelCount={1_100_000}
 							webGlContextAttributes={SHADER_CONTEXT_ATTRIBUTES}
@@ -479,10 +749,13 @@ function Wordmark({ variant = "hero" }: WordmarkProps) {
 							colorBack={inkColor.back}
 							colorFront={inkColor.front}
 							shape="simplex"
-							type="8x8"
+							type={shader.ditherType}
 							size={2}
 							speed={layerSpeed("ink")}
+							fit="contain"
 							scale={0.6}
+							worldWidth={1595}
+							worldHeight={628}
 							minPixelRatio={1}
 							maxPixelCount={1_100_000}
 							webGlContextAttributes={SHADER_CONTEXT_ATTRIBUTES}
@@ -494,20 +767,27 @@ function Wordmark({ variant = "hero" }: WordmarkProps) {
 							colorBack={underlineColor.back}
 							colorFront={underlineColor.front}
 							shape="simplex"
-							type="8x8"
+							type={shader.ditherType}
 							size={2.2}
 							speed={layerSpeed("underline")}
 							frame={7_600}
+							fit="contain"
 							scale={0.28}
 							rotation={90}
+							worldWidth={1595}
+							worldHeight={628}
 							minPixelRatio={1}
 							maxPixelCount={1_100_000}
 							webGlContextAttributes={SHADER_CONTEXT_ATTRIBUTES}
 						/>
 						<span
+							ref={disturbanceRef}
 							className="wordmark-art-disturbance"
 							style={{
-								opacity: hoverReveal * (0.32 + pointerDisturbance * 0.56),
+								opacity:
+									shader.mobileMotion && variant === "hero"
+										? undefined
+										: hoverReveal * (0.32 + pointerDisturbance * 0.56),
 							}}
 						>
 							<Dithering
@@ -518,7 +798,7 @@ function Wordmark({ variant = "hero" }: WordmarkProps) {
 								colorBack={disturbanceColor.back}
 								colorFront={disturbanceColor.front}
 								shape="ripple"
-								type="8x8"
+								type={shader.ditherType}
 								size={1.8}
 								speed={layerSpeed("disturbance")}
 								frame={3_400}

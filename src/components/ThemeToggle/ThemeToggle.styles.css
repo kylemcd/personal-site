@@ -4,6 +4,8 @@
 
 	position: relative;
 	display: grid;
+	height: var(--site-navigation-item-height, 2.75rem);
+	box-sizing: border-box;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: var(--theme-toggle-gap);
 	margin-top: var(--spc-2);
@@ -40,10 +42,9 @@
 	position: relative;
 	z-index: 1;
 	display: flex;
-	min-height: var(--spc-11);
+	min-height: 0;
 	align-items: center;
 	justify-content: center;
-	gap: var(--spc-2);
 	color: var(--color-text-2);
 	cursor: pointer;
 	font-size: var(--font-size--1);

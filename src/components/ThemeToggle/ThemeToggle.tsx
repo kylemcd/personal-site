@@ -55,17 +55,19 @@ function ThemeToggle() {
 				className="theme-toggle-option"
 				value="light"
 				closeOnClick={false}
+				aria-label="Use light theme"
+				title="Light theme"
 			>
 				<i className="hn hn-sun" aria-hidden="true" />
-				<span>Light</span>
 			</Menu.RadioItem>
 			<Menu.RadioItem
 				className="theme-toggle-option"
 				value="dark"
 				closeOnClick={false}
+				aria-label="Use dark theme"
+				title="Dark theme"
 			>
 				<i className="hn hn-moon" aria-hidden="true" />
-				<span>Dark</span>
 			</Menu.RadioItem>
 		</Menu.RadioGroup>
 	);

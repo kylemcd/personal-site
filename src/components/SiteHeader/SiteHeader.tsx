@@ -40,8 +40,10 @@ function SiteHeader() {
 				Number.parseFloat(
 					window.getComputedStyle(document.documentElement).fontSize,
 				) || 16;
-			const gutter =
-				Number.parseFloat(window.getComputedStyle(header).paddingLeft) || 0;
+			const headerStyles = window.getComputedStyle(header);
+			const gutter = Number.parseFloat(headerStyles.paddingLeft) || 0;
+			const expandedPadding =
+				Number.parseFloat(headerStyles.paddingTop) || gutter;
 			const fullWidth = Math.max(window.innerWidth - gutter * 2, 0);
 			const compactWidth = Math.min(
 				Math.max(window.innerWidth * 0.18, rootFontSize * 7),
@@ -60,7 +62,8 @@ function SiteHeader() {
 				1,
 			);
 			const width = fullWidth - (fullWidth - compactWidth) * progress;
-			const wordmarkPadding = gutter + (compactTop - gutter) * progress;
+			const wordmarkPadding =
+				expandedPadding + (compactTop - expandedPadding) * progress;
 
 			header.style.setProperty("--site-wordmark-fallback-width", `${width}px`);
 			header.style.setProperty(
