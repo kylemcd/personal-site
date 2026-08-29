@@ -1,26 +1,21 @@
 :root {
-	--color-bg-1: rgb(16, 15, 15);
-	--color-bg-2: rgb(28, 27, 26);
+	--color-bg-1: rgb(5, 5, 5);
+	--color-bg-2: rgb(24, 24, 23);
 
-	--color-text-1: rgb(206, 205, 195);
-	--color-text-2: rgb(135, 133, 128);
-	--color-text-3: rgb(87, 86, 83);
+	--color-text-1: rgb(245, 245, 242);
+	--color-text-2: rgb(166, 165, 160);
+	--color-text-3: rgb(104, 103, 99);
 
-	--color-text-light: rgb(206, 205, 195);
-	--color-bg-dark: rgb(28, 27, 26);
+	--color-text-light: rgb(245, 245, 242);
+	--color-bg-dark: rgb(5, 5, 5);
 
-	--color-ui-1: rgb(40, 39, 38);
-	--color-ui-2: rgb(52, 51, 49);
-	--color-ui-3: rgb(64, 62, 60);
-
-	--color-gold: rgb(58, 45, 4);
-	--color-silver: rgb(52, 51, 49);
-	--color-bronze: rgb(39, 24, 14);
+	--color-ui-1: rgb(40, 40, 38);
+	--color-ui-2: rgb(64, 63, 60);
+	--color-ui-3: rgb(88, 87, 83);
+	--color-focus: rgb(112, 172, 255);
 
 	--color-accent: rgb(32, 94, 166);
 	--color-listening-blue: rgb(175, 48, 41);
-	--color-racing-red: rgb(32, 94, 166);
-	--color-concert-orange: rgb(188, 82, 21);
 	--color-transparent: transparent;
 
 	--font-family-sans:
@@ -30,20 +25,32 @@
 	--font-family-mono:
 		"Geist Mono", ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas,
 		"Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace;
+
+	--site-gutter: 2rem;
+	--site-readable-width: 45rem;
+	--site-navigation-width: 58rem;
+	--site-article-width: 52rem;
+	--site-section-space: clamp(3rem, 7vw, 7rem);
+}
+
+@media (max-width: 767px) {
+	:root {
+		--site-gutter: 1rem;
+	}
 }
 
 [data-appearance="light"] {
-	--color-bg-1: rgb(206, 205, 195);
-	--color-bg-2: rgb(135, 133, 128);
+	--color-bg-1: rgb(255, 255, 255);
+	--color-bg-2: rgb(255, 255, 255);
 
-	--color-text-1: rgb(16, 15, 15);
-	--color-text-2: rgb(28, 27, 26);
+	--color-text-1: rgb(8, 8, 8);
+	--color-text-2: rgb(65, 64, 61);
+	--color-text-3: rgb(112, 110, 105);
 
-	--color-ui-1: rgb(183, 181, 172);
-	--color-ui-2: rgb(206, 205, 195);
-	--color-ui-3: rgb(218, 216, 206);
+	--color-ui-1: rgb(218, 217, 211);
+	--color-ui-2: rgb(185, 183, 176);
+	--color-ui-3: rgb(152, 150, 144);
+	--color-focus: rgb(25, 96, 184);
 
 	--color-listening-blue: rgb(175, 48, 41);
-	--color-racing-red: rgb(32, 94, 166);
-	--color-concert-orange: rgb(188, 82, 21);
 }

@@ -1,2 +1,2 @@
-export type { StatBarListProps, StatBarListRow } from "./StatBarList";
+export type { StatBarListRow } from "./StatBarList";
 export { StatBarList } from "./StatBarList";

@@ -9,20 +9,22 @@ import { Text } from "@/components/Text";
 import { formatDateInCentral } from "@/lib/dates";
 import { buildHead } from "@/lib/meta";
 import { posts } from "@/lib/posts/posts";
+import { PublishedContentError } from "@/lib/posts/published-content";
 import "@/styles/prism.css";
 import "@/styles/routes/posts.css";
 
 const getPost = createServerFn({ method: "GET" })
-	.inputValidator((data: { slug: string }) => data)
+	.validator((data: { slug: string }) => data)
 	.handler(async ({ data: { slug } }) => {
-		const result = await posts.find<{
-			title: string;
-			date: string;
-			"substack-link"?: string;
-		}>({ slug });
+		const result = await posts.find({ slug });
 
 		if (Result.isError(result)) {
-			if (result.error.status === 404) throw notFound();
+			if (
+				result.error instanceof PublishedContentError &&
+				result.error.status === 404
+			) {
+				throw notFound();
+			}
 			throw new Error("This post does not exist.", {
 				cause: result.error,
 			});

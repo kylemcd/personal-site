@@ -1,6 +1,7 @@
 import markdocPkg from "@markdoc/markdoc";
 import { Result, TaggedError } from "better-result";
 import * as yaml from "js-yaml";
+import { type ZodType, z } from "zod";
 
 import { toErrorDetails } from "@/lib/error-details";
 import { nodes } from "./nodes";
@@ -36,15 +37,18 @@ const toHtml = ({
 		return Result.err(new InvalidMarkdownError({}));
 	}
 
-	try {
-		const parsed = parse(rawMarkdown);
-		const transformed = transform(parsed, { nodes });
-		return Result.ok(renderers.html(transformed));
-	} catch (error) {
-		return Result.err(
-			new ParseMarkdownError({ cause: error, details: toErrorDetails(error) }),
-		);
-	}
+	return Result.try<string, ParseMarkdownError>({
+		try: () => {
+			const parsed = parse(rawMarkdown);
+			const transformed = transform(parsed, { nodes });
+			return renderers.html(transformed);
+		},
+		catch: (error) =>
+			new ParseMarkdownError({
+				cause: error,
+				details: toErrorDetails(error),
+			}),
+	});
 };
 
 class InvalidFrontmatterError extends TaggedError(
@@ -53,15 +57,25 @@ class InvalidFrontmatterError extends TaggedError(
 	override message = "Invalid frontmatter provided.";
 }
 
-type Frontmatter = Record<string, string>;
+const frontmatterValueSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+	z.null(),
+]);
+const defaultFrontmatterSchema = z.record(z.string(), frontmatterValueSchema);
 
-type FrontmatterParams = {
+type Frontmatter = Record<string, string | number | boolean | null>;
+
+type FrontmatterParams<F extends object> = {
 	rawMarkdown: string;
+	frontmatterSchema?: ZodType<F>;
 };
 
-const toFrontmatter = <F extends Frontmatter = Frontmatter>({
+const toFrontmatter = <F extends object = Frontmatter>({
 	rawMarkdown,
-}: FrontmatterParams): Result<
+	frontmatterSchema,
+}: FrontmatterParams<F>): Result<
 	F,
 	InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
 > => {
@@ -69,34 +83,45 @@ const toFrontmatter = <F extends Frontmatter = Frontmatter>({
 		return Result.err(new InvalidMarkdownError({}));
 	}
 
-	let parsedFrontmatter: F;
-	try {
-		const parsedMarkdown = parse(rawMarkdown);
-		const rawFrontMatter = parsedMarkdown.attributes?.frontmatter;
-		const loadedFrontmatter = yaml.load(rawFrontMatter);
-		const frontMatter =
-			loadedFrontmatter &&
-			typeof loadedFrontmatter === "object" &&
-			!Array.isArray(loadedFrontmatter)
-				? Object.fromEntries(
-						Object.entries(loadedFrontmatter).map(([key, value]) => [
-							key,
-							value instanceof Date ? value.toISOString() : value,
-						]),
-					)
-				: loadedFrontmatter;
-		parsedFrontmatter = frontMatter as F;
-	} catch (error) {
-		return Result.err(
-			new ParseMarkdownError({ cause: error, details: toErrorDetails(error) }),
-		);
-	}
+	return Result.try<unknown, ParseMarkdownError>({
+		try: () => {
+			const parsedMarkdown = parse(rawMarkdown);
+			const rawFrontMatter = parsedMarkdown.attributes?.frontmatter;
+			const loadedFrontmatter = yaml.load(rawFrontMatter);
+			const frontMatter =
+				loadedFrontmatter &&
+				typeof loadedFrontmatter === "object" &&
+				!Array.isArray(loadedFrontmatter)
+					? Object.fromEntries(
+							Object.entries(loadedFrontmatter).map(([key, value]) => [
+								key,
+								value instanceof Date ? value.toISOString() : value,
+							]),
+						)
+					: loadedFrontmatter;
+			return frontMatter;
+		},
+		catch: (error) =>
+			new ParseMarkdownError({
+				cause: error,
+				details: toErrorDetails(error),
+			}),
+	}).andThen((frontmatter): Result<F, InvalidFrontmatterError> => {
+		if (frontmatter === undefined) {
+			return Result.err(new InvalidFrontmatterError({}));
+		}
 
-	if (parsedFrontmatter === undefined) {
-		return Result.err(new InvalidFrontmatterError({}));
-	}
-
-	return Result.ok(parsedFrontmatter);
+		const schema = frontmatterSchema ?? defaultFrontmatterSchema;
+		const parsed = schema.safeParse(frontmatter);
+		return parsed.success
+			? Result.ok(parsed.data as F)
+			: Result.err(
+					new InvalidFrontmatterError({
+						cause: parsed.error,
+						details: parsed.error.message,
+					}),
+				);
+	});
 };
 
 export type TableOfContentsItem = {
@@ -166,7 +191,7 @@ const toReadingTime = ({
 	return Result.ok(Math.ceil(words / 200));
 };
 
-type MarkdownDocument<F extends Frontmatter> = {
+type MarkdownDocument<F extends object> = {
 	frontmatter: F;
 	content: string;
 	tableOfContents: Array<TableOfContentsItem>;
@@ -174,31 +199,32 @@ type MarkdownDocument<F extends Frontmatter> = {
 	hasMermaid: boolean;
 };
 
-const fromRaw = <F extends Frontmatter = Frontmatter>({
+const fromRaw = <F extends object = Frontmatter>({
 	rawMarkdown,
+	frontmatterSchema,
 }: {
 	rawMarkdown: string;
+	frontmatterSchema?: ZodType<F>;
 }): Result<
 	MarkdownDocument<F>,
 	InvalidMarkdownError | ParseMarkdownError | InvalidFrontmatterError
-> => {
-	const frontmatterResult = toFrontmatter<F>({ rawMarkdown });
-	if (Result.isError(frontmatterResult)) return frontmatterResult;
+> =>
+	Result.gen(function* () {
+		const frontmatter = yield* toFrontmatter<F>({
+			rawMarkdown,
+			...(frontmatterSchema ? { frontmatterSchema } : {}),
+		});
+		const content = yield* toHtml({ rawMarkdown });
+		const readingTime = yield* toReadingTime({ rawMarkdown });
 
-	const contentResult = toHtml({ rawMarkdown });
-	if (Result.isError(contentResult)) return contentResult;
-
-	const readingTimeResult = toReadingTime({ rawMarkdown });
-	if (Result.isError(readingTimeResult)) return readingTimeResult;
-
-	return Result.ok({
-		frontmatter: frontmatterResult.value,
-		content: contentResult.value,
-		tableOfContents: toTableOfContents(contentResult.value),
-		readingTime: readingTimeResult.value,
-		hasMermaid: /^```mermaid\b/m.test(rawMarkdown),
+		return Result.ok({
+			frontmatter,
+			content,
+			tableOfContents: toTableOfContents(content),
+			readingTime,
+			hasMermaid: /^```mermaid\b/m.test(rawMarkdown),
+		});
 	});
-};
 
 const markdown = {
 	toFrontmatter,
@@ -206,4 +232,9 @@ const markdown = {
 	fromRaw,
 };
 
-export { markdown };
+export {
+	InvalidFrontmatterError,
+	InvalidMarkdownError,
+	markdown,
+	ParseMarkdownError,
+};

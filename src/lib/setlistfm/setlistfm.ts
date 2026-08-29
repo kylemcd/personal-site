@@ -1,15 +1,15 @@
 import { Result, TaggedError } from "better-result";
 
 import { env } from "@/lib/env";
-import { recordObservedArtistGenresBatch } from "@/lib/lastfm/genre-taxonomy";
 import {
 	buildArtistTagMap,
 	buildSimilarTagMap,
 	buildTopGenresFromWeights,
-	getPrimaryGenreAssignments,
+	type LastFmGenreLookupError,
 } from "@/lib/lastfm/genres";
 import { getOrComputeJson, type KvPutError, refreshJson } from "@/lib/store";
 
+import { fetchAttendedConcertEntries } from "./api";
 import {
 	type ConcertsFile,
 	loadConcertEntries,
@@ -18,7 +18,6 @@ import {
 	SETLIST_FM_CONCERTS_KV_KEY,
 } from "./concerts-data";
 import type { ConcertsData, Setlist, SetlistArtist } from "./schema";
-import { scrapeConcertEntriesDiff } from "./scrape";
 
 class SetlistFmDataError extends TaggedError("SetlistFmDataError")<{
 	readonly error: unknown;
@@ -31,7 +30,7 @@ const TOP_ARTISTS_COUNT = 10;
 const TOP_SONGS_COUNT = 10;
 const TOP_SONG_CLOSER_BONUS = 0.5;
 const GENRE_COUNT = 6;
-export const SETLIST_FM_CACHE_KEY = "setlistfm:attended:v4";
+const SETLIST_FM_CACHE_KEY = "setlistfm:attended:v5";
 const CACHE_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const RAW_CONCERTS_TTL_SECONDS = 365 * 24 * 60 * 60; // 1 year
 
@@ -186,10 +185,19 @@ const computeRecords = (
 		};
 	}
 	const sorted = [...uniqueDays].sort();
+	const firstDay = sorted[0];
+	const lastDay = sorted.at(-1);
+	if (!firstDay || !lastDay) {
+		return {
+			avgDaysBetweenShows: null,
+			biggestMonth: null,
+			biggestWeek: null,
+		};
+	}
 	const avgDaysBetweenShows =
 		sorted.length > 1
 			? Math.round(
-					(Date.parse(sorted[sorted.length - 1]!) - Date.parse(sorted[0]!)) /
+					(Date.parse(lastDay) - Date.parse(firstDay)) /
 						MS_PER_DAY /
 						(sorted.length - 1),
 				)
@@ -206,16 +214,16 @@ const computeRecords = (
 	let bestWeekCount = 0;
 	let windowEnd = 0;
 	for (let windowStart = 0; windowStart < sorted.length; windowStart += 1) {
-		const startMs = Date.parse(sorted[windowStart]!);
+		const startIso = sorted[windowStart];
+		if (!startIso) continue;
+		const startMs = Date.parse(startIso);
 		const maxMs = startMs + 6 * MS_PER_DAY;
-		while (
-			windowEnd < sorted.length &&
-			Date.parse(sorted[windowEnd]!) <= maxMs
-		) {
+		while (windowEnd < sorted.length) {
+			const candidateDay = sorted[windowEnd];
+			if (!candidateDay || Date.parse(candidateDay) > maxMs) break;
 			windowEnd += 1;
 		}
 		const count = windowEnd - windowStart;
-		const startIso = sorted[windowStart]!;
 		if (
 			count > bestWeekCount ||
 			(count === bestWeekCount &&
@@ -407,14 +415,18 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 				(a, b) => songCount(b) - songCount(a),
 			);
 			return {
-				artists: orderedSetlists.map((setlist) => ({
-					name: setlist.artist.name,
-					mbid:
-						setlist.artist.mbid && setlist.artist.mbid.trim().length > 0
-							? setlist.artist.mbid.trim()
-							: null,
-					setlistUrl: setlist.url ?? "",
-				})),
+				artists: orderedSetlists.map((setlist) => {
+					const artistKey = resolveArtistKey(setlist.artist);
+					return {
+						name: setlist.artist.name,
+						mbid:
+							setlist.artist.mbid && setlist.artist.mbid.trim().length > 0
+								? setlist.artist.mbid.trim()
+								: null,
+						showCount: topArtistsMap.get(artistKey)?.count ?? 1,
+						setlistUrl: setlist.url ?? "",
+					};
+				}),
 				venue: group.venue,
 				city: group.city,
 				dateIso: group.dateIso,
@@ -566,65 +578,54 @@ const aggregateCore = (setlists: ReadonlyArray<Setlist>): CoreAggregation => {
 
 const buildConcertGenres = async (
 	weightedArtists: ReadonlyArray<{ name: string; weight: number }>,
-): Promise<ConcertsData["topGenres"]> => {
-	if (!env.LASTFM_API_KEY) return [];
-	if (weightedArtists.length === 0) return [];
+): Promise<Result<ConcertsData["topGenres"], LastFmGenreLookupError>> => {
+	if (!env.LASTFM_API_KEY) return Result.ok([]);
+	if (weightedArtists.length === 0) return Result.ok([]);
 
 	const lookupKeys = weightedArtists.map((a) => a.name);
-	const artistTopTags = await buildArtistTagMap(lookupKeys);
+	const artistTopTagsResult = await buildArtistTagMap(lookupKeys);
+	if (Result.isError(artistTopTagsResult)) return artistTopTagsResult;
+	const artistTopTags = artistTopTagsResult.value;
 	const tagWeighted = weightedArtists.map((a) => ({
 		key: a.name.toLowerCase(),
 		name: a.name,
 		weight: a.weight,
 	}));
-	const similarGenreTags = await buildSimilarTagMap({
+	const similarGenreTagsResult = await buildSimilarTagMap({
 		weightedArtists: tagWeighted,
 		artistTopTags,
 	});
-	const assignments = getPrimaryGenreAssignments({
-		weightedArtists: tagWeighted,
-		artistTopTags,
-	});
-	const observationResult = await recordObservedArtistGenresBatch(
-		assignments.map((entry) => ({
-			artistKey: entry.artistKey,
-			artistName: entry.artistName,
-			genre: entry.genre,
-			source: "genre-rollup:setlistfm",
-		})),
+	if (Result.isError(similarGenreTagsResult)) return similarGenreTagsResult;
+	const similarGenreTags = similarGenreTagsResult.value;
+	return Result.ok(
+		buildTopGenresFromWeights({
+			weightedArtists: tagWeighted,
+			artistTopTags,
+			similarGenreTags,
+			genreCount: GENRE_COUNT,
+		}),
 	);
-	if (Result.isError(observationResult)) {
-		console.error(
-			"[setlistfm] failed to record artist genre observations",
-			observationResult.error,
-		);
-	}
-	return buildTopGenresFromWeights({
-		weightedArtists: tagWeighted,
-		artistTopTags,
-		similarGenreTags,
-		genreCount: GENRE_COUNT,
-	});
 };
 
 const buildConcertsData = async (
 	setlists: ReadonlyArray<Setlist>,
-): Promise<ConcertsData> => {
+): Promise<Result<ConcertsData, LastFmGenreLookupError>> => {
 	const core = aggregateCore(setlists);
-	const topGenres = await buildConcertGenres(core.weightedArtists);
-	return {
+	const topGenresResult = await buildConcertGenres(core.weightedArtists);
+	if (Result.isError(topGenresResult)) return topGenresResult;
+	return Result.ok({
 		totalShows: core.totalShows,
 		uniqueArtists: core.uniqueArtists,
 		firstShowYear: core.firstShowYear,
 		recentShows: core.recentShows,
 		topArtists: core.topArtists,
 		topSongs: core.topSongs,
-		topGenres,
+		topGenres: topGenresResult.value,
 		records: core.records,
 		showsByYear: core.showsByYear,
 		firstTimeByYear: core.firstTimeByYear,
 		setlistStats: core.setlistStats,
-	};
+	});
 };
 
 const computeAttendedConcerts = async (): Promise<
@@ -634,20 +635,23 @@ const computeAttendedConcerts = async (): Promise<
 	if (source === "backup") {
 		console.warn("[setlistfm] using backup KV concerts payload");
 	}
-	return Result.ok(await buildConcertsData(setlists));
+	const dataResult = await buildConcertsData(setlists);
+	return Result.isError(dataResult)
+		? Result.err(new SetlistFmDataError({ error: dataResult.error }))
+		: Result.ok(dataResult.value);
 };
 
 type SetlistRefreshParams = {
+	apiKey?: string;
 	user?: string;
-	lookbackDays?: number;
-	fullRescan?: boolean;
 };
 
 type SetlistRefreshSummary = {
 	totalConcerts: number;
 	addedConcerts: number;
 	updatedConcerts: number;
-	discoveredLinks: number;
+	discoveredSetlists: number;
+	apiPages: number;
 };
 
 const refreshConcertsBackup = async () => {
@@ -664,19 +668,29 @@ const refreshConcertsRaw = async (
 	params?: SetlistRefreshParams,
 ): Promise<Result<SetlistRefreshSummary, SetlistFmDataError | KvPutError>> => {
 	const existing = await loadConcertEntries();
-	const scrapeResult = await scrapeConcertEntriesDiff({
+	const apiResult = await fetchAttendedConcertEntries({
+		apiKey: params?.apiKey ?? env.SETLIST_FM_API_KEY,
 		...(params?.user ? { user: params.user } : {}),
-		...(typeof params?.lookbackDays === "number"
-			? { lookbackDays: params.lookbackDays }
-			: {}),
-		...(params?.fullRescan ? { fullRescan: true } : {}),
-		existing: existing.entries,
 	});
-	if (Result.isError(scrapeResult)) {
-		return Result.err(new SetlistFmDataError({ error: scrapeResult.error }));
+	if (Result.isError(apiResult)) {
+		return Result.err(new SetlistFmDataError({ error: apiResult.error }));
 	}
 
-	const rawPayload: ConcertsFile = { concerts: scrapeResult.value.concerts };
+	const existingById = new Map(
+		existing.entries.map((entry) => [entry.id, entry] as const),
+	);
+	const addedConcerts = apiResult.value.concerts.filter(
+		(entry) => !existingById.has(entry.id),
+	).length;
+	const updatedConcerts = apiResult.value.concerts.filter((entry) => {
+		const previous = existingById.get(entry.id);
+		return (
+			previous !== undefined &&
+			JSON.stringify(previous) !== JSON.stringify(entry)
+		);
+	}).length;
+
+	const rawPayload: ConcertsFile = { concerts: apiResult.value.concerts };
 	const rawWrite = await refreshJson<ConcertsFile, SetlistFmDataError>({
 		key: SETLIST_FM_CONCERTS_KV_KEY,
 		ttlSeconds: RAW_CONCERTS_TTL_SECONDS,
@@ -684,10 +698,11 @@ const refreshConcertsRaw = async (
 	});
 	if (Result.isError(rawWrite)) return Result.err(rawWrite.error);
 	return Result.ok({
-		totalConcerts: scrapeResult.value.concerts.length,
-		addedConcerts: scrapeResult.value.added,
-		updatedConcerts: scrapeResult.value.updated,
-		discoveredLinks: scrapeResult.value.discoveredLinks,
+		totalConcerts: apiResult.value.concerts.length,
+		addedConcerts,
+		updatedConcerts,
+		discoveredSetlists: apiResult.value.total,
+		apiPages: apiResult.value.pages,
 	} satisfies SetlistRefreshSummary);
 };
 
@@ -698,7 +713,7 @@ const refreshConcertsAggregate = async () =>
 		compute: computeAttendedConcerts,
 	});
 
-const refreshConcertsFromSetlistProfile = async (
+const refreshConcertsFromSetlistApi = async (
 	params?: SetlistRefreshParams,
 ): Promise<Result<SetlistRefreshSummary, SetlistFmDataError | KvPutError>> => {
 	const backupWrite = await refreshConcertsBackup();
@@ -716,6 +731,8 @@ const refreshConcertsFromSetlistProfile = async (
 const attendedConcerts = (): Promise<
 	Result<ConcertsData, SetlistFmDataError | KvPutError>
 > => {
+	if (env.DEV_FRESH_DATA) return refreshConcertsAggregate();
+
 	return getOrComputeJson<ConcertsData, SetlistFmDataError>({
 		key: SETLIST_FM_CACHE_KEY,
 		ttlSeconds: CACHE_TTL_SECONDS,
@@ -725,7 +742,7 @@ const attendedConcerts = (): Promise<
 
 const setlistfm = {
 	attendedConcerts,
-	refreshConcertsFromSetlistProfile,
+	refreshConcertsFromSetlistApi,
 	refreshConcertsBackup,
 	refreshConcertsRaw,
 	refreshConcertsAggregate,
@@ -737,4 +754,4 @@ export const __setlistfmTestUtils = {
 	computeRecords,
 };
 
-export { SetlistFmDataError, setlistfm };
+export { setlistfm };

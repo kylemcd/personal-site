@@ -2,7 +2,7 @@ const CENTRAL_TIME_ZONE = "America/Chicago";
 
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DATE_TIME_PATTERN =
-	/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?$/;
+	/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})?$/;
 
 type DateTimeParts = {
 	year: number;
@@ -84,27 +84,32 @@ const toComparableTimestampInCentral = (date: string): number => {
 	const dateOnly = DATE_ONLY_PATTERN.exec(date);
 	if (dateOnly) {
 		const [, year, month, day] = dateOnly;
-		return toCentralTimestamp({
-			year: asNumber(year!),
-			month: asNumber(month!),
-			day: asNumber(day!),
-			hour: 0,
-			minute: 0,
-			second: 0,
-		});
+		if (year && month && day) {
+			return toCentralTimestamp({
+				year: asNumber(year),
+				month: asNumber(month),
+				day: asNumber(day),
+				hour: 0,
+				minute: 0,
+				second: 0,
+			});
+		}
 	}
 
 	const dateTime = DATE_TIME_PATTERN.exec(date);
 	if (dateTime) {
-		const [, year, month, day, hour, minute, second = "0"] = dateTime;
-		return toCentralTimestamp({
-			year: asNumber(year!),
-			month: asNumber(month!),
-			day: asNumber(day!),
-			hour: asNumber(hour!),
-			minute: asNumber(minute!),
-			second: asNumber(second),
-		});
+		const [, year, month, day, hour, minute, second = "0", offset] = dateTime;
+		if (offset) return Date.parse(date);
+		if (year && month && day && hour && minute) {
+			return toCentralTimestamp({
+				year: asNumber(year),
+				month: asNumber(month),
+				day: asNumber(day),
+				hour: asNumber(hour),
+				minute: asNumber(minute),
+				second: asNumber(second),
+			});
+		}
 	}
 
 	return new Date(date).getTime();

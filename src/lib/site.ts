@@ -1,4 +1,4 @@
-export const SITE_HOSTNAME = "kpm.sh";
+const SITE_HOSTNAME = "kpm.sh";
 export const SITE_URL = `https://${SITE_HOSTNAME}`;
 
 const NON_CANONICAL_SITE_HOSTNAMES = new Set([

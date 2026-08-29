@@ -23,15 +23,6 @@
 	order: 3;
 }
 
-.experience-list-item:before {
-	content: "";
-	display: block;
-	flex-grow: 1;
-	height: 1px;
-	background-color: var(--color-ui-1);
-	order: 2;
-}
-
 .experience-list-item-info-date {
 	font-variant-numeric: tabular-nums;
 }

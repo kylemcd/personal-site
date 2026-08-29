@@ -3,12 +3,18 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	env: {} as Record<string, unknown>,
+	appEnv: {
+		DEV_FRESH_DATA: false,
+		KV_READ_ONLY_CACHE: false,
+	},
 }));
 
 vi.mock("cloudflare:workers", () => ({ env: mocks.env }));
+vi.mock("@/lib/env", () => ({ env: mocks.appEnv }));
 
 import {
 	invalidatePublishedContentCache,
+	PUBLISHED_CONTENT_CACHE_GENERATION_KEY,
 	PUBLISHED_CONTENT_CACHE_PREFIX,
 	publishedContent,
 } from "./published-content";
@@ -32,9 +38,10 @@ const publishedSummary = {
 const createStore = () => {
 	const values = new Map<string, string>();
 	const store = {
-		get: vi.fn(async (key: string) => {
+		get: vi.fn(async (key: string, type?: "json" | "text") => {
 			const value = values.get(key);
-			return value === undefined ? null : JSON.parse(value);
+			if (value === undefined) return null;
+			return type === "text" ? value : JSON.parse(value);
 		}),
 		put: vi.fn(async (key: string, value: string) => {
 			values.set(key, value);
@@ -64,6 +71,8 @@ describe("published content response cache", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		for (const key of Object.keys(mocks.env)) delete mocks.env[key];
+		mocks.appEnv.DEV_FRESH_DATA = false;
+		mocks.appEnv.KV_READ_ONLY_CACHE = false;
 	});
 
 	test("reuses a validated cached manifest instead of refetching articles", async () => {
@@ -85,7 +94,7 @@ describe("published content response cache", () => {
 		expect(Result.isOk(second) && second.value).toEqual([publishedSummary]);
 		expect(fetch).toHaveBeenCalledTimes(1);
 		expect(store.put).toHaveBeenCalledTimes(1);
-		expect(store.get).toHaveBeenCalledTimes(2);
+		expect(store.get).toHaveBeenCalledTimes(4);
 	});
 
 	test("reuses a cached article document on subsequent page loads", async () => {
@@ -111,20 +120,49 @@ describe("published content response cache", () => {
 		expect(Result.isOk(second) && second.value).toEqual(document);
 		expect(fetch).toHaveBeenCalledTimes(1);
 		expect(store.put).toHaveBeenCalledWith(
-			`${PUBLISHED_CONTENT_CACHE_PREFIX}/v1/published/posts/an-article`,
+			`${PUBLISHED_CONTENT_CACHE_PREFIX}initial:/v1/published/posts/an-article`,
 			JSON.stringify(document),
+			{ expirationTtl: 60 * 60 },
 		);
+	});
+
+	test("bypasses cached responses and cache writes for fresh development data", async () => {
+		const { store, values } = createStore();
+		values.set(
+			`${PUBLISHED_CONTENT_CACHE_PREFIX}initial:/v1/published/posts`,
+			JSON.stringify({ documents: [{ ...publishedSummary, title: "Stale" }] }),
+		);
+		const fetch = vi.fn(async () =>
+			Response.json({
+				ok: true,
+				data: { documents: [{ ...publishedSummary, title: "Fresh" }] },
+				requestId: "request-id",
+			}),
+		);
+		mocks.env.APP_STORE = store;
+		mocks.env.PUBLISHED_CONTENT = { fetch };
+		mocks.appEnv.DEV_FRESH_DATA = true;
+
+		const result = await publishedContent.list();
+
+		expect(Result.isOk(result) && result.value[0]?.title).toBe("Fresh");
+		expect(fetch).toHaveBeenCalledTimes(1);
+		expect(store.get).not.toHaveBeenCalled();
+		expect(store.put).not.toHaveBeenCalled();
 	});
 
 	test("removes every cached response when publishing sends an update", async () => {
 		const { store, values } = createStore();
-		values.set(`${PUBLISHED_CONTENT_CACHE_PREFIX}/v1/published/posts`, "{}");
 		values.set(
-			`${PUBLISHED_CONTENT_CACHE_PREFIX}/v1/published/posts/an-article`,
+			`${PUBLISHED_CONTENT_CACHE_PREFIX}old:/v1/published/posts`,
 			"{}",
 		);
 		values.set(
-			`${PUBLISHED_CONTENT_CACHE_PREFIX}/v1/published/posts/another-article`,
+			`${PUBLISHED_CONTENT_CACHE_PREFIX}old:/v1/published/posts/an-article`,
+			"{}",
+		);
+		values.set(
+			`${PUBLISHED_CONTENT_CACHE_PREFIX}old:/v1/published/posts/another-article`,
 			"{}",
 		);
 		values.set("unrelated", "keep me");
@@ -133,7 +171,56 @@ describe("published content response cache", () => {
 			store: store as unknown as KVNamespace,
 		});
 
-		expect([...values.entries()]).toEqual([["unrelated", "keep me"]]);
+		expect(values.get("unrelated")).toBe("keep me");
+		expect(values.get(PUBLISHED_CONTENT_CACHE_GENERATION_KEY)).toEqual(
+			expect.any(String),
+		);
+		expect(
+			[...values.keys()].filter((key) =>
+				key.startsWith(PUBLISHED_CONTENT_CACHE_PREFIX),
+			),
+		).toEqual([]);
 		expect(store.list).toHaveBeenCalledTimes(2);
+	});
+
+	test("does not revive an invalidated response when an older request finishes late", async () => {
+		const { store, values } = createStore();
+		values.set(PUBLISHED_CONTENT_CACHE_GENERATION_KEY, "old");
+
+		let resolveFirstRequest: ((response: Response) => void) | undefined;
+		const firstResponse = new Promise<Response>((resolve) => {
+			resolveFirstRequest = resolve;
+		});
+		const fetch = vi
+			.fn()
+			.mockImplementationOnce(() => firstResponse)
+			.mockResolvedValueOnce(
+				Response.json({
+					ok: true,
+					data: { documents: [{ ...publishedSummary, title: "New" }] },
+					requestId: "second-request",
+				}),
+			);
+		mocks.env.APP_STORE = store;
+		mocks.env.PUBLISHED_CONTENT = { fetch };
+
+		const staleRequest = publishedContent.list();
+		await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+		await invalidatePublishedContentCache({
+			store: store as unknown as KVNamespace,
+		});
+		resolveFirstRequest?.(
+			Response.json({
+				ok: true,
+				data: { documents: [{ ...publishedSummary, title: "Old" }] },
+				requestId: "first-request",
+			}),
+		);
+		await staleRequest;
+
+		const current = await publishedContent.list();
+
+		expect(Result.isOk(current) && current.value[0]?.title).toBe("New");
+		expect(fetch).toHaveBeenCalledTimes(2);
 	});
 });

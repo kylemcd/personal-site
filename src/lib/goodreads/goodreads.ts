@@ -1,8 +1,9 @@
 import { Result, TaggedError } from "better-result";
-import { XMLParser } from "fast-xml-parser";
 import { GOODREADS_USER_ID } from "@/lib/config";
+import { env } from "@/lib/env";
 import { toErrorDetails } from "@/lib/error-details";
 import { getJson, type KvPutError, refreshJson } from "@/lib/store";
+import { type ParseGoodreadsError, parseRssToBooks } from "./rss";
 import type { Book } from "./schema";
 
 export const GOODREADS_SHELF_CACHE_KEY = "goodreads:shelf:v1";
@@ -24,96 +25,7 @@ class FetchGoodreadsError extends TaggedError("FetchGoodreadsError")<{
 	override message = "Failed to fetch Goodreads books";
 }
 
-class ParseGoodreadsError extends TaggedError("ParseGoodreadsError")<{
-	readonly error: unknown;
-}>() {
-	override message = "Failed to parse Goodreads RSS";
-}
-
 type GoodreadsShelf = "read" | "currently-reading" | "to-read";
-
-type RawGoodreadsItem = {
-	title?: string;
-	link?: string;
-	book_id?: string;
-	book_image_url?: string;
-	book_small_image_url?: string;
-	book_medium_image_url?: string;
-	book_large_image_url?: string;
-	book_description?: string;
-	author_name?: string;
-	isbn?: string;
-	average_rating?: string;
-	book_published?: string;
-};
-
-const parseRssToBooks = (
-	xml: string,
-): Result<ReadonlyArray<Book>, ParseGoodreadsError> => {
-	const result = Result.try(() => {
-		const parser = new XMLParser({
-			ignoreAttributes: false,
-			attributeNamePrefix: "@_",
-			cdataPropName: "__cdata",
-			textNodeName: "#text",
-		});
-
-		const parsed = parser.parse(xml);
-		const items = parsed?.rss?.channel?.item;
-		if (!items) return [];
-
-		const itemsArray: RawGoodreadsItem[] = Array.isArray(items)
-			? items
-			: [items];
-
-		return itemsArray.map((item) => {
-			const extractValue = (value: unknown): string => {
-				if (typeof value === "string") return value;
-				if (typeof value === "number") return String(value);
-				if (value && typeof value === "object") {
-					const obj = value as Record<string, unknown>;
-					if ("__cdata" in obj) return String(obj.__cdata);
-					if ("#text" in obj) return String(obj["#text"]);
-				}
-				return "";
-			};
-
-			return {
-				title: cleanHtmlEntities(extractValue(item.title) || "Unknown Title"),
-				subtitle: null,
-				description: item.book_description
-					? cleanHtmlEntities(extractValue(item.book_description))
-					: null,
-				slug: extractValue(item.book_id) || null,
-				cover:
-					extractValue(item.book_large_image_url) ||
-					extractValue(item.book_image_url) ||
-					null,
-				authors: [
-					{
-						name: cleanHtmlEntities(
-							extractValue(item.author_name) || "Unknown",
-						),
-					},
-				],
-			};
-		});
-	});
-	if (Result.isError(result)) {
-		return Result.err(new ParseGoodreadsError({ error: result.error }));
-	}
-	return Result.ok(result.value);
-};
-
-const cleanHtmlEntities = (str: string): string =>
-	str
-		.replace(/&amp;/g, "&")
-		.replace(/&lt;/g, "<")
-		.replace(/&gt;/g, ">")
-		.replace(/&quot;/g, '"')
-		.replace(/&#39;/g, "'")
-		.replace(/&apos;/g, "'")
-		.replace(/<!\[CDATA\[(.*?)\]\]>/g, "$1");
 
 type GetBooksArgs = {
 	shelf: GoodreadsShelf;
@@ -160,11 +72,8 @@ const getBooks = async ({
 
 	const response = responseResult.value;
 	if (!response.ok) {
-		const bodyResult = await Result.tryPromise({
-			try: () => response.text(),
-			catch: () => "",
-		});
-		const body = Result.isOk(bodyResult) ? bodyResult.value : "";
+		const bodyResult = await Result.tryPromise(() => response.text());
+		const body = bodyResult.unwrapOr("");
 		const bodySnippet = body.trim()
 			? body.trim().length > 2000
 				? `${body.trim().slice(0, 2000)}...`
@@ -193,24 +102,7 @@ const getBooks = async ({
 	});
 	if (Result.isError(xmlResult)) return xmlResult;
 
-	const parsedBooksResult = parseRssToBooks(xmlResult.value);
-	if (Result.isError(parsedBooksResult)) return parsedBooksResult;
-
-	return Result.ok(parsedBooksResult.value.slice(0, limit));
-};
-
-const shelf = async (): Promise<
-	Result<ShelfData, FetchGoodreadsError | ParseGoodreadsError | KvPutError>
-> => {
-	const cachedResult = await getJson<ShelfData>({
-		key: GOODREADS_SHELF_CACHE_KEY,
-	});
-	if (Result.isOk(cachedResult) && cachedResult.value) {
-		return Result.ok(cachedResult.value);
-	}
-
-	// Cache miss: warm and return fresh shelf data.
-	return refreshShelf();
+	return parseRssToBooks(xmlResult.value).map((books) => books.slice(0, limit));
 };
 
 const fetchShelfData = async (): Promise<
@@ -236,6 +128,22 @@ const refreshShelf = () =>
 		ttlSeconds: GOODREADS_SHELF_CACHE_TTL_SECONDS,
 		compute: fetchShelfData,
 	});
+
+const shelf = async (): Promise<
+	Result<ShelfData, FetchGoodreadsError | ParseGoodreadsError | KvPutError>
+> => {
+	if (env.DEV_FRESH_DATA) return refreshShelf();
+
+	const cachedResult = await getJson<ShelfData>({
+		key: GOODREADS_SHELF_CACHE_KEY,
+	});
+	if (Result.isOk(cachedResult) && cachedResult.value) {
+		return Result.ok(cachedResult.value);
+	}
+
+	// Cache miss: warm and return fresh shelf data.
+	return refreshShelf();
+};
 
 export const goodreads = {
 	shelf,

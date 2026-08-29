@@ -1,4 +1,4 @@
-import { goodreads, GOODREADS_SHELF_CACHE_KEY } from "@/lib/goodreads";
+import { GOODREADS_SHELF_CACHE_KEY, goodreads } from "@/lib/goodreads";
 
 import { makeRefreshWorkflow, type RefreshWorkflowParams } from "./shared";
 
@@ -9,16 +9,16 @@ export type RefreshGoodreadsWorkflowEnv = {
 	KV_CACHE_VERSION?: string;
 };
 
-export const RefreshGoodreadsWorkflow = makeRefreshWorkflow<RefreshGoodreadsWorkflowEnv>({
-	stepName: "refresh-goodreads",
-	refresh: goodreads.refreshShelf as () => Promise<import("better-result").Result<unknown, unknown>>,
-	buildDetails: (value) => {
-		const shelf = value as { reading: unknown[]; finished: unknown[]; next: unknown[] };
-		return {
-			cacheKey: GOODREADS_SHELF_CACHE_KEY,
-			reading: shelf.reading.length,
-			finished: shelf.finished.length,
-			next: shelf.next.length,
-		};
-	},
-});
+export const RefreshGoodreadsWorkflow =
+	makeRefreshWorkflow<RefreshGoodreadsWorkflowEnv>()({
+		stepName: "refresh-goodreads",
+		refresh: goodreads.refreshShelf,
+		buildDetails: (shelf) => {
+			return {
+				cacheKey: GOODREADS_SHELF_CACHE_KEY,
+				reading: shelf.reading.length,
+				finished: shelf.finished.length,
+				next: shelf.next.length,
+			};
+		},
+	});

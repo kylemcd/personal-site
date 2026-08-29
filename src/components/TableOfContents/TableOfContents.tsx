@@ -5,11 +5,9 @@ import type { TableOfContentsItem } from "@/lib/markdown";
 
 import "./TableOfContents.styles.css";
 
-// Create a context to share active item ID
 const TableOfContentsContext = React.createContext<{
 	activeId: string | null;
-	setActiveId: (id: string | null) => void;
-}>({ activeId: null, setActiveId: () => {} });
+}>({ activeId: null });
 
 type TableOfContentsItemProps = {
 	item: TableOfContentsItem;
@@ -20,56 +18,8 @@ const TableOfContentsListItem = ({
 	item,
 	itemIndex,
 }: TableOfContentsItemProps) => {
-	const { activeId, setActiveId } = React.useContext(TableOfContentsContext);
+	const { activeId } = React.useContext(TableOfContentsContext);
 	const isActive = activeId === item.id || (!activeId && itemIndex === 0);
-
-	const checkIfActive = React.useCallback(() => {
-		const target = document.getElementById(item.id);
-		if (!target) return;
-
-		const rect = target.getBoundingClientRect();
-		const THRESHOLD = 22;
-
-		// Check if this item should be active
-		const isClosestToThreshold =
-			rect.top <= THRESHOLD && rect.top > -target.offsetHeight;
-
-		// If we're the active item and we've scrolled past the threshold, find previous item
-		if (activeId === item.id && rect.top > THRESHOLD) {
-			// Get all headings
-			const allHeadings = Array.from(
-				document.querySelectorAll(
-					"h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]",
-				),
-			);
-			const currentIndex = allHeadings.findIndex((el) => el.id === item.id);
-
-			// If we have a previous heading, check if it should be active
-			if (currentIndex > 0) {
-				const prevHeading = allHeadings[currentIndex - 1]!;
-				const prevRect = prevHeading.getBoundingClientRect();
-				if (prevRect.top <= THRESHOLD) {
-					setActiveId(prevHeading.id);
-				}
-			}
-		}
-
-		// Make this item active if it's closest to threshold
-		if (isClosestToThreshold) {
-			setActiveId(item.id);
-		}
-	}, [item.id, setActiveId, activeId]);
-
-	React.useEffect(() => {
-		// Initial check
-		checkIfActive();
-
-		// Add scroll listener
-		document.addEventListener("scroll", checkIfActive);
-		return () => {
-			document.removeEventListener("scroll", checkIfActive);
-		};
-	}, [checkIfActive]);
 
 	return (
 		<li>
@@ -102,11 +52,52 @@ type TableOfContentsProps = {
 	items: Array<TableOfContentsItem>;
 };
 
+const flattenItems = (
+	items: ReadonlyArray<TableOfContentsItem>,
+): Array<TableOfContentsItem> =>
+	items.flatMap((item) => [item, ...flattenItems(item.children)]);
+
 function TableOfContents({ items }: TableOfContentsProps) {
 	const [activeId, setActiveId] = React.useState<string | null>(null);
+	const flatItems = React.useMemo(() => flattenItems(items), [items]);
 	const [containerStyle, setContainerStyle] =
 		React.useState<React.CSSProperties>();
 	const containerRef = React.useRef<HTMLDivElement>(null);
+
+	React.useEffect(() => {
+		const headings = flatItems
+			.map(({ id }) => document.getElementById(id))
+			.filter((heading): heading is HTMLElement => heading !== null);
+		if (headings.length === 0) return;
+
+		const threshold = 22;
+		let animationFrame = 0;
+		const updateActiveHeading = () => {
+			animationFrame = 0;
+			let activeHeading = headings[0];
+			for (const heading of headings) {
+				if (heading.getBoundingClientRect().top > threshold) break;
+				activeHeading = heading;
+			}
+			setActiveId((current) =>
+				current === activeHeading?.id ? current : (activeHeading?.id ?? null),
+			);
+		};
+		const scheduleUpdate = () => {
+			if (animationFrame === 0) {
+				animationFrame = window.requestAnimationFrame(updateActiveHeading);
+			}
+		};
+
+		scheduleUpdate();
+		document.addEventListener("scroll", scheduleUpdate, { passive: true });
+		window.addEventListener("resize", scheduleUpdate);
+		return () => {
+			document.removeEventListener("scroll", scheduleUpdate);
+			window.removeEventListener("resize", scheduleUpdate);
+			window.cancelAnimationFrame(animationFrame);
+		};
+	}, [flatItems]);
 
 	React.useEffect(() => {
 		const container = containerRef.current;
@@ -170,7 +161,7 @@ function TableOfContents({ items }: TableOfContentsProps) {
 			className="table-of-contents-container"
 			style={containerStyle}
 		>
-			<TableOfContentsContext.Provider value={{ activeId, setActiveId }}>
+			<TableOfContentsContext.Provider value={{ activeId }}>
 				<div className="table-of-contents">
 					<ul>
 						{items.map((item, index) => (

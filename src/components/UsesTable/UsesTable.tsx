@@ -11,6 +11,7 @@ import "./UsesTable.styles.css";
 
 type UsesTableProps = {
 	items: ReadonlyArray<UseItem>;
+	titleHref?: string;
 };
 
 type TagOption = {
@@ -34,7 +35,6 @@ type TagPillStyle = CSSProperties &
 
 const isExternalLink = (link: string): boolean =>
 	/^https?:\/\//i.test(link) || link.startsWith("//");
-
 
 const buildTagOptions = (items: ReadonlyArray<UseItem>): TagOption[] => {
 	const optionMap = new Map<string, string>();
@@ -131,7 +131,7 @@ const selectedTagSummary = (
 	return `${selectedTagKeys.length} selected`;
 };
 
-function UsesTable({ items }: UsesTableProps) {
+function UsesTable({ items, titleHref }: UsesTableProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedTagKeys, setSelectedTagKeys] = useState<string[]>([]);
 
@@ -155,7 +155,17 @@ function UsesTable({ items }: UsesTableProps) {
 		<div className="uses-table-root">
 			<div className="uses-controls">
 				<Text as="h2" size="2" className="uses-controls-title">
-					Uses
+					{titleHref ? (
+						<a className="section-heading-link" href={titleHref}>
+							<span className="section-heading-label">Uses</span>
+							<i
+								className="hn hn-angle-right section-heading-icon"
+								aria-hidden="true"
+							/>
+						</a>
+					) : (
+						"Uses"
+					)}
 				</Text>
 				<div className="uses-controls-right">
 					<div className="uses-search">
@@ -253,16 +263,16 @@ function UsesTable({ items }: UsesTableProps) {
 							{filteredItems.map((item) => (
 								<tr
 									key={`${item.order}-${item.name}`}
-									className={
-										item.link ? "uses-table-row-linkable" : undefined
-									}
+									className={item.link ? "uses-table-row-linkable" : undefined}
 								>
 									<td>
 										{item.link ? (
 											<a
 												className="uses-row-link"
 												href={item.link}
-												target={isExternalLink(item.link) ? "_blank" : undefined}
+												target={
+													isExternalLink(item.link) ? "_blank" : undefined
+												}
 												rel={
 													isExternalLink(item.link)
 														? "noopener noreferrer"

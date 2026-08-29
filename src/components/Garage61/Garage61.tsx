@@ -1,36 +1,15 @@
 import { SectionStatRow } from "@/components/SectionStatRow";
-import { StatBarList, type StatBarListRow } from "@/components/StatBarList";
 import { Text } from "@/components/Text";
 import { clampPercent, formatDuration, formatPercentLabel } from "@/lib/format";
 import type { Garage61Summary } from "@/lib/garage61/schema";
 
+import { RecentCarImages } from "./RecentCarImages";
+import { RecentTrackMaps } from "./RecentTrackMaps";
 import "./Garage61.styles.css";
 
 type Garage61Props = {
 	overview: Garage61Summary["derived"]["overview"];
 	titleHref?: string;
-	recentLayout?: "scroll" | "stack";
-};
-
-const getCleanLapRatio = (track: {
-	cleanLaps?: number | null;
-	laps: number;
-	cleanPercentage: number | null;
-}) => {
-	const laps = Math.max(0, track.laps ?? 0);
-	const cleanFromField =
-		typeof track.cleanLaps === "number" && Number.isFinite(track.cleanLaps)
-			? track.cleanLaps
-			: null;
-	const cleanFromPercentage =
-		track.cleanPercentage !== null
-			? Math.round((track.cleanPercentage / 100) * laps)
-			: 0;
-	const clean = Math.max(
-		0,
-		Math.min(laps, cleanFromField ?? cleanFromPercentage),
-	);
-	return `${clean}/${laps}`;
 };
 
 function Garage61({ overview, titleHref }: Garage61Props) {
@@ -39,37 +18,10 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 		overview.recentTracks.length > 0 || overview.recentCars.length > 0;
 	const shouldRender = hasRecent || overview.totalTimeOnTrackSeconds > 0;
 
-	const cleanestTracks = [...overview.insights.trackConfidence]
-		.sort((a, b) => (b.cleanPercentage ?? -1) - (a.cleanPercentage ?? -1))
-		.slice(0, 5);
 	const recentTracks = overview.recentTracks.slice(0, 5);
 	const recentCars = overview.recentCars.slice(0, 5);
 
 	if (!shouldRender) return null;
-
-	const cleanestTrackRows: Array<StatBarListRow> = cleanestTracks.map(
-		(track) => ({
-			key: `clean-${track.track}`,
-			title: track.track,
-			subtitleRight: `${getCleanLapRatio(track)} laps`,
-			percent: clampPercent(track.cleanPercentage),
-			percentLabel: formatPercentLabel(track.cleanPercentage),
-		}),
-	);
-	const recentTrackRows: Array<StatBarListRow> = recentTracks.map((track) => ({
-		key: `track-${track.id}-${track.name}`,
-		title: track.name,
-		subtitleRight: formatDuration(track.timeOnTrackSeconds),
-		percent: clampPercent(track.timeSharePercentage ?? 0),
-		percentLabel: formatPercentLabel(track.timeSharePercentage),
-	}));
-	const recentCarRows: Array<StatBarListRow> = recentCars.map((car) => ({
-		key: `car-${car.id}-${car.name}`,
-		title: car.name,
-		subtitleRight: formatDuration(car.timeOnTrackSeconds),
-		percent: clampPercent(car.timeSharePercentage ?? 0),
-		percentLabel: formatPercentLabel(car.timeSharePercentage),
-	}));
 
 	return (
 		<div className="g61-racing">
@@ -220,12 +172,7 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 											? `Practice ${formatDuration(sessionTimeBreakdown.practiceTimeOnTrackSeconds)}`
 											: "Practice n/a"}
 									</Text>
-									<Text
-										as="p"
-										size="0"
-										family="mono"
-										className="g61-racing-red"
-									>
+									<Text as="p" size="0" color="2" family="mono">
 										{sessionTimeBreakdown
 											? `Racing ${formatDuration(sessionTimeBreakdown.racingTimeOnTrackSeconds)}`
 											: "Racing n/a"}
@@ -238,46 +185,22 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 			/>
 
 			<div className="g61-racing-recent-lists">
-				<div className="g61-racing-recent-card">
+				<div className="g61-racing-recent-card g61-racing-recent-tracks">
 					<div className="g61-racing-table-header">
 						<Text as="p" size="0" color="2">
 							Recent tracks
 						</Text>
 					</div>
-					<StatBarList
-						rows={recentTrackRows}
-						barColor="var(--color-racing-red)"
-						percentColor="var(--color-racing-red)"
-						variant="racing"
-					/>
+					<RecentTrackMaps tracks={recentTracks} />
 				</div>
 
-				<div className="g61-racing-recent-card">
+				<div className="g61-racing-recent-card g61-racing-recent-cars">
 					<div className="g61-racing-table-header">
 						<Text as="p" size="0" color="2">
 							Recent cars
 						</Text>
 					</div>
-					<StatBarList
-						rows={recentCarRows}
-						barColor="var(--color-racing-red)"
-						percentColor="var(--color-racing-red)"
-						variant="racing"
-					/>
-				</div>
-
-				<div className="g61-racing-recent-card">
-					<div className="g61-racing-table-header">
-						<Text as="p" size="0" color="2">
-							Cleanest tracks
-						</Text>
-					</div>
-					<StatBarList
-						rows={cleanestTrackRows}
-						barColor="var(--color-racing-red)"
-						percentColor="var(--color-racing-red)"
-						variant="racing"
-					/>
+					<RecentCarImages cars={recentCars} />
 				</div>
 			</div>
 		</div>

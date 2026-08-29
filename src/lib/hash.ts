@@ -6,6 +6,3 @@ export const fnv1a32 = (value: string): number => {
 	}
 	return hash >>> 0;
 };
-
-export const hashString = (value: string): string =>
-	fnv1a32(value).toString(36);

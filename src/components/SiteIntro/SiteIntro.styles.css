@@ -1,0 +1,10 @@
+.site-intro {
+	display: flex;
+	max-width: var(--site-readable-width);
+	flex-direction: column;
+	gap: var(--spc-5);
+	font-size: clamp(0.9375rem, 1.2vw, 1.0625rem);
+	font-weight: 400;
+	letter-spacing: 0.015em;
+	line-height: 1.45;
+}

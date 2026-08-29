@@ -41,7 +41,9 @@ describe("UsesTable", () => {
 		const link = screen.getByRole("link", { name: "Open MacBook Pro" });
 
 		expect(link).not.toBeNull();
-		expect(link.getAttribute("href")).toBe("https://www.apple.com/macbook-pro/");
+		expect(link.getAttribute("href")).toBe(
+			"https://www.apple.com/macbook-pro/",
+		);
 		expect(link.getAttribute("target")).toBe("_blank");
 		expect(link.getAttribute("rel")).toBe("noopener noreferrer");
 	});

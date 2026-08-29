@@ -43,5 +43,4 @@ function MetricBar({
 	);
 }
 
-export type { MetricBarProps };
 export { MetricBar };

@@ -3,6 +3,7 @@ import { Result, TaggedError } from "better-result";
 import { env } from "@/lib/env";
 import { fetchFresh } from "@/lib/fetch";
 import { fnv1a32 } from "@/lib/hash";
+import { asRecord } from "@/lib/record";
 import { forEachAsyncResult } from "@/lib/result";
 import {
 	getJson,
@@ -13,7 +14,6 @@ import {
 
 import type { Garage61Summary } from "./schema";
 import {
-	asRecord,
 	computeSharePercentage,
 	getArrayCandidate,
 	getFirstValue,
@@ -35,11 +35,12 @@ const GARAGE61_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 // compatible (filled from emptySummary() in normalizeSummary) so old cached
 // envelopes deserialize cleanly. Bumping this key triggers the stale-data
 // monitor between deploy and the next request that warms a fresh envelope.
-export const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v11";
+export const GARAGE61_SUMMARY_CACHE_KEY = "garage61:summary:v13";
 const GARAGE61_SUMMARY_CACHE_FALLBACK_KEYS = [
+	"garage61:summary:v12",
+	"garage61:summary:v11",
 	"garage61:summary:v10",
 	"garage61:summary:v9",
-	"garage61:summary:v8",
 ] as const;
 const GARAGE61_SUMMARY_CACHE_TTL_SECONDS = 30 * 60;
 // Track and car names never change, so each id is looked up once and then
@@ -116,7 +117,12 @@ const fetchGarage61 = async <A>(
 		request: request as Promise<Result<Garage61Response, unknown>>,
 	});
 
-	return request;
+	const result = await request;
+	if (Result.isError(result)) {
+		const cached = garage61CachedRequests.get(key);
+		if (cached?.request === request) garage61CachedRequests.delete(key);
+	}
+	return result;
 };
 
 const forEachConcurrent = <A, B, E>(
@@ -396,23 +402,74 @@ const extractTrackIsOval = (data: unknown, targetId: number): boolean => {
 	return tokens.some((value) => value.includes("oval"));
 };
 
-type TrackLookup = { id: number; name: string; isOval: boolean };
-type CarLookup = { id: number; name: string };
+const extractTrackDetails = (
+	data: unknown,
+	targetId: number,
+): { variant: string | null; platformId: number | null } => {
+	const match =
+		getArrayCandidate(data)
+			.map((row) => asRecord(row))
+			.filter((row): row is Record<string, unknown> => row !== null)
+			.find((row) => {
+				const id = getIdValue(getFirstValue(row, ["id", "trackId"]));
+				return id === targetId;
+			}) ?? asRecord(data);
+	if (!match) return { variant: null, platformId: null };
+
+	return {
+		variant: getTextValue(
+			getFirstValue(match, [
+				"variant",
+				"configuration",
+				"config",
+				"layoutName",
+			]),
+		),
+		platformId: getIdValue(getFirstValue(match, ["platform_id", "platformId"])),
+	};
+};
+
+const extractCarPlatformId = (
+	data: unknown,
+	targetId: number,
+): number | null => {
+	const match =
+		getArrayCandidate(data)
+			.map((row) => asRecord(row))
+			.filter((row): row is Record<string, unknown> => row !== null)
+			.find(
+				(row) => getIdValue(getFirstValue(row, ["id", "carId"])) === targetId,
+			) ?? asRecord(data);
+	if (!match) return null;
+	return getIdValue(getFirstValue(match, ["platform_id", "platformId"]));
+};
+
+type TrackLookup = {
+	id: number;
+	name: string;
+	isOval: boolean;
+	variant: string | null;
+	platformId: number | null;
+};
+type CarLookup = { id: number; name: string; platformId: number | null };
 
 const lookupTrack = (
 	apiKey: string,
 	id: number,
 ): Promise<Result<TrackLookup, unknown>> =>
 	getOrComputeJson<TrackLookup, unknown>({
-		key: `garage61:track:v1:${id}`,
+		key: `garage61:track:v2:${id}`,
 		ttlSeconds: GARAGE61_LOOKUP_CACHE_TTL_SECONDS,
 		compute: async () => {
 			const trackResult = await trackById(apiKey, id);
 			if (Result.isError(trackResult)) return trackResult;
+			const details = extractTrackDetails(trackResult.value.data, id);
 			return Result.ok({
 				id,
 				name: extractLookupName(trackResult.value.data, id, `Track ${id}`),
 				isOval: extractTrackIsOval(trackResult.value.data, id),
+				variant: details.variant,
+				platformId: details.platformId,
 			});
 		},
 	});
@@ -422,7 +479,7 @@ const lookupCar = (
 	id: number,
 ): Promise<Result<CarLookup, unknown>> =>
 	getOrComputeJson<CarLookup, unknown>({
-		key: `garage61:car:v1:${id}`,
+		key: `garage61:car:v2:${id}`,
 		ttlSeconds: GARAGE61_LOOKUP_CACHE_TTL_SECONDS,
 		compute: async () => {
 			const carResult = await carById(apiKey, id);
@@ -430,6 +487,7 @@ const lookupCar = (
 			return Result.ok({
 				id,
 				name: extractLookupName(carResult.value.data, id, `Car ${id}`),
+				platformId: extractCarPlatformId(carResult.value.data, id),
 			});
 		},
 	});
@@ -609,7 +667,16 @@ const buildSummary = async (
 	const trackIsOvalById = new Map(
 		trackLookups.map((track) => [track.id, track.isOval]),
 	);
+	const trackVariantById = new Map(
+		trackLookups.map((track) => [track.id, track.variant]),
+	);
+	const trackPlatformIdById = new Map(
+		trackLookups.map((track) => [track.id, track.platformId]),
+	);
 	const carNameById = new Map(carLookups.map((car) => [car.id, car.name]));
+	const carPlatformIdById = new Map(
+		carLookups.map((car) => [car.id, car.platformId]),
+	);
 	const isNonOvalRow = (row: { trackId: number | null; track: string }) =>
 		(row.trackId === null || trackIsOvalById.get(row.trackId) !== true) &&
 		!isLikelyOvalTrackName(row.track);
@@ -674,6 +741,8 @@ const buildSummary = async (
 		{
 			id: number;
 			name: string;
+			variant: string | null;
+			platformId: number | null;
 			timeOnTrackSeconds: number;
 			lapsDriven: number;
 			latestTimestamp: number;
@@ -685,6 +754,7 @@ const buildSummary = async (
 		{
 			id: number;
 			name: string;
+			platformId: number | null;
 			timeOnTrackSeconds: number;
 			lapsDriven: number;
 			latestTimestamp: number;
@@ -704,7 +774,8 @@ const buildSummary = async (
 				: row.track;
 		const trackId =
 			row.trackId !== null ? row.trackId : stableNameId("track", trackName);
-		const trackKey = normalizeName(trackName);
+		const trackKey =
+			row.trackId !== null ? String(row.trackId) : normalizeName(trackName);
 		const currentTrack = trackTimeMap.get(trackKey);
 		if (currentTrack) {
 			currentTrack.timeOnTrackSeconds += rowTime;
@@ -720,6 +791,14 @@ const buildSummary = async (
 			trackTimeMap.set(trackKey, {
 				id: trackId,
 				name: trackName,
+				variant:
+					row.trackId !== null
+						? (trackVariantById.get(row.trackId) ?? null)
+						: null,
+				platformId:
+					row.trackId !== null
+						? (trackPlatformIdById.get(row.trackId) ?? null)
+						: null,
 				timeOnTrackSeconds: rowTime,
 				lapsDriven: 0,
 				latestTimestamp: validTimestamp,
@@ -746,6 +825,10 @@ const buildSummary = async (
 			carTimeMap.set(carKey, {
 				id: carId,
 				name: carName,
+				platformId:
+					row.carId !== null
+						? (carPlatformIdById.get(row.carId) ?? null)
+						: null,
 				timeOnTrackSeconds: rowTime,
 				lapsDriven: 0,
 				latestTimestamp: validTimestamp,
@@ -762,7 +845,8 @@ const buildSummary = async (
 		const carName =
 			row.carId !== null ? (carNameById.get(row.carId) ?? row.car) : row.car;
 		const lapsDriven = Math.max(0, row.lapsDriven ?? 0);
-		const trackKey = normalizeName(trackName);
+		const trackKey =
+			row.trackId !== null ? String(row.trackId) : normalizeName(trackName);
 		const carKey = normalizeName(carName);
 		const track = trackTimeMap.get(trackKey);
 		if (track) track.lapsDriven += lapsDriven;
@@ -783,7 +867,8 @@ const buildSummary = async (
 			id: track.id,
 			name: track.name,
 			timeOnTrackSeconds: track.timeOnTrackSeconds,
-			variant: null,
+			variant: track.variant,
+			platformId: track.platformId,
 			timeSharePercentage: computeSharePercentage(
 				track.timeOnTrackSeconds,
 				totalTimeOnTrackSeconds,
@@ -807,6 +892,7 @@ const buildSummary = async (
 		.map((car) => ({
 			id: car.id,
 			name: car.name,
+			platformId: car.platformId,
 			timeOnTrackSeconds: car.timeOnTrackSeconds,
 			timeSharePercentage: computeSharePercentage(
 				car.timeOnTrackSeconds,

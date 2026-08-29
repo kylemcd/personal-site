@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	all: vi.fn(),
-	fromRaw: vi.fn(),
+	toHtml: vi.fn(),
 }));
 
 vi.mock("@/lib/posts/published-content", () => ({
@@ -11,7 +11,7 @@ vi.mock("@/lib/posts/published-content", () => ({
 }));
 
 vi.mock("@/lib/markdown", () => ({
-	markdown: { fromRaw: mocks.fromRaw },
+	markdown: { toHtml: mocks.toHtml },
 }));
 
 import {
@@ -50,9 +50,9 @@ describe("blog RSS feed", () => {
 				Array.from({ length: 25 }, (_, index) => publishedDocument({ index })),
 			),
 		);
-		mocks.fromRaw.mockImplementation(
+		mocks.toHtml.mockImplementation(
 			({ rawMarkdown }: { rawMarkdown: string }) =>
-				Result.ok({ content: `<p>${rawMarkdown}</p>` }),
+				Result.ok(`<p>${rawMarkdown}</p>`),
 		);
 	});
 
@@ -60,7 +60,7 @@ describe("blog RSS feed", () => {
 		const result = await createBlogRssFeed();
 
 		expect(mocks.all).toHaveBeenCalledTimes(1);
-		expect(mocks.fromRaw).toHaveBeenCalledTimes(25);
+		expect(mocks.toHtml).toHaveBeenCalledTimes(25);
 		expect(result.isOk() && result.value).toContain("post-0");
 		expect(result.isOk() && result.value).toContain("post-24");
 		expect(result.isOk() && result.value).toContain("https://kpm.sh/posts/");
@@ -73,6 +73,30 @@ describe("blog RSS feed", () => {
 		);
 
 		expect((await createBlogRssFeed()).isErr()).toBe(true);
+	});
+
+	test("omits drafts and scheduled posts", async () => {
+		mocks.all.mockResolvedValue(
+			Result.ok([
+				publishedDocument({ index: 0 }),
+				{
+					...publishedDocument({ index: 1 }),
+					draft: true,
+					slug: "draft-post",
+				},
+				{
+					...publishedDocument({ index: 2 }),
+					date: "2999-01-01",
+					slug: "scheduled-post",
+				},
+			]),
+		);
+
+		const result = await createBlogRssFeed();
+
+		expect(result.isOk() && result.value).not.toContain("draft-post");
+		expect(result.isOk() && result.value).not.toContain("scheduled-post");
+		expect(mocks.toHtml).toHaveBeenCalledTimes(1);
 	});
 
 	test("refreshes and reads the rendered feed snapshot in KV", async () => {

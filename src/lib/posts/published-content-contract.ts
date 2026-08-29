@@ -36,5 +36,4 @@ export {
 	publishedDocumentCollectionSchema,
 	publishedDocumentSchema,
 	publishedManifestSchema,
-	publishedSummarySchema,
 };

@@ -1,36 +1,5 @@
 import { Result } from "better-result";
 
-import { toErrorDetails } from "@/lib/error-details";
-
-export type ResultValue<A, E> = Result<A, E>;
-export type AsyncResult<A, E> = Promise<Result<A, E>>;
-
-export const toError = (error: unknown): Error =>
-	error instanceof Error ? error : new Error(toErrorDetails(error));
-
-export const trySync = <A, E>(
-	thunk: () => A,
-	mapError: (error: unknown) => E,
-): Result<A, E> => {
-	try {
-		return Result.ok(thunk());
-	} catch (error) {
-		return Result.err(mapError(error));
-	}
-};
-
-export const tryAsync = <A, E>(
-	thunk: () => Promise<A>,
-	mapError: (error: unknown) => E,
-): Promise<Result<A, E>> =>
-	(async () => {
-		try {
-			return Result.ok(await thunk());
-		} catch (error) {
-			return Result.err(mapError(error));
-		}
-	})();
-
 export const combineResults = <A, E>(
 	results: ReadonlyArray<Result<A, E>>,
 ): Result<ReadonlyArray<A>, E> => {
@@ -42,11 +11,6 @@ export const combineResults = <A, E>(
 	return Result.ok(values);
 };
 
-export const combineAsyncResults = async <A, E>(
-	results: ReadonlyArray<Promise<Result<A, E>>>,
-): Promise<Result<ReadonlyArray<A>, E>> =>
-	combineResults(await Promise.all(results));
-
 export const forEachAsyncResult = async <A, B, E>(
 	items: ReadonlyArray<A>,
 	fn: (item: A) => Promise<Result<B, E>>,
@@ -54,19 +18,19 @@ export const forEachAsyncResult = async <A, B, E>(
 ): Promise<Result<ReadonlyArray<B>, E>> => {
 	const concurrency = Math.max(1, (options?.concurrency ?? items.length) || 1);
 	const output: B[] = new Array(items.length);
-	let index = 0;
-	let firstError: E | null = null;
+	const entries = items.entries();
+	let failure: { error: E } | undefined;
 
 	const workers = Array.from({ length: concurrency }, async () => {
 		while (true) {
-			if (firstError !== null) return;
-			const current = index;
-			index += 1;
-			if (current >= items.length) return;
+			if (failure) return;
+			const next = entries.next();
+			if (next.done) return;
+			const [current, item] = next.value;
 
-			const result = await fn(items[current]!);
+			const result = await fn(item);
 			if (Result.isError(result)) {
-				firstError = result.error;
+				failure = { error: result.error };
 				return;
 			}
 			output[current] = result.value;
@@ -75,7 +39,7 @@ export const forEachAsyncResult = async <A, B, E>(
 
 	await Promise.all(workers);
 
-	if (firstError !== null) return Result.err(firstError);
+	if (failure) return Result.err(failure.error);
 	return Result.ok(output);
 };
 
@@ -84,11 +48,16 @@ export const mapAsyncConcurrent = async <A, B>(
 	mapper: (item: A) => Promise<B>,
 	options?: { concurrency?: number },
 ): Promise<Array<B>> => {
-	const mapped = await forEachAsyncResult(
-		items,
-		async (item) => Result.ok(await mapper(item)),
-		options,
-	);
-	return Result.isOk(mapped) ? [...mapped.value] : [];
-};
+	const concurrency = Math.max(1, (options?.concurrency ?? items.length) || 1);
+	const output: B[] = new Array(items.length);
+	const entries = items.entries();
 
+	const workers = Array.from({ length: concurrency }, async () => {
+		for (const [index, item] of entries) {
+			output[index] = await mapper(item);
+		}
+	});
+
+	await Promise.all(workers);
+	return output;
+};

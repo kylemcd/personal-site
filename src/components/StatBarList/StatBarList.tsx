@@ -59,7 +59,10 @@ function StatBarList({
 						</Text>
 					) : null}
 					<div className="share-list-progress">
-						<MetricBar value={row.percent} {...(barColor !== undefined ? { fillColor: barColor } : {})} />
+						<MetricBar
+							value={row.percent}
+							{...(barColor !== undefined ? { fillColor: barColor } : {})}
+						/>
 						<Text
 							as="p"
 							size="0"
@@ -80,5 +83,5 @@ function StatBarList({
 	);
 }
 
-export type { StatBarListProps, StatBarListRow };
+export type { StatBarListRow };
 export { StatBarList };

@@ -1,7 +1,5 @@
 import { asRecord } from "@/lib/record";
 
-export { asRecord } from "@/lib/record";
-
 export const roundPercent = (value: number): number =>
 	Math.round(value * 10) / 10;
 

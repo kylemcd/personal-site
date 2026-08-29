@@ -33,5 +33,4 @@ function SectionStatRow({
 	);
 }
 
-export type { SectionStatItem, SectionStatRowProps };
 export { SectionStatRow };

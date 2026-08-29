@@ -1,15 +1,5 @@
-import { z } from "zod";
-
 type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | { [key: string]: JsonValue } | JsonValue[];
-
-export const Garage61MeSchema = z.object({
-	id: z.number(),
-	name: z.string(),
-	image: z.string().optional(),
-});
-
-export type Garage61Me = z.infer<typeof Garage61MeSchema>;
 
 export type Garage61Summary = {
 	profile: {
@@ -56,6 +46,7 @@ export type Garage61Summary = {
 				id: number;
 				name: string;
 				variant?: string | null;
+				platformId?: number | null;
 				timeOnTrackSeconds: number;
 				timeSharePercentage: number | null;
 				lapsDriven: number;
@@ -64,6 +55,7 @@ export type Garage61Summary = {
 			recentCars: Array<{
 				id: number;
 				name: string;
+				platformId?: number | null;
 				timeOnTrackSeconds: number;
 				timeSharePercentage: number | null;
 				lapsDriven: number;
@@ -94,7 +86,3 @@ export type Garage61Summary = {
 		};
 	};
 };
-
-export type Garage61FastLap = Garage61Summary["derived"]["fastestLaps"][number];
-export type Garage61RecentStatistic =
-	Garage61Summary["derived"]["recentStatistics"][number];

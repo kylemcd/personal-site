@@ -1,17 +1,19 @@
 import server from "@tanstack/react-start/server-entry";
-import { GenreObservationCollector } from "./src/lib/lastfm/genre-taxonomy";
 import { invalidatePublishedContentCache } from "./src/lib/posts/published-content";
+import {
+	getRacingCarImagePlatformId,
+	respondWithRacingCarImage,
+} from "./src/lib/racing-media/car-images";
+import {
+	getRacingTrackMapRequest,
+	respondWithRacingTrackMap,
+} from "./src/lib/racing-media/track-maps";
 import {
 	RSS_PATH,
 	readCachedBlogRssFeed,
 	refreshCachedBlogRssFeed,
 } from "./src/lib/rss";
 import { redirectToCanonicalSite } from "./src/lib/site";
-import type {
-	GenreReviewDigestParams,
-	GenreReviewDigestWorkflowEnv,
-} from "./workflows/genre-review-digest";
-import { GenreReviewDigestWorkflow } from "./workflows/genre-review-digest";
 import type {
 	RefreshWorkflowParams as Garage61RefreshParams,
 	RefreshGarage61WorkflowEnv,
@@ -43,9 +45,9 @@ type WorkerEnv = StaleMonitorWorkflowEnv &
 	RefreshGarage61WorkflowEnv &
 	RefreshGoodreadsWorkflowEnv &
 	RefreshLastFmWorkflowEnv &
-	RefreshSetlistFmWorkflowEnv &
-	GenreReviewDigestWorkflowEnv & {
+	RefreshSetlistFmWorkflowEnv & {
 		APP_STORE: KVNamespace;
+		RACING_MEDIA?: R2Bucket;
 		GARAGE61_REFRESH_WORKFLOW?: {
 			createBatch: (
 				options: Array<{
@@ -86,14 +88,6 @@ type WorkerEnv = StaleMonitorWorkflowEnv &
 				}>,
 			) => Promise<unknown>;
 		};
-		GENRE_REVIEW_DIGEST_WORKFLOW?: {
-			createBatch: (
-				options: Array<{
-					id?: string;
-					params?: GenreReviewDigestParams;
-				}>,
-			) => Promise<unknown>;
-		};
 	};
 
 type PublishedContentUpdate = {
@@ -102,8 +96,6 @@ type PublishedContentUpdate = {
 };
 
 export {
-	GenreObservationCollector,
-	GenreReviewDigestWorkflow,
 	RefreshGarage61Workflow,
 	RefreshGoodreadsWorkflow,
 	RefreshLastFmWorkflow,
@@ -116,6 +108,8 @@ const applyRuntimeEnv = (env: WorkerEnv) => {
 	process.env.GARAGE61_API_KEY =
 		env.GARAGE61_API_KEY ?? process.env.GARAGE61_API_KEY;
 	process.env.LASTFM_API_KEY = env.LASTFM_API_KEY ?? process.env.LASTFM_API_KEY;
+	process.env.SETLIST_FM_API_KEY =
+		env.SETLIST_FM_API_KEY ?? process.env.SETLIST_FM_API_KEY;
 };
 
 const rssResponse = ({ feed }: { feed: string }): Response => {
@@ -196,6 +190,28 @@ export default {
 		applyRuntimeEnv(env);
 
 		const { pathname } = new URL(request.url);
+		const racingCarPlatformId = getRacingCarImagePlatformId(pathname);
+		if (
+			racingCarPlatformId !== null &&
+			(request.method === "GET" || request.method === "HEAD")
+		) {
+			return respondWithRacingCarImage({
+				request,
+				bucket: env.RACING_MEDIA,
+				platformId: racingCarPlatformId,
+			});
+		}
+		const racingTrackMap = getRacingTrackMapRequest(pathname);
+		if (
+			racingTrackMap !== null &&
+			(request.method === "GET" || request.method === "HEAD")
+		) {
+			return respondWithRacingTrackMap({
+				request,
+				bucket: env.RACING_MEDIA,
+				trackMap: racingTrackMap,
+			});
+		}
 		if (request.method === "GET" && pathname === RSS_PATH) {
 			return respondWithRssFeed({ store: env.APP_STORE });
 		}
@@ -258,19 +274,6 @@ export default {
 			`stale-monitor-${scheduleId}`,
 			{ triggeredAt: new Date().toISOString() },
 		);
-		if (
-			scheduledAt.getUTCDay() === 1 &&
-			scheduledAt.getUTCHours() >= 14 &&
-			env.GENRE_REVIEW_DIGEST_WORKFLOW
-		) {
-			triggerWorkflow(
-				ctx,
-				env.GENRE_REVIEW_DIGEST_WORKFLOW,
-				"GENRE_REVIEW_DIGEST_WORKFLOW",
-				`genre-review-digest-${scheduleId}`,
-				{ triggeredAt: new Date().toISOString() },
-			);
-		}
 	},
 	queue: async (
 		_batch: MessageBatch<PublishedContentUpdate>,

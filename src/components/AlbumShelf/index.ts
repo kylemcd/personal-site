@@ -1,1 +1,1 @@
-export { AlbumCard, AlbumShelf, Equalizer, NowPlaying } from "./AlbumShelf";
+export { AlbumShelf } from "./AlbumShelf";

@@ -1,40 +1,30 @@
 import { z } from "zod";
 
-export const ImageSchema = z.object({
+const ImageSchema = z.object({
 	"#text": z.string(),
 	size: z.string(),
 });
 
-export type Image = z.infer<typeof ImageSchema>;
-
-export const TrackArtistSchema = z.object({
+const TrackArtistSchema = z.object({
 	"#text": z.string(),
 	mbid: z.string(),
 });
 
-export type TrackArtist = z.infer<typeof TrackArtistSchema>;
-
-export const TrackAlbumSchema = z.object({
+const TrackAlbumSchema = z.object({
 	"#text": z.string(),
 	mbid: z.string(),
 });
 
-export type TrackAlbum = z.infer<typeof TrackAlbumSchema>;
-
-export const NowPlayingAttrSchema = z.object({
+const NowPlayingAttrSchema = z.object({
 	nowplaying: z.string(),
 });
 
-export type NowPlayingAttr = z.infer<typeof NowPlayingAttrSchema>;
-
-export const TrackDateSchema = z.object({
+const TrackDateSchema = z.object({
 	uts: z.string(),
 	"#text": z.string(),
 });
 
-export type TrackDate = z.infer<typeof TrackDateSchema>;
-
-export const TrackSchema = z.object({
+const TrackSchema = z.object({
 	name: z.string(),
 	artist: TrackArtistSchema,
 	album: TrackAlbumSchema,
@@ -52,9 +42,7 @@ export const RecentTracksResponseSchema = z.object({
 	}),
 });
 
-export type RecentTracksResponse = z.infer<typeof RecentTracksResponseSchema>;
-
-export const TopTrackItemSchema = z.object({
+const TopTrackItemSchema = z.object({
 	name: z.string(),
 	playcount: z.string(),
 	url: z.string(),
@@ -65,8 +53,6 @@ export const TopTrackItemSchema = z.object({
 	image: z.array(ImageSchema),
 });
 
-export type TopTrackItem = z.infer<typeof TopTrackItemSchema>;
-
 export const TopTracksResponseSchema = z.object({
 	toptracks: z.object({
 		track: z.array(TopTrackItemSchema),
@@ -75,14 +61,12 @@ export const TopTracksResponseSchema = z.object({
 
 export type TopTracksResponse = z.infer<typeof TopTracksResponseSchema>;
 
-export const TopArtistItemSchema = z.object({
+const TopArtistItemSchema = z.object({
 	name: z.string(),
 	playcount: z.string(),
 	url: z.string(),
 	image: z.array(ImageSchema),
 });
-
-export type TopArtistItem = z.infer<typeof TopArtistItemSchema>;
 
 export const TopArtistsResponseSchema = z.object({
 	topartists: z.object({
@@ -92,7 +76,7 @@ export const TopArtistsResponseSchema = z.object({
 
 export type TopArtistsResponse = z.infer<typeof TopArtistsResponseSchema>;
 
-export const TopAlbumItemSchema = z.object({
+const TopAlbumItemSchema = z.object({
 	name: z.string(),
 	playcount: z.string(),
 	url: z.string(),
@@ -102,8 +86,6 @@ export const TopAlbumItemSchema = z.object({
 	image: z.array(ImageSchema),
 });
 
-export type TopAlbumItem = z.infer<typeof TopAlbumItemSchema>;
-
 export const TopAlbumsResponseSchema = z.object({
 	topalbums: z.object({
 		album: z.array(TopAlbumItemSchema),
@@ -111,6 +93,22 @@ export const TopAlbumsResponseSchema = z.object({
 });
 
 export type TopAlbumsResponse = z.infer<typeof TopAlbumsResponseSchema>;
+
+export const AlbumInfoResponseSchema = z.object({
+	album: z.object({
+		userplaycount: z.union([z.string(), z.number()]),
+		tracks: z
+			.object({
+				track: z
+					.union([
+						z.array(z.object({ name: z.string() })),
+						z.object({ name: z.string() }),
+					])
+					.optional(),
+			})
+			.optional(),
+	}),
+});
 
 const TopTagItemSchema = z.object({
 	name: z.string(),
@@ -129,8 +127,6 @@ export const TopArtistTagsResponseSchema = z.object({
 	}),
 });
 
-export type TopArtistTagsResponse = z.infer<typeof TopArtistTagsResponseSchema>;
-
 const SimilarTagItemSchema = z.object({
 	name: z.string(),
 });
@@ -146,8 +142,6 @@ export const SimilarTagsResponseSchema = z.object({
 			}),
 	}),
 });
-
-export type SimilarTagsResponse = z.infer<typeof SimilarTagsResponseSchema>;
 
 /**
  * Normalized album type for use in components

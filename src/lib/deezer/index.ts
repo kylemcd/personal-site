@@ -1,0 +1,1 @@
+export { deezer } from "./deezer";

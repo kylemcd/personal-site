@@ -1,12 +1,13 @@
-import { z } from "zod";
 import { Result } from "better-result";
+import { z } from "zod";
 
 import { getJson } from "@/lib/store";
 
 import type { Setlist } from "./schema";
 
 export const SETLIST_FM_CONCERTS_KV_KEY = "setlistfm:concerts:raw:v1";
-export const SETLIST_FM_CONCERTS_BACKUP_KV_KEY = "setlistfm:concerts:raw:backup:v1";
+export const SETLIST_FM_CONCERTS_BACKUP_KV_KEY =
+	"setlistfm:concerts:raw:backup:v1";
 
 const SongSchema = z.union([
 	z.string(),
@@ -20,11 +21,14 @@ const ConcertEntrySchema = z.object({
 	id: z.string(),
 	date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD"),
 	artist: z.string(),
+	artistMbid: z.string().optional(),
 	venue: z.string(),
 	city: z.string(),
 	tour: z.string().optional(),
 	url: z.string(),
 	songs: z.array(SongSchema),
+	versionId: z.string().optional(),
+	lastUpdated: z.string().optional(),
 });
 
 const ConcertsFileSchema = z.object({
@@ -59,7 +63,7 @@ const songToSetlist = (
 const entryToSetlist = (entry: ConcertEntry): Setlist => ({
 	id: entry.id,
 	eventDate: isoDateToSetlistFm(entry.date),
-	artist: { name: entry.artist, mbid: "" },
+	artist: { name: entry.artist, mbid: entry.artistMbid ?? "" },
 	venue: {
 		name: entry.venue,
 		city: { name: entry.city, country: { name: "United States" } },
@@ -73,7 +77,9 @@ export const loadConcertEntries = async (): Promise<{
 	entries: ConcertsFile["concerts"];
 	source: "kv" | "backup";
 }> => {
-	const fromKv = await getJson<ConcertsFile>({ key: SETLIST_FM_CONCERTS_KV_KEY });
+	const fromKv = await getJson<ConcertsFile>({
+		key: SETLIST_FM_CONCERTS_KV_KEY,
+	});
 	if (Result.isOk(fromKv) && fromKv.value) {
 		const parsed = ConcertsFileSchema.safeParse(fromKv.value);
 		if (parsed.success) {
@@ -82,9 +88,12 @@ export const loadConcertEntries = async (): Promise<{
 				source: "kv",
 			};
 		}
-		console.error("[setlistfm] invalid KV concerts payload; falling back to backup", {
-			issues: parsed.error.issues,
-		});
+		console.error(
+			"[setlistfm] invalid KV concerts payload; falling back to backup",
+			{
+				issues: parsed.error.issues,
+			},
+		);
 	}
 
 	const fromBackup = await getJson<ConcertsFile>({
@@ -116,5 +125,3 @@ export const loadConcertsWithSource = async (): Promise<{
 		source: data.source,
 	};
 };
-
-export { ConcertEntrySchema, ConcertsFileSchema };

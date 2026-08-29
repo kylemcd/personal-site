@@ -1,10 +1,10 @@
 @import "./global/reset.css";
 @import "./global/fonts.css";
 @import "./global/default.css";
+@import "./global/layout.css";
 @import "./global/rounded.css";
 @import "./global/spacing.css";
 @import "./global/tokens.css";
-@import "./global/animations.css";
 
 /* Components */
 @import "./global/list.css";

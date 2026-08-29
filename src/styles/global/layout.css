@@ -1,0 +1,111 @@
+.site-shell {
+	display: flex;
+	min-height: 100svh;
+	flex-direction: column;
+}
+
+.site-content {
+	width: 100%;
+	flex: 1;
+}
+
+.section-stack {
+	display: flex;
+	flex-direction: column;
+}
+
+.section-container {
+	position: relative;
+	padding: var(--site-section-space) var(--site-gutter);
+}
+
+.section-container-flush-right {
+	padding: var(--site-section-space) 0;
+}
+
+.section-container-flush-right
+	> .horizontal-scroll-container
+	> .horizontal-scroll-container-items
+	> *:first-child,
+.section-container-flush-right
+	> .listening-stack
+	> .horizontal-scroll-container
+	> .horizontal-scroll-container-items
+	> *:first-child,
+.section-container-flush-right
+	> .listening-stack
+	> .listening-recent-section
+	> .horizontal-scroll-container
+	> .horizontal-scroll-container-items
+	> *:first-child,
+.section-container-flush-right
+	> .g61-racing
+	> .g61-racing-recent-lists
+	> .g61-racing-list-block
+	> .horizontal-scroll-container
+	> .horizontal-scroll-container-items
+	> *:first-child {
+	margin-left: var(--site-gutter);
+}
+
+.section-container-flush-right > .listening-stack > .listening-recent-section {
+	padding: 0;
+}
+
+.section-container-flush-right
+	> .listening-stack
+	> .listening-recent-section
+	> h3 {
+	margin-left: var(--site-gutter);
+}
+
+.section-container > h2 {
+	margin-bottom: var(--spc-6);
+}
+
+.section-title-padded {
+	padding: 0 var(--site-gutter);
+	margin-bottom: var(--spc-4);
+}
+
+.section-title-tight {
+	margin-bottom: var(--spc-2);
+}
+
+.section-heading-link {
+	display: inline-flex;
+	align-items: center;
+	gap: calc(var(--spc-1) + 2px);
+	color: var(--color-text-1);
+	text-decoration: none;
+	transition: color 150ms ease;
+}
+
+.section-heading-link:hover {
+	color: var(--color-text-2);
+}
+
+.section-heading-link:hover .section-heading-label {
+	text-decoration: underline;
+	text-decoration-color: var(--color-text-2);
+	text-underline-offset: 3px;
+}
+
+.section-heading-icon {
+	color: var(--color-text-2);
+	font-size: 0.9em;
+	line-height: 1;
+	transform: translateY(2px);
+	transition: transform 150ms ease;
+}
+
+.section-heading-link:hover .section-heading-icon {
+	transform: translate(1px, 2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.section-heading-link,
+	.section-heading-icon {
+		transition: none;
+	}
+}

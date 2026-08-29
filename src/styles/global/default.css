@@ -1,11 +1,26 @@
 html,
 body {
 	font-family: var(--font-family-sans);
-	font-weight: 300;
+	font-weight: 400;
 	color: var(--color-text-1);
 	font-size: 1rem;
 	line-height: 1.6rem;
 	background-color: var(--color-bg-1);
+}
+
+html {
+	background-color: var(--color-bg-1);
+	scroll-behavior: smooth;
+}
+
+body {
+	min-width: 320px;
+	min-height: 100vh;
+}
+
+::selection {
+	background: var(--color-text-1);
+	color: var(--color-bg-1);
 }
 
 h1,
@@ -41,4 +56,10 @@ pre *,
 code * {
 	font-size: 0.85rem;
 	font-family: var(--font-family-mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
 }

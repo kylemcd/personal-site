@@ -2,60 +2,9 @@ import { useEffect, useRef, useState } from "react";
 
 import { HorizontalScrollContainer } from "@/components/HorizontalScrollContainer";
 import { Text } from "@/components/Text";
-import type { Album, NowPlayingAlbum } from "@/lib/lastfm/schema";
+import type { Album } from "@/lib/lastfm/schema";
 
 import "./Album.styles.css";
-
-function Equalizer() {
-	return (
-		<span className="equalizer">
-			<span className="equalizer-bar" />
-			<span className="equalizer-bar" />
-			<span className="equalizer-bar" />
-		</span>
-	);
-}
-
-type MarqueeProps = {
-	text: string;
-	size?: "0" | "1";
-	color?: "1" | "2";
-};
-
-function Marquee({ text, size = "1", color = "1" }: MarqueeProps) {
-	const containerRef = useRef<HTMLSpanElement>(null);
-	const textRef = useRef<HTMLSpanElement>(null);
-	const [shouldScroll, setShouldScroll] = useState(false);
-
-	useEffect(() => {
-		const container = containerRef.current;
-		const textEl = textRef.current;
-
-		if (container && textEl) {
-			const isOverflowing = textEl.scrollWidth > container.clientWidth;
-			setShouldScroll(isOverflowing);
-		}
-	}, []);
-
-	return (
-		<span
-			className="marquee"
-			data-size={size}
-			data-color={color}
-			data-scroll={shouldScroll}
-			ref={containerRef}
-		>
-			<span className="marquee-content">
-				<span ref={textRef}>{text}</span>
-				{shouldScroll && <span aria-hidden="true">{text}</span>}
-			</span>
-		</span>
-	);
-}
-
-type NowPlayingProps = {
-	album: NowPlayingAlbum;
-};
 
 type CoverArtProps = {
 	src: string;
@@ -68,6 +17,9 @@ function CoverArt({ src, alt, className }: CoverArtProps) {
 	const imageRef = useRef<HTMLImageElement>(null);
 
 	useEffect(() => {
+		setFailed(false);
+		if (!src.trim()) return;
+
 		const img = imageRef.current;
 		if (!img) return;
 		if (img.complete && img.naturalWidth === 0) {
@@ -77,7 +29,11 @@ function CoverArt({ src, alt, className }: CoverArtProps) {
 
 	if (failed || !src.trim()) {
 		return (
-			<div className={`${className} cover-art-fallback`} aria-label={`${alt} cover unavailable`}>
+			<div
+				className={`${className} cover-art-fallback`}
+				role="img"
+				aria-label={`${alt} cover unavailable`}
+			>
 				<Text as="span" size="0" color="2">
 					No Cover
 				</Text>
@@ -93,25 +49,6 @@ function CoverArt({ src, alt, className }: CoverArtProps) {
 			className={className}
 			onError={() => setFailed(true)}
 		/>
-	);
-}
-
-function NowPlaying({ album }: NowPlayingProps) {
-	return (
-		<a
-			className="now-playing"
-			href={album.trackUrl}
-			target="_blank"
-			rel="noopener noreferrer"
-		>
-			<CoverArt src={album.image} alt={album.name} className="now-playing-image" />
-			<div className="now-playing-info">
-				<Marquee text={album.trackName} size="0" color="1" />
-				<Text as="p" size="0" color="2">
-					{album.artist}
-				</Text>
-			</div>
-		</a>
 	);
 }
 
@@ -161,4 +98,4 @@ function AlbumShelf({ albums, variant = "scroll" }: AlbumShelfProps) {
 	);
 }
 
-export { AlbumCard, AlbumShelf, Equalizer, NowPlaying };
+export { AlbumShelf };

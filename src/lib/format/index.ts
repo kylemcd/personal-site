@@ -16,7 +16,6 @@ export const formatPercentLabel = (
 	if (value === null || value === undefined || !Number.isFinite(value)) {
 		return invalidLabel;
 	}
-	if (value <= 0) return "<1%";
 	if (value < 1) return "<1%";
 	return `${Math.round(value)}%`;
 };
@@ -29,10 +28,4 @@ export const formatDuration = (seconds: number): string => {
 	if (days > 0) return `${days}d ${hours}h ${minutes}m`;
 	if (hours > 0) return `${hours}h ${minutes}m`;
 	return `${minutes}m`;
-};
-
-export const formatLapTime = (seconds: number): string => {
-	const minutes = Math.floor(seconds / 60);
-	const remainder = seconds - minutes * 60;
-	return `${minutes}:${remainder.toFixed(3).padStart(6, "0")}`;
 };

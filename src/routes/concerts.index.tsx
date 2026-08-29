@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { Result } from "better-result";
 
 import { ConcertsSection } from "@/components/ConcertsSection";
 import { ErrorComponent } from "@/components/ErrorComponent";
@@ -11,7 +10,7 @@ import { setlistfm } from "@/lib/setlistfm";
 const getData = createServerFn({ method: "GET" }).handler(async () => {
 	const concertsResult = await setlistfm.attendedConcerts();
 	return {
-		concerts: Result.isOk(concertsResult) ? concertsResult.value : null,
+		concerts: concertsResult.unwrapOr(null),
 	};
 });
 
@@ -23,6 +22,7 @@ export const Route = createFileRoute("/concerts/")({
 		buildHead({
 			title: "Concerts - Kyle McDonald",
 			url: "https://kpm.sh/concerts",
+			image: "https://kpm.sh/open-graph/concerts.png",
 		}),
 });
 

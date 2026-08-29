@@ -1,0 +1,69 @@
+name: Generate OG Images
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: generate-og-images
+  cancel-in-progress: false
+
+jobs:
+  generate-og-images:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate current OG images
+        run: npm run og
+
+      - name: Commit generated images
+        shell: bash
+        run: |
+          git add public/open-graph
+
+          if git diff --cached --quiet; then
+            echo "OG images are already current."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: refresh OG images"
+
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+
+            echo "Push rejected on attempt ${attempt}. Rebasing and retrying..."
+            git fetch origin main
+            if ! git rebase origin/main; then
+              git rebase --abort || true
+              exit 1
+            fi
+          done
+
+          echo "Failed to push generated OG images after retries."
+          exit 1

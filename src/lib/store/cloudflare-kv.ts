@@ -310,20 +310,20 @@ const putEnvelope = async <A>({
 		return Result.ok();
 	}
 
-	try {
-		const expirationTtl = getRetentionTtlSeconds({
-			ttlSeconds,
-			retentionTtlSeconds,
-			key,
-		});
-		await namespace.put(scopedKey, JSON.stringify(envelope), {
-			...(typeof expirationTtl === "number" ? { expirationTtl } : {}),
-		});
-		writeToMemory(scopedKey, envelope, memoryTtlSeconds);
-		return Result.ok();
-	} catch (error) {
-		return Result.err(new KvPutError({ error, key: scopedKey }));
-	}
+	return Result.tryPromise({
+		try: async () => {
+			const expirationTtl = getRetentionTtlSeconds({
+				ttlSeconds,
+				retentionTtlSeconds,
+				key,
+			});
+			await namespace.put(scopedKey, JSON.stringify(envelope), {
+				...(typeof expirationTtl === "number" ? { expirationTtl } : {}),
+			});
+			writeToMemory(scopedKey, envelope, memoryTtlSeconds);
+		},
+		catch: (error) => new KvPutError({ error, key: scopedKey }),
+	});
 };
 
 const putJson = async <A>({

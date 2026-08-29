@@ -137,7 +137,7 @@ export const fetchJson = async <A>(
 			},
 			catch: () => "",
 		});
-		const bodySnippet = Result.isOk(snippetResult) ? snippetResult.value : "";
+		const bodySnippet = snippetResult.unwrapOr("");
 		return Result.err(new FetchResponseError({ response, bodySnippet }));
 	}
 
@@ -155,14 +155,12 @@ export const fetchJson = async <A>(
 		});
 	}
 
-	try {
-		return Result.ok({
-			data: schema.parse(raw),
-			headers: response.headers,
-		});
-	} catch (error) {
-		return Result.err(new SchemaParseError({ error }));
+	const parsed = schema.safeParse(raw);
+	if (!parsed.success) {
+		return Result.err(new SchemaParseError({ error: parsed.error }));
 	}
+
+	return Result.ok({ data: parsed.data, headers: response.headers });
 };
 
 // ---------------------------------------------------------------------------
@@ -189,7 +187,3 @@ const withCache = <A>(
 
 export const fetchFresh = <A>(params: FetchParams<A>) =>
 	withCache<A>("no-store", params);
-export const fetchCache = <A>(params: FetchParams<A>) =>
-	withCache<A>("force-cache", params);
-export const fetchRevalidate = <A>(params: FetchParams<A>) =>
-	withCache<A>(undefined, params);

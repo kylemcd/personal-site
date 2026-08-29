@@ -103,13 +103,10 @@
 	gap: var(--spc-3);
 	align-items: baseline;
 	padding: var(--spc-2) 0;
-	border-top: var(--spc-px) solid
-		color-mix(in srgb, var(--color-ui-1) 70%, transparent);
 	color: inherit;
 }
 
 .concerts-recent-list li:first-child .concerts-recent-row {
-	border-top: none;
 	padding-top: 0;
 }
 
@@ -144,64 +141,9 @@
 }
 
 .concerts-bar-chart {
-	height: 240px;
+	height: 300px;
 	width: 100%;
 	min-width: 0;
-}
-
-.concerts-yearly-tooltip {
-	background: var(--color-bg-1);
-	border: var(--spc-px) solid var(--color-ui-2);
-	padding: var(--spc-2) var(--spc-3);
-	font-family: var(--font-family-mono);
-	font-size: 0.75rem;
-	color: var(--color-text-1);
-	min-width: 160px;
-	display: flex;
-	flex-direction: column;
-	gap: var(--spc-2);
-}
-
-.concerts-yearly-tooltip-year {
-	color: var(--color-text-2);
-	letter-spacing: 0.04em;
-}
-
-.concerts-yearly-tooltip-rows {
-	display: flex;
-	flex-direction: column;
-	gap: calc(var(--spc-px) * 3);
-}
-
-.concerts-yearly-tooltip-row {
-	display: grid;
-	grid-template-columns: 10px 1fr auto;
-	align-items: center;
-	column-gap: var(--spc-4);
-}
-
-.concerts-yearly-tooltip-row > .concerts-yearly-tooltip-swatch {
-	margin-right: calc(var(--spc-2) * -1);
-}
-
-.concerts-yearly-tooltip-swatch {
-	width: 10px;
-	height: 10px;
-	display: inline-block;
-}
-
-.concerts-yearly-tooltip-swatch-line {
-	height: 2px;
-	background: var(--color-text-1);
-}
-
-.concerts-yearly-tooltip-label {
-	color: var(--color-text-2);
-}
-
-.concerts-yearly-tooltip-value {
-	color: var(--color-text-1);
-	font-variant-numeric: tabular-nums;
 }
 
 .concerts-ranked-list {

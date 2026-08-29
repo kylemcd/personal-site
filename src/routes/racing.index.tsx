@@ -49,7 +49,7 @@ function RacingRoute() {
 
 	return (
 		<div className="section-container section-container-flush-right">
-			<Garage61 overview={racing.derived.overview} recentLayout="stack" />
+			<Garage61 overview={racing.derived.overview} />
 		</div>
 	);
 }

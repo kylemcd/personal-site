@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { computeSharePercentage } from "./derivations";
+import { computeSharePercentage } from "./shared";
 
 describe("garage61 derivations", () => {
 	it("computes share percentages and handles zero totals", () => {

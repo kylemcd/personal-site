@@ -2,6 +2,7 @@ import { env as cloudflareEnv } from "cloudflare:workers";
 import { Result, TaggedError } from "better-result";
 import { type ZodType, z } from "zod";
 
+import { env } from "@/lib/env";
 import {
 	type PublishedDocument,
 	type PublishedSummary,
@@ -10,7 +11,11 @@ import {
 	publishedManifestSchema,
 } from "./published-content-contract";
 
-const PUBLISHED_CONTENT_CACHE_PREFIX = "published-content:response:v1:";
+const PUBLISHED_CONTENT_CACHE_PREFIX = "published-content:response:v2:";
+const PUBLISHED_CONTENT_CACHE_GENERATION_KEY =
+	"published-content:response-generation";
+const INITIAL_CACHE_GENERATION = "initial";
+const PUBLISHED_CONTENT_CACHE_TTL_SECONDS = 60 * 60;
 
 type PublishedContentCacheStore = Pick<
 	KVNamespace,
@@ -53,21 +58,50 @@ const binding = (): Result<Fetcher, PublishedContentError> => {
 			);
 };
 
-const cacheKey = ({ path }: { path: string }) =>
-	`${PUBLISHED_CONTENT_CACHE_PREFIX}${path}`;
+const cacheKey = ({ path, generation }: { path: string; generation: string }) =>
+	`${PUBLISHED_CONTENT_CACHE_PREFIX}${generation}:${path}`;
+
+const readCacheGeneration = async (): Promise<string> => {
+	const store = cloudflareEnv.APP_STORE;
+	if (!store) return INITIAL_CACHE_GENERATION;
+
+	const result = await Result.tryPromise({
+		try: () => store.get(PUBLISHED_CONTENT_CACHE_GENERATION_KEY, "text"),
+		catch: (cause) =>
+			new PublishedContentError({
+				message: "Published content cache generation read failed",
+				retryable: true,
+				cause,
+			}),
+	});
+	if (Result.isError(result)) {
+		console.error("[published-content] Cache generation read failed", {
+			error: result.error,
+		});
+		return INITIAL_CACHE_GENERATION;
+	}
+	return result.value || INITIAL_CACHE_GENERATION;
+};
 
 const readCached = async <T>({
 	path,
+	generation,
 	schema,
 }: {
 	path: string;
+	generation: string;
 	schema: ZodType<T>;
 }): Promise<T | undefined> => {
+	if (env.DEV_FRESH_DATA) return undefined;
+
 	const store = cloudflareEnv.APP_STORE;
 	if (!store) return undefined;
 
 	try {
-		const cached = await store.get<unknown>(cacheKey({ path }), "json");
+		const cached = await store.get<unknown>(
+			cacheKey({ path, generation }),
+			"json",
+		);
 		if (cached === null) return undefined;
 
 		const parsed = schema.safeParse(cached);
@@ -77,7 +111,7 @@ const readCached = async <T>({
 			path,
 			error: parsed.error,
 		});
-		await store.delete(cacheKey({ path }));
+		await store.delete(cacheKey({ path, generation }));
 	} catch (cause) {
 		console.error("[published-content] Cache read failed", { path, cause });
 	}
@@ -87,16 +121,20 @@ const readCached = async <T>({
 
 const writeCached = async <T>({
 	path,
+	generation,
 	value,
 }: {
 	path: string;
+	generation: string;
 	value: T;
 }): Promise<void> => {
 	const store = cloudflareEnv.APP_STORE;
-	if (!store) return;
+	if (!store || env.DEV_FRESH_DATA || env.KV_READ_ONLY_CACHE) return;
 
 	try {
-		await store.put(cacheKey({ path }), JSON.stringify(value));
+		await store.put(cacheKey({ path, generation }), JSON.stringify(value), {
+			expirationTtl: PUBLISHED_CONTENT_CACHE_TTL_SECONDS,
+		});
 	} catch (cause) {
 		console.error("[published-content] Cache write failed", { path, cause });
 	}
@@ -109,7 +147,10 @@ const fetchPublished = async <T>({
 	path: string;
 	schema: ZodType<T>;
 }): Promise<Result<T, PublishedContentError>> => {
-	const cached = await readCached({ path, schema });
+	const generation = env.DEV_FRESH_DATA
+		? INITIAL_CACHE_GENERATION
+		: await readCacheGeneration();
+	const cached = await readCached({ path, generation, schema });
 	if (cached !== undefined) return Result.ok(cached);
 
 	const service = binding();
@@ -170,7 +211,7 @@ const fetchPublished = async <T>({
 		);
 	}
 
-	await writeCached({ path, value: parsed.data.data });
+	await writeCached({ path, generation, value: parsed.data.data });
 	return Result.ok(parsed.data.data);
 };
 
@@ -179,6 +220,8 @@ const invalidatePublishedContentCache = async ({
 }: {
 	store: PublishedContentCacheStore;
 }): Promise<void> => {
+	await store.put(PUBLISHED_CONTENT_CACHE_GENERATION_KEY, crypto.randomUUID());
+
 	let cursor: string | undefined;
 	const keys: string[] = [];
 
@@ -229,6 +272,7 @@ const publishedContent = { all, find, list };
 
 export {
 	invalidatePublishedContentCache,
+	PUBLISHED_CONTENT_CACHE_GENERATION_KEY,
 	PUBLISHED_CONTENT_CACHE_PREFIX,
 	PublishedContentError,
 	publishedContent,

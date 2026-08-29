@@ -1,0 +1,119 @@
+.dither-chart {
+	width: 100%;
+	height: 100%;
+	color: var(--color-text-2);
+	font-family: var(--font-family-mono);
+	font-variant-numeric: tabular-nums;
+	--ts-chart-tooltip-background: color-mix(
+		in srgb,
+		var(--color-bg-1) 94%,
+		transparent
+	);
+	--ts-chart-tooltip-color: var(--color-text-1);
+	--ts-chart-tooltip-border: 0;
+	--ts-chart-tooltip-border-radius: var(--rnd-5);
+	--ts-chart-tooltip-shadow: none;
+	--ts-chart-tooltip-padding: 0.625rem 0.75rem;
+	--ts-chart-tooltip-font: 0.6875rem / 1.45 var(--font-family-mono);
+}
+
+.dither-chart:focus {
+	outline: none;
+}
+
+.dither-chart:focus-visible {
+	outline: var(--spc-px) dotted var(--color-text-2);
+	outline-offset: calc(var(--spc-px) * 3);
+}
+
+.dither-chart-tooltip {
+	white-space: pre-line;
+	font-variant-numeric: tabular-nums;
+	backdrop-filter: blur(10px);
+}
+
+.dither-chart svg {
+	shape-rendering: geometricprecision;
+}
+
+.dither-chart svg text {
+	paint-order: stroke fill;
+	stroke: var(--color-bg-1);
+	stroke-width: 2px;
+	stroke-linejoin: round;
+}
+
+.dither-chart .ts-chart__grid line,
+.dither-chart .ts-chart__grid path {
+	stroke-dasharray: 1 5;
+	stroke-linecap: round;
+}
+
+.dither-chart-concerts-wrap {
+	position: relative;
+	width: 100%;
+	height: 100%;
+}
+
+.dither-chart-legend {
+	position: absolute;
+	z-index: 1;
+	top: var(--spc-1);
+	right: var(--spc-2);
+	display: flex;
+	align-items: center;
+	gap: var(--spc-3);
+	margin: 0;
+	padding: 0;
+	color: var(--color-text-2);
+	font-family: var(--font-family-mono);
+	font-size: 0.6875rem;
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+	list-style: none;
+}
+
+.dither-chart-legend li {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--spc-1);
+	white-space: nowrap;
+}
+
+.dither-chart-legend-swatch {
+	display: inline-block;
+	width: 0.75rem;
+	height: 0.75rem;
+	border: 1px solid var(--color-ui-2);
+}
+
+.dither-chart-legend-swatch-new {
+	background: linear-gradient(
+		180deg,
+		color-mix(in srgb, var(--color-ui-3) 88%, transparent),
+		color-mix(in srgb, var(--color-ui-2) 48%, transparent)
+	);
+}
+
+.dither-chart-legend-swatch-returning {
+	background: linear-gradient(
+		180deg,
+		color-mix(in srgb, var(--color-ui-1) 78%, transparent),
+		color-mix(in srgb, var(--color-ui-1) 28%, transparent)
+	);
+}
+
+.dither-chart-legend-swatch-shows {
+	position: relative;
+	border: 0;
+}
+
+.dither-chart-legend-swatch-shows::after {
+	position: absolute;
+	top: 50%;
+	right: 0;
+	left: 0;
+	height: 1px;
+	background: var(--color-text-1);
+	content: "";
+}

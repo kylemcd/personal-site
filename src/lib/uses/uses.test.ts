@@ -1,3 +1,4 @@
+import { Result } from "better-result";
 import { describe, expect, it } from "vitest";
 
 import { parseUsesMarkdown } from "./uses";
@@ -13,26 +14,33 @@ describe("parseUsesMarkdown", () => {
 
 		const result = parseUsesMarkdown(input);
 
-		expect(result).toHaveLength(2);
-		expect(result[0]).toEqual({
+		expect(Result.isOk(result)).toBe(true);
+		if (Result.isError(result)) return;
+		expect(result.value).toHaveLength(2);
+		expect(result.value[0]).toEqual({
 			name: "MacBook",
 			description: "Main machine",
 			tags: ["Hardware", "Apple"],
 			order: 0,
 		});
-		expect(result[1]?.order).toBe(1);
+		expect(result.value[1]?.order).toBe(1);
 	});
 
-	it("throws when required headers are missing", () => {
+	it("returns a typed error when required headers are missing", () => {
 		const input = `
 | Name | Notes | Tags |
 | --- | --- | --- |
 | MacBook | Main machine | Hardware |
 `;
 
-		expect(() => parseUsesMarkdown(input)).toThrow(
-			"Missing required column(s): Description",
-		);
+		const result = parseUsesMarkdown(input);
+		expect(Result.isError(result)).toBe(true);
+		if (Result.isOk(result)) return;
+		expect(result.error).toMatchObject({
+			_tag: "UsesParseError",
+			reason: "missing_columns",
+			missingColumns: ["Description"],
+		});
 	});
 
 	it("skips fully empty table rows", () => {
@@ -45,8 +53,13 @@ describe("parseUsesMarkdown", () => {
 `;
 
 		const result = parseUsesMarkdown(input);
-		expect(result).toHaveLength(2);
-		expect(result.map((item) => item.name)).toEqual(["MacBook", "VS Code"]);
+		expect(Result.isOk(result)).toBe(true);
+		if (Result.isError(result)) return;
+		expect(result.value).toHaveLength(2);
+		expect(result.value.map((item) => item.name)).toEqual([
+			"MacBook",
+			"VS Code",
+		]);
 	});
 
 	it("normalizes tags for filtering while preserving display casing", () => {
@@ -57,7 +70,9 @@ describe("parseUsesMarkdown", () => {
 `;
 
 		const result = parseUsesMarkdown(input);
-		expect(result[0]?.tags).toEqual(["Hardware", "Desk Setup"]);
+		expect(Result.isOk(result)).toBe(true);
+		if (Result.isError(result)) return;
+		expect(result.value[0]?.tags).toEqual(["Hardware", "Desk Setup"]);
 	});
 
 	it("parses optional link cells including markdown link syntax", () => {
@@ -69,19 +84,25 @@ describe("parseUsesMarkdown", () => {
 `;
 
 		const result = parseUsesMarkdown(input);
-		expect(result[0]?.link).toBe("https://www.raycast.com/");
-		expect(result[1]?.link).toBe("https://code.visualstudio.com/");
+		expect(Result.isOk(result)).toBe(true);
+		if (Result.isError(result)) return;
+		expect(result.value[0]?.link).toBe("https://www.raycast.com/");
+		expect(result.value[1]?.link).toBe("https://code.visualstudio.com/");
 	});
 
-	it("throws on unsafe javascript links", () => {
+	it("returns a typed error for unsafe javascript links", () => {
 		const input = `
 | Name | Description | Tags | Link |
 | --- | --- | --- | --- |
 | Example | Demo | Software | javascript:alert(1) |
 `;
 
-		expect(() => parseUsesMarkdown(input)).toThrow(
-			"javascript: URLs are not allowed",
-		);
+		const result = parseUsesMarkdown(input);
+		expect(Result.isError(result)).toBe(true);
+		if (Result.isOk(result)) return;
+		expect(result.error).toMatchObject({
+			_tag: "UsesParseError",
+			reason: "unsafe_link",
+		});
 	});
 });

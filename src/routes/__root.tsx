@@ -1,6 +1,6 @@
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { Footer } from "@/components/Footer";
-import { Navigation } from "@/components/Navigation";
+import { SiteHeader } from "@/components/SiteHeader";
 import { buildMeta } from "@/lib/meta";
 import "@/styles/global.css";
 
@@ -38,8 +38,10 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en">
+		<html lang="en" suppressHydrationWarning>
 			<head>
+				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: theme must be set before styles paint */}
+				<script dangerouslySetInnerHTML={{ __html: themeScript }} />
 				<HeadContent />
 				<link
 					rel="alternate"
@@ -50,14 +52,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<link rel="icon" href="/images/avatar.png" type="image/png" />
 			</head>
 			<body>
-				<div className="page-container">
-					<Navigation />
-					{children}
+				<div className="site-shell">
+					<SiteHeader />
+					<main className="site-content">{children}</main>
+					<Footer />
 				</div>
-				<Footer />
 				<Scripts />
-				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: theme script must run before first paint to avoid flash */}
-				<script dangerouslySetInnerHTML={{ __html: themeScript }} />
 				{process.env.NODE_ENV === "production" && (
 					<script
 						async

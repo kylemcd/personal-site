@@ -2,13 +2,13 @@ import { Result, TaggedError } from "better-result";
 
 import { env } from "@/lib/env";
 import { fetchFresh } from "@/lib/fetch";
-import { getOrComputeJson } from "@/lib/store";
+import { forEachAsyncResult } from "@/lib/result";
+import { getOrComputeJson, type KvPutError } from "@/lib/store";
 import {
 	canonicalizeGenreTag,
 	getArtistGenreOverride,
 	loadAliasMap,
 	loadArtistGenreOverrides,
-	recordObservedAndSuggestionsBatch,
 } from "./genre-taxonomy";
 
 import {
@@ -25,6 +25,9 @@ export class LastFmGenreError extends TaggedError("LastFmGenreError")<{
 const LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
 const LASTFM_ARTIST_TAGS_CACHE_KEY_PREFIX = "lastfm:artist-top-tags:v1";
 const LASTFM_ARTIST_TAGS_TTL_SECONDS = 365 * 24 * 60 * 60; // 1 year
+const LASTFM_GENRE_LOOKUP_CONCURRENCY = 4;
+
+export type LastFmGenreLookupError = LastFmGenreError | KvPutError;
 
 const getPrimaryArtistGenre = (params: {
 	artist: WeightedArtist;
@@ -61,17 +64,17 @@ export const normalizeGenreTag = (tag: string): string => {
 	return canonicalizeGenreTag(trimmed);
 };
 
-export const formatGenreLabel = (tag: string): string =>
+const formatGenreLabel = (tag: string): string =>
 	tag
 		.split(" ")
 		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
 		.join(" ");
 
-export type ArtistTopTags = Array<{ name: string; count: number }>;
+type ArtistTopTags = Array<{ name: string; count: number }>;
 export type ArtistTagMap = Record<string, ArtistTopTags>;
 export type SimilarTagMap = Record<string, Array<string>>;
 
-export const fetchArtistTopTags = async (
+const fetchArtistTopTags = async (
 	artist: string,
 ): Promise<Result<ArtistTopTags, LastFmGenreError>> => {
 	const params = new URLSearchParams({
@@ -100,7 +103,7 @@ export const fetchArtistTopTags = async (
 	return Result.ok(tags);
 };
 
-export const fetchSimilarGenreTags = async (
+const fetchSimilarGenreTags = async (
 	tag: string,
 ): Promise<Result<Array<string>, LastFmGenreError>> => {
 	await loadAliasMap();
@@ -123,7 +126,7 @@ export const fetchSimilarGenreTags = async (
 	return Result.ok(normalized);
 };
 
-export const groupGenresBySimilarity = (params: {
+const groupGenresBySimilarity = (params: {
 	genreScores: ReadonlyMap<string, number>;
 	similarGenreTags: Readonly<Record<string, Array<string>>>;
 }): Map<string, number> => {
@@ -188,7 +191,7 @@ const GENRE_COUNT_DEFAULT = 6;
 
 export const buildArtistTagMap = async (
 	artistKeys: ReadonlyArray<string>,
-): Promise<ArtistTagMap> => {
+): Promise<Result<ArtistTagMap, LastFmGenreLookupError>> => {
 	await loadAliasMap();
 	await loadArtistGenreOverrides();
 	const unique = [...new Set(artistKeys)];
@@ -196,41 +199,28 @@ export const buildArtistTagMap = async (
 		const normalized = artist.toLowerCase().trim().replace(/\s+/g, " ");
 		return `${LASTFM_ARTIST_TAGS_CACHE_KEY_PREFIX}:${encodeURIComponent(normalized)}`;
 	};
-	const tagResults = await Promise.all(
-		unique.map(async (artist) => ({
-			artist,
-			result: await getOrComputeJson<ArtistTopTags, LastFmGenreError>({
+	const tagResults = await forEachAsyncResult(
+		unique,
+		async (artist) => {
+			const result = await getOrComputeJson<ArtistTopTags, LastFmGenreError>({
 				key: artistCacheKey(artist),
 				ttlSeconds: LASTFM_ARTIST_TAGS_TTL_SECONDS,
 				compute: () => fetchArtistTopTags(artist),
-			}),
-		})),
+			});
+			return result.map((tags) => ({ artist, tags }));
+		},
+		{ concurrency: LASTFM_GENRE_LOOKUP_CONCURRENCY },
 	);
+	if (Result.isError(tagResults)) return tagResults;
 	const artistTopTags: ArtistTagMap = {};
-	const observations: Array<{ rawTag: string; source: string }> = [];
-	for (const tagResult of tagResults) {
-		if (Result.isError(tagResult.result)) continue;
-		const normalizedTags = tagResult.result.value.map((tag) => ({
+	for (const tagResult of tagResults.value) {
+		const normalizedTags = tagResult.tags.map((tag) => ({
 			...tag,
 			name: normalizeGenreTag(tag.name),
 		}));
 		artistTopTags[tagResult.artist.toLowerCase()] = normalizedTags;
-		observations.push(
-			...tagResult.result.value.map((tag) => ({
-				rawTag: tag.name,
-				source: "artist.gettoptags",
-			})),
-		);
 	}
-	const observationResult =
-		await recordObservedAndSuggestionsBatch(observations);
-	if (Result.isError(observationResult)) {
-		console.error(
-			"[lastfm] failed to record artist tag observations",
-			observationResult.error,
-		);
-	}
-	return artistTopTags;
+	return Result.ok(artistTopTags);
 };
 
 export const buildSimilarTagMap = async (params: {
@@ -238,7 +228,7 @@ export const buildSimilarTagMap = async (params: {
 	artistTopTags: ArtistTagMap;
 	artistTagLimit?: number;
 	seedLimit?: number;
-}): Promise<SimilarTagMap> => {
+}): Promise<Result<SimilarTagMap, LastFmGenreError>> => {
 	const {
 		weightedArtists,
 		artistTopTags,
@@ -261,30 +251,21 @@ export const buildSimilarTagMap = async (params: {
 		.sort((a, b) => b[1] - a[1])
 		.slice(0, seedLimit)
 		.map(([name]) => name);
-	const results = await Promise.all(
-		seeds.map(async (tag) => ({
-			tag,
-			result: await fetchSimilarGenreTags(tag),
-		})),
+	const results = await forEachAsyncResult(
+		seeds,
+		async (tag) =>
+			(await fetchSimilarGenreTags(tag)).map((similarTags) => ({
+				tag,
+				similarTags,
+			})),
+		{ concurrency: LASTFM_GENRE_LOOKUP_CONCURRENCY },
 	);
+	if (Result.isError(results)) return results;
 	const map: SimilarTagMap = {};
-	const observations: Array<{ rawTag: string; source: string }> = [];
-	for (const r of results) {
-		if (Result.isError(r.result)) continue;
-		map[r.tag] = r.result.value;
-		observations.push(
-			...r.result.value.map((rawTag) => ({ rawTag, source: "tag.getsimilar" })),
-		);
+	for (const result of results.value) {
+		map[result.tag] = result.similarTags;
 	}
-	const observationResult =
-		await recordObservedAndSuggestionsBatch(observations);
-	if (Result.isError(observationResult)) {
-		console.error(
-			"[lastfm] failed to record similar tag observations",
-			observationResult.error,
-		);
-	}
-	return map;
+	return Result.ok(map);
 };
 
 export const buildTopGenresFromWeights = (params: {
@@ -330,36 +311,4 @@ export const buildTopGenresFromWeights = (params: {
 			name: formatGenreLabel(tag),
 			share: Math.max(1, Math.round((score / total) * 100)),
 		}));
-};
-
-export const getPrimaryGenreAssignments = (params: {
-	weightedArtists: ReadonlyArray<WeightedArtist>;
-	artistTopTags: ArtistTagMap;
-	artistTagLimit?: number;
-}): Array<{ artistKey: string; artistName: string; genre: string }> => {
-	const {
-		weightedArtists,
-		artistTopTags,
-		artistTagLimit = ARTIST_TAG_LIMIT_DEFAULT,
-	} = params;
-	const assignments: Array<{
-		artistKey: string;
-		artistName: string;
-		genre: string;
-	}> = [];
-	for (const artist of weightedArtists) {
-		if (artist.weight <= 0) continue;
-		const primary = getPrimaryArtistGenre({
-			artist,
-			artistTopTags,
-			artistTagLimit,
-		});
-		if (!primary) continue;
-		assignments.push({
-			artistKey: artist.key,
-			artistName: artist.name ?? artist.key,
-			genre: primary.genre,
-		});
-	}
-	return assignments;
 };

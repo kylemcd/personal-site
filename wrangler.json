@@ -5,8 +5,8 @@
 	"compatibility_date": "2025-09-02",
 	"compatibility_flags": ["nodejs_compat"],
 	"vars": {
+		"DEV_FRESH_DATA": "false",
 		"KV_READ_ONLY_CACHE": "false",
-		"KV_ENABLE_GENRE_OBSERVATION_WRITES": "false",
 		"KV_ENABLE_LOOKUP_STATUS_WRITES": "false"
 	},
 	"main": "./worker.ts",
@@ -23,10 +23,18 @@
 			"remote": true
 		}
 	],
+	"r2_buckets": [
+		{
+			"binding": "RACING_MEDIA",
+			"bucket_name": "kpm-racing-media",
+			"remote": true
+		}
+	],
 	"services": [
 		{
 			"binding": "PUBLISHED_CONTENT",
-			"service": "arsenal-share"
+			"service": "arsenal-share",
+			"remote": true
 		}
 	],
 	"queues": {
@@ -71,25 +79,16 @@
 			"binding": "STALE_MONITOR_WORKFLOW",
 			"name": "stale-data-monitor",
 			"class_name": "StaleDataMonitorWorkflow"
-		},
-		{
-			"binding": "GENRE_REVIEW_DIGEST_WORKFLOW",
-			"name": "genre-review-digest",
-			"class_name": "GenreReviewDigestWorkflow"
 		}
 	],
-	"durable_objects": {
-		"bindings": [
-			{
-				"name": "GENRE_OBSERVATION_COLLECTOR",
-				"class_name": "GenreObservationCollector"
-			}
-		]
-	},
 	"migrations": [
 		{
 			"tag": "v1",
 			"new_sqlite_classes": ["GenreObservationCollector"]
+		},
+		{
+			"tag": "v2",
+			"deleted_classes": ["GenreObservationCollector"]
 		}
 	],
 	"triggers": {

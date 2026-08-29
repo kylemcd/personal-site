@@ -134,7 +134,7 @@
 }
 
 .wrapped-waveform-bar.is-warm {
-	background: color-mix(in srgb, var(--color-listening-blue) 72%, white 18%);
+	background: var(--color-text-1);
 	opacity: 0.95;
 }
 
@@ -164,31 +164,6 @@
 	height: 220px;
 	width: 100%;
 	min-width: 0;
-}
-
-.wrapped-treemap-tooltip {
-	background: var(--color-bg-1);
-	border: var(--spc-px) solid var(--color-ui-2);
-	padding: calc(var(--spc-1) + (var(--spc-px) * 2)) var(--spc-2);
-	display: flex;
-	flex-direction: column;
-	gap: calc(var(--spc-px) * 2);
-}
-
-.wrapped-treemap-tooltip p {
-	margin: 0;
-	color: var(--color-text-1);
-	font-size: 0.75rem;
-	line-height: 1.1;
-	font-family: var(--font-family-mono);
-}
-
-.wrapped-treemap-tooltip-name {
-	font-weight: 600;
-}
-
-.wrapped-treemap-tooltip-meta {
-	font-weight: 400;
 }
 
 .wrapped-genre-radar {

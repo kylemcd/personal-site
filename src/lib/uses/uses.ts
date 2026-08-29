@@ -1,3 +1,5 @@
+import { Result, TaggedError } from "better-result";
+
 const USES_MARKDOWN_PATH = "../../../content/uses.md";
 const REQUIRED_COLUMNS = ["Name", "Description", "Tags"] as const;
 const OPTIONAL_LINK_COLUMNS = ["Link", "URL", "Href"] as const;
@@ -20,6 +22,23 @@ type TableSlice = {
 	headers: string[];
 	rows: string[][];
 };
+
+type UsesParseErrorReason =
+	| "empty_markdown"
+	| "missing_table"
+	| "missing_columns"
+	| "unsafe_link";
+
+class UsesParseError extends TaggedError("UsesParseError")<{
+	readonly message: string;
+	readonly reason: UsesParseErrorReason;
+	readonly missingColumns?: ReadonlyArray<string>;
+}>() {}
+
+class UsesContentError extends TaggedError("UsesContentError")<{
+	readonly message: string;
+	readonly path: string;
+}>() {}
 
 const isTableRow = (line: string): boolean => line.includes("|");
 
@@ -97,10 +116,12 @@ const normalizeTags = (rawTags: string): string[] => {
 
 const PLACEHOLDER_CELLS = new Set(["—", "-", "n/a", "none", ""]);
 
-const normalizeLink = (rawLink: string): string | undefined => {
+const normalizeLink = (
+	rawLink: string,
+): Result<string | undefined, UsesParseError> => {
 	const trimmed = rawLink.trim();
 	if (!trimmed || PLACEHOLDER_CELLS.has(trimmed.toLowerCase())) {
-		return undefined;
+		return Result.ok(undefined);
 	}
 
 	const markdownLinkMatch = trimmed.match(/^\[[^\]]+\]\((.+)\)$/);
@@ -109,23 +130,37 @@ const normalizeLink = (rawLink: string): string | undefined => {
 	const normalizedScheme = unwrappedUrl.toLowerCase();
 
 	if (normalizedScheme.startsWith("javascript:")) {
-		throw new Error(
-			"Invalid uses table link. javascript: URLs are not allowed.",
+		return Result.err(
+			new UsesParseError({
+				reason: "unsafe_link",
+				message: "Invalid uses table link. javascript: URLs are not allowed.",
+			}),
 		);
 	}
 
-	return unwrappedUrl || undefined;
+	return Result.ok(unwrappedUrl || undefined);
 };
 
-export const parseUsesMarkdown = (rawMarkdown: string): UseItem[] => {
+export const parseUsesMarkdown = (
+	rawMarkdown: string,
+): Result<UseItem[], UsesParseError> => {
 	if (!rawMarkdown?.trim()) {
-		throw new Error("The uses markdown file is empty.");
+		return Result.err(
+			new UsesParseError({
+				reason: "empty_markdown",
+				message: "The uses markdown file is empty.",
+			}),
+		);
 	}
 
 	const table = findFirstTable(rawMarkdown);
 	if (!table) {
-		throw new Error(
-			"No markdown table was found in content/uses.md. Add a table with Name, Description, and Tags columns (optional Link column supported).",
+		return Result.err(
+			new UsesParseError({
+				reason: "missing_table",
+				message:
+					"No markdown table was found in content/uses.md. Add a table with Name, Description, and Tags columns (optional Link column supported).",
+			}),
 		);
 	}
 
@@ -138,8 +173,12 @@ export const parseUsesMarkdown = (rawMarkdown: string): UseItem[] => {
 		(columnName) => !headerIndexMap.has(columnName),
 	);
 	if (missingColumns.length > 0) {
-		throw new Error(
-			`Invalid uses table headers. Missing required column(s): ${missingColumns.join(", ")}. Expected headers: ${REQUIRED_COLUMNS.join(" | ")}.`,
+		return Result.err(
+			new UsesParseError({
+				reason: "missing_columns",
+				missingColumns,
+				message: `Invalid uses table headers. Missing required column(s): ${missingColumns.join(", ")}. Expected headers: ${REQUIRED_COLUMNS.join(" | ")}.`,
+			}),
 		);
 	}
 
@@ -159,7 +198,9 @@ export const parseUsesMarkdown = (rawMarkdown: string): UseItem[] => {
 			continue;
 		}
 
-		const link = normalizeLink(rawLink);
+		const linkResult = normalizeLink(rawLink);
+		if (Result.isError(linkResult)) return linkResult;
+		const link = linkResult.value;
 
 		items.push({
 			name,
@@ -170,22 +211,25 @@ export const parseUsesMarkdown = (rawMarkdown: string): UseItem[] => {
 		});
 	}
 
-	return items;
+	return Result.ok(items);
 };
 
-const getRawUsesMarkdown = (): string => {
+const getRawUsesMarkdown = (): Result<string, UsesContentError> => {
 	const markdown = USES_FILES[USES_MARKDOWN_PATH];
 	if (!markdown) {
-		throw new Error("Unable to load content/uses.md.");
+		return Result.err(
+			new UsesContentError({
+				path: USES_MARKDOWN_PATH,
+				message: "Unable to load content/uses.md.",
+			}),
+		);
 	}
 
-	return markdown;
+	return Result.ok(markdown);
 };
 
-const list = (): UseItem[] => {
-	const markdown = getRawUsesMarkdown();
-	return parseUsesMarkdown(markdown);
-};
+const list = (): Result<UseItem[], UsesContentError | UsesParseError> =>
+	getRawUsesMarkdown().andThen(parseUsesMarkdown);
 
 export const uses = {
 	list,

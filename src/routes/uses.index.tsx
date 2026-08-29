@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import { Result } from "better-result";
 
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { UsesTable } from "@/components/UsesTable";
@@ -8,9 +9,9 @@ import { uses } from "@/lib/uses";
 import "@/styles/routes/uses.css";
 
 const getData = createServerFn({ method: "GET" }).handler(async () => {
-	return {
-		items: uses.list(),
-	};
+	const result = uses.list();
+	if (Result.isError(result)) throw result.error;
+	return { items: result.value };
 });
 
 export const Route = createFileRoute("/uses/")({

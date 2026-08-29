@@ -49,6 +49,12 @@ describe("runtime post repository", () => {
 					date: "2024-01-01",
 					draft: true,
 				},
+				{
+					title: "Scheduled",
+					slug: "scheduled",
+					date: "2999-01-01",
+					draft: false,
+				},
 			]),
 		);
 	});
@@ -73,6 +79,7 @@ describe("runtime post repository", () => {
 		expect(Result.isOk(result) && result.value).toEqual({ content: "remote" });
 		expect(mocks.localFromRaw).toHaveBeenCalledWith({
 			rawMarkdown: "---\ntitle: Remote\n---\n\nBody",
+			frontmatterSchema: expect.any(Object),
 		});
 	});
 

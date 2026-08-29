@@ -1,1 +1,1 @@
-export { BookCard, Bookshelf } from "./Bookshelf";
+export { Bookshelf } from "./Bookshelf";

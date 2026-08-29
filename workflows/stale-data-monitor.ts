@@ -3,6 +3,7 @@ import { WorkflowEntrypoint } from "cloudflare:workers";
 import { GARAGE61_SUMMARY_CACHE_KEY } from "@/lib/garage61";
 import { GOODREADS_SHELF_CACHE_KEY } from "@/lib/goodreads";
 import { LASTFM_MONTHLY_TOP_CACHE_KEY } from "@/lib/lastfm";
+import { asRecord } from "@/lib/record";
 
 export type StaleMonitorParams = {
 	triggeredAt: string;
@@ -37,11 +38,6 @@ const MONITORED_KEYS: ReadonlyArray<MonitoredKey> = [
 	{ key: LASTFM_MONTHLY_TOP_CACHE_KEY, label: "Last.fm monthly top" },
 ];
 
-const asRecord = (value: unknown): Record<string, unknown> | null => {
-	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-	return value as Record<string, unknown>;
-};
-
 const normalizeCacheVersion = (value: string | undefined): string =>
 	typeof value === "string" &&
 	value.trim() &&
@@ -54,7 +50,7 @@ const parseEnvelope = (raw: string): CacheEnvelope | null => {
 	try {
 		const parsed = JSON.parse(raw) as unknown;
 		const record = asRecord(parsed);
-		if (!record || record.__cacheEnvelope !== 1 || !("value" in record)) {
+		if (record?.__cacheEnvelope !== 1 || !("value" in record)) {
 			return null;
 		}
 		const refreshAfterRaw = record.refreshAfter;

@@ -17,7 +17,6 @@ import { Route as PostsIndexRouteImport } from './routes/posts.index'
 import { Route as ListeningIndexRouteImport } from './routes/listening.index'
 import { Route as ConcertsIndexRouteImport } from './routes/concerts.index'
 import { Route as PostsSlugRouteImport } from './routes/posts.$slug'
-import { Route as AdminGenresRouteImport } from './routes/admin.genres'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -59,15 +58,9 @@ const PostsSlugRoute = PostsSlugRouteImport.update({
   path: '/posts/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminGenresRoute = AdminGenresRouteImport.update({
-  id: '/admin/genres',
-  path: '/admin/genres',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin/genres': typeof AdminGenresRoute
   '/posts/$slug': typeof PostsSlugRoute
   '/concerts/': typeof ConcertsIndexRoute
   '/listening/': typeof ListeningIndexRoute
@@ -78,7 +71,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin/genres': typeof AdminGenresRoute
   '/posts/$slug': typeof PostsSlugRoute
   '/concerts': typeof ConcertsIndexRoute
   '/listening': typeof ListeningIndexRoute
@@ -90,7 +82,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin/genres': typeof AdminGenresRoute
   '/posts/$slug': typeof PostsSlugRoute
   '/concerts/': typeof ConcertsIndexRoute
   '/listening/': typeof ListeningIndexRoute
@@ -103,7 +94,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/admin/genres'
     | '/posts/$slug'
     | '/concerts/'
     | '/listening/'
@@ -114,7 +104,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin/genres'
     | '/posts/$slug'
     | '/concerts'
     | '/listening'
@@ -125,7 +114,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/admin/genres'
     | '/posts/$slug'
     | '/concerts/'
     | '/listening/'
@@ -137,7 +125,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminGenresRoute: typeof AdminGenresRoute
   PostsSlugRoute: typeof PostsSlugRoute
   ConcertsIndexRoute: typeof ConcertsIndexRoute
   ListeningIndexRoute: typeof ListeningIndexRoute
@@ -205,19 +192,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PostsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/genres': {
-      id: '/admin/genres'
-      path: '/admin/genres'
-      fullPath: '/admin/genres'
-      preLoaderRoute: typeof AdminGenresRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminGenresRoute: AdminGenresRoute,
   PostsSlugRoute: PostsSlugRoute,
   ConcertsIndexRoute: ConcertsIndexRoute,
   ListeningIndexRoute: ListeningIndexRoute,

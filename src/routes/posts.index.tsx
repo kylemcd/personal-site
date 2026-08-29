@@ -17,6 +17,7 @@ export const Route = createFileRoute("/posts/")({
 		buildHead({
 			title: "Writing - Kyle McDonald",
 			url: "https://kpm.sh/posts",
+			image: "https://kpm.sh/open-graph/posts.png",
 		}),
 });
 

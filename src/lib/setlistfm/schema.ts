@@ -1,63 +1,39 @@
-import { z } from "zod";
+type SetlistSong = {
+	name: string;
+	cover?: { name?: string; mbid?: string };
+	tape?: boolean;
+	info?: string;
+};
 
-export const SetlistSongSchema = z.object({
-	name: z.string(),
-	cover: z
-		.object({
-			name: z.string().optional(),
-			mbid: z.string().optional(),
-		})
-		.optional(),
-	tape: z.boolean().optional(),
-	info: z.string().optional(),
-});
+type SetlistSet = {
+	name?: string;
+	encore?: number;
+	song: SetlistSong[];
+};
 
-export type SetlistSong = z.infer<typeof SetlistSongSchema>;
+export type SetlistArtist = {
+	name: string;
+	mbid: string;
+	url?: string;
+};
 
-export const SetlistSetSchema = z.object({
-	name: z.string().optional(),
-	encore: z.number().optional(),
-	song: z.array(SetlistSongSchema).optional().default([]),
-});
+type SetlistVenue = {
+	name: string;
+	city?: {
+		name?: string;
+		country?: { name?: string };
+	};
+};
 
-export type SetlistSet = z.infer<typeof SetlistSetSchema>;
-
-export const SetlistArtistSchema = z.object({
-	name: z.string(),
-	mbid: z.string().optional().default(""),
-	url: z.string().optional(),
-});
-
-export type SetlistArtist = z.infer<typeof SetlistArtistSchema>;
-
-export const SetlistVenueSchema = z.object({
-	name: z.string(),
-	city: z
-		.object({
-			name: z.string().optional(),
-			country: z
-				.object({ name: z.string().optional() })
-				.optional(),
-		})
-		.optional(),
-});
-
-export type SetlistVenue = z.infer<typeof SetlistVenueSchema>;
-
-export const SetlistSchema = z.object({
-	id: z.string(),
-	eventDate: z.string(),
-	artist: SetlistArtistSchema,
-	venue: SetlistVenueSchema,
-	tour: z.object({ name: z.string().optional() }).optional(),
-	sets: z
-		.object({ set: z.array(SetlistSetSchema).optional().default([]) })
-		.optional()
-		.default({ set: [] }),
-	url: z.string().optional().default(""),
-});
-
-export type Setlist = z.infer<typeof SetlistSchema>;
+export type Setlist = {
+	id: string;
+	eventDate: string;
+	artist: SetlistArtist;
+	venue: SetlistVenue;
+	tour?: { name?: string };
+	sets: { set: SetlistSet[] };
+	url: string;
+};
 
 /**
  * Normalized data shape consumed by the UI.
@@ -76,6 +52,8 @@ export type ConcertsData = {
 		artists: Array<{
 			name: string;
 			mbid: string | null;
+			/** Lifetime number of distinct attended shows for this artist. */
+			showCount: number;
 			setlistUrl: string;
 		}>;
 		venue: string;

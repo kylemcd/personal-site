@@ -1,7 +1,8 @@
 import { Result } from "better-result";
+import { z } from "zod";
 
-import { toComparableTimestampInCentral } from "@/lib/dates";
 import { markdown } from "@/lib/markdown";
+import { isPublicPost, sortPostsNewestFirst } from "./publication";
 import { publishedContent } from "./published-content";
 
 type PostSummary = {
@@ -9,6 +10,12 @@ type PostSummary = {
 	slug: string;
 	date: string;
 };
+
+const postFrontmatterSchema = z.object({
+	title: z.string().trim().min(1),
+	date: z.string().trim().min(1),
+	"substack-link": z.string().url().optional(),
+});
 
 const all = async ({
 	includeFuture = false,
@@ -18,42 +25,29 @@ const all = async ({
 	const publishedResult = await publishedContent.list();
 	if (Result.isError(publishedResult)) return publishedResult;
 
-	const now = Date.now();
-	const summaries: PostSummary[] = publishedResult.value
-		.filter((post) => {
-			if (post.draft) return false;
-			if (includeFuture) return true;
-			const timestamp = toComparableTimestampInCentral(post.date);
-			return Number.isNaN(timestamp) || timestamp <= now;
-		})
-		.map((post) => ({
-			title: post.title,
-			slug: post.slug,
-			date: post.date,
-		}))
-		.sort(
-			(left, right) =>
-				toComparableTimestampInCentral(right.date) -
-				toComparableTimestampInCentral(left.date),
-		);
+	const summaries: PostSummary[] = sortPostsNewestFirst(
+		publishedResult.value.filter((post) =>
+			isPublicPost(post, { includeFuture }),
+		),
+	).map((post) => ({
+		title: post.title,
+		slug: post.slug,
+		date: post.date,
+	}));
 
 	return Result.ok(summaries);
 };
 
-const find = async <F extends Record<string, string>>({
-	slug,
-}: {
-	slug: string;
-}) => {
+const find = async ({ slug }: { slug: string }) => {
 	const publishedResult = await publishedContent.find({ slug });
 	return publishedResult.andThen(({ markdown: rawMarkdown }) =>
-		markdown.fromRaw<F>({ rawMarkdown }),
+		markdown.fromRaw({ rawMarkdown, frontmatterSchema: postFrontmatterSchema }),
 	);
 };
 
 const getPostsWritingData = async () => {
 	const result = await all();
-	return { writing: Result.isOk(result) ? result.value : [] };
+	return { writing: result.unwrapOr([]) };
 };
 
 const posts = { all, find };

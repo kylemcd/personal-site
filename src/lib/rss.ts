@@ -2,8 +2,17 @@ import { Result, TaggedError } from "better-result";
 import { XMLBuilder } from "fast-xml-parser";
 
 import { toComparableTimestampInCentral } from "@/lib/dates";
-import { markdown } from "@/lib/markdown";
-import { publishedContent } from "@/lib/posts/published-content";
+import {
+	type InvalidFrontmatterError,
+	type InvalidMarkdownError,
+	markdown,
+	type ParseMarkdownError,
+} from "@/lib/markdown";
+import { isPublicPost, sortPostsNewestFirst } from "@/lib/posts/publication";
+import {
+	type PublishedContentError,
+	publishedContent,
+} from "@/lib/posts/published-content";
 import { combineResults } from "@/lib/result";
 import { SITE_URL } from "@/lib/site";
 
@@ -69,14 +78,25 @@ class RssCacheError extends TaggedError("RssCacheError")<{
 	readonly cause: unknown;
 }>() {}
 
-const createBlogRssFeed = async () => {
-	const documentsResult = await publishedContent.all();
-	if (Result.isError(documentsResult)) return documentsResult;
+type RssFeedError =
+	| PublishedContentError
+	| InvalidMarkdownError
+	| ParseMarkdownError
+	| InvalidFrontmatterError;
 
+const createBlogRssFeed = async (): Promise<Result<string, RssFeedError>> => {
+	const documentsResult = await publishedContent.all();
+	if (Result.isError(documentsResult)) {
+		return Result.err(documentsResult.error);
+	}
+
+	const publicDocuments = sortPostsNewestFirst(
+		documentsResult.value.filter((document) => isPublicPost(document)),
+	);
 	const feedPostsResult = combineResults(
-		documentsResult.value.map((document) =>
-			markdown.fromRaw({ rawMarkdown: document.markdown }).map(
-				({ content }) =>
+		publicDocuments.map((document) =>
+			markdown.toHtml({ rawMarkdown: document.markdown }).map(
+				(content) =>
 					({
 						title: document.title,
 						slug: document.slug,
@@ -86,7 +106,9 @@ const createBlogRssFeed = async () => {
 			),
 		),
 	);
-	if (Result.isError(feedPostsResult)) return feedPostsResult;
+	if (Result.isError(feedPostsResult)) {
+		return Result.err(feedPostsResult.error);
+	}
 	const feedPosts = feedPostsResult.value;
 
 	const lastBuildDate = feedPosts[0]
@@ -163,7 +185,6 @@ export {
 	createBlogRssFeed,
 	RSS_CACHE_KEY,
 	RSS_PATH,
-	RssCacheError,
 	readCachedBlogRssFeed,
 	refreshCachedBlogRssFeed,
 };

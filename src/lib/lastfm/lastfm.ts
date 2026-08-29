@@ -3,17 +3,17 @@ import { LASTFM_USERNAME } from "@/lib/config";
 import { env } from "@/lib/env";
 import { fetchFresh } from "@/lib/fetch";
 import { getOrComputeJson } from "@/lib/store";
-import { recordObservedArtistGenresBatch } from "./genre-taxonomy";
+import { toFullAlbumPlayCount } from "./album-play-counts";
 import {
 	type ArtistTagMap,
 	buildArtistTagMap,
 	buildSimilarTagMap,
 	buildTopGenresFromWeights,
-	getPrimaryGenreAssignments,
 	type SimilarTagMap,
 } from "./genres";
 import {
 	type Album,
+	AlbumInfoResponseSchema,
 	type ListeningData,
 	type NowPlayingAlbum,
 	RecentTracksResponseSchema,
@@ -37,6 +37,7 @@ const ALBUMS_LIMIT = 20;
 const MONTHLY_TOP_LIMIT = 200;
 export const LASTFM_MONTHLY_TOP_CACHE_KEY = "lastfm:monthly-top:v3";
 const LASTFM_MONTHLY_TOP_CACHE_TTL_SECONDS = 30 * 60; // 30 minutes
+const LASTFM_ALBUM_INFO_CACHE_TTL_SECONDS = 24 * 60 * 60; // 24 hours
 const WRAPPED_TOP_COUNT = 10;
 const WRAPPED_GENRE_COUNT = 6;
 const ARTIST_TAG_LIMIT = 6;
@@ -305,8 +306,8 @@ const extractListeningData = (
 	return { nowPlaying, albums, wrapped };
 };
 
-const parsePlayCount = (value: string): number => {
-	const parsed = Number.parseInt(value, 10);
+const parsePlayCount = (value: string | number): number => {
+	const parsed = typeof value === "number" ? value : Number.parseInt(value, 10);
 	return Number.isNaN(parsed) ? 0 : parsed;
 };
 
@@ -379,8 +380,13 @@ const getMonthlySessionStats = (params: {
 	let currentSessionCount = 1;
 
 	for (let i = 1; i < monthTrackTimes.length; i += 1) {
+		const currentTrackTime = monthTrackTimes[i];
+		const previousTrackTime = monthTrackTimes[i - 1];
+		if (currentTrackTime === undefined || previousTrackTime === undefined) {
+			continue;
+		}
 		const gapSeconds = Math.floor(
-			(monthTrackTimes[i]! - monthTrackTimes[i - 1]!) / 1000,
+			(currentTrackTime - previousTrackTime) / 1000,
 		);
 		if (gapSeconds <= SESSION_BREAK_SECONDS) {
 			currentSessionCount += 1;
@@ -479,10 +485,11 @@ const buildFunFacts = (params: {
 		(fact) =>
 			/\bKyle\b/.test(fact) || /^(this month,\s+)?(he|his)\b/i.test(fact),
 	);
+	const firstKyleFact = facts[firstKyleMentionIndex];
 	const orderedFacts =
-		firstKyleMentionIndex > 0
+		firstKyleMentionIndex > 0 && firstKyleFact
 			? [
-					facts[firstKyleMentionIndex]!,
+					firstKyleFact,
 					...facts.slice(0, firstKyleMentionIndex),
 					...facts.slice(firstKyleMentionIndex + 1),
 				]
@@ -525,11 +532,11 @@ const extractWrappedData = (params: {
 		nowMs,
 	} = params;
 
-	if (topTracks.length === 0 || topArtistsRaw.length === 0) return null;
-	const recentTrackArt = buildRecentTrackArtMap(recentTracks);
+	const topTrackRaw = topTracks.at(0);
+	const topArtistRaw = topArtistsRaw.at(0);
+	if (!topTrackRaw || !topArtistRaw) return null;
 
-	const topTrackRaw = topTracks[0]!;
-	const topArtistRaw = topArtistsRaw[0]!;
+	const recentTrackArt = buildRecentTrackArtMap(recentTracks);
 	const topArtistPlays = parsePlayCount(topArtistRaw.playcount);
 	const topTrackPlays = parsePlayCount(topTrackRaw.playcount);
 	const totalScrobbles = topTracks.reduce(
@@ -688,6 +695,72 @@ type CachedMonthlyTopData = {
 	similarGenreTags: SimilarTagMap;
 };
 
+type AlbumPlayCount = {
+	name: string;
+	artist: string;
+	plays: number;
+};
+
+const exactAlbumPlayCount = (album: Pick<Album, "artist" | "name">) => {
+	const params = new URLSearchParams({
+		api_key: env.LASTFM_API_KEY || "",
+		format: "json",
+		method: "album.getinfo",
+		artist: album.artist,
+		album: album.name,
+		username: LASTFM_USERNAME,
+		autocorrect: "1",
+	});
+	const cacheKey = encodeURIComponent(getAlbumKey(album.name, album.artist));
+
+	return getOrComputeJson<AlbumPlayCount | null, LastFmDataError>({
+		key: `lastfm:album-play-count:v2:${cacheKey}`,
+		ttlSeconds: LASTFM_ALBUM_INFO_CACHE_TTL_SECONDS,
+		compute: async () => {
+			const response = await fetchFresh({
+				url: `${LASTFM_API_URL}?${params.toString()}`,
+				method: "GET",
+				schema: AlbumInfoResponseSchema,
+			});
+			if (Result.isError(response)) {
+				return Result.err(new LastFmDataError({ error: response.error }));
+			}
+
+			const tracks = response.value.data.album.tracks?.track;
+			const trackCount = Array.isArray(tracks) ? tracks.length : tracks ? 1 : 0;
+			const plays = toFullAlbumPlayCount(
+				parsePlayCount(response.value.data.album.userplaycount),
+				trackCount,
+			);
+			if (plays === null) return Result.ok(null);
+
+			return Result.ok({
+				name: album.name,
+				artist: album.artist,
+				plays,
+			});
+		},
+	});
+};
+
+const albumPlayCounts = async (
+	albums: ReadonlyArray<Pick<Album, "artist" | "name">>,
+) => {
+	const exactResults = await Promise.all(
+		albums.map((album) => exactAlbumPlayCount(album)),
+	);
+	const exactMatches = exactResults.flatMap((result) => {
+		const match = result.unwrapOr(null);
+		return match ? [match] : [];
+	});
+	const firstError = exactResults.find((result) => Result.isError(result));
+	if (albums.length > 0 && exactMatches.length === 0 && firstError) {
+		return Result.err(firstError.error);
+	}
+
+	return Result.ok(exactMatches);
+};
+
 const monthlyTopData = () => {
 	const topTracksParams = new URLSearchParams({
 		...getBaseParams(),
@@ -745,7 +818,13 @@ const monthlyTopData = () => {
 			const primaryArtists = topArtistsRes.value.data.topartists.artist.map(
 				(artist) => getPrimaryArtist(artist.name),
 			);
-			const artistTopTags = await buildArtistTagMap(primaryArtists);
+			const artistTopTagsResult = await buildArtistTagMap(primaryArtists);
+			if (Result.isError(artistTopTagsResult)) {
+				return Result.err(
+					new LastFmDataError({ error: artistTopTagsResult.error }),
+				);
+			}
+			const artistTopTags = artistTopTagsResult.value;
 
 			const weightedArtists = topArtistsRes.value.data.topartists.artist.map(
 				(artist) => ({
@@ -754,31 +833,18 @@ const monthlyTopData = () => {
 					weight: parsePlayCount(artist.playcount),
 				}),
 			);
-			const similarGenreTags = await buildSimilarTagMap({
+			const similarGenreTagsResult = await buildSimilarTagMap({
 				weightedArtists,
 				artistTopTags,
 				artistTagLimit: ARTIST_TAG_LIMIT,
 				seedLimit: GENRE_SIMILAR_TAG_SAMPLE_LIMIT,
 			});
-			const assignments = getPrimaryGenreAssignments({
-				weightedArtists,
-				artistTopTags,
-				artistTagLimit: ARTIST_TAG_LIMIT,
-			});
-			const observationResult = await recordObservedArtistGenresBatch(
-				assignments.map((entry) => ({
-					artistKey: entry.artistKey,
-					artistName: entry.artistName,
-					genre: entry.genre,
-					source: "genre-rollup:lastfm",
-				})),
-			);
-			if (Result.isError(observationResult)) {
-				console.error(
-					"[lastfm] failed to record artist genre observations",
-					observationResult.error,
+			if (Result.isError(similarGenreTagsResult)) {
+				return Result.err(
+					new LastFmDataError({ error: similarGenreTagsResult.error }),
 				);
 			}
+			const similarGenreTags = similarGenreTagsResult.value;
 
 			return Result.ok({
 				topTracks: topTracksRes.value.data.toptracks.track,
@@ -834,6 +900,7 @@ const recentActivity = async (): Promise<
 const refreshMonthlyTop = () => monthlyTopData();
 
 const lastfm = {
+	albumPlayCounts,
 	recentActivity,
 	refreshMonthlyTop,
 };

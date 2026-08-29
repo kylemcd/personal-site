@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { Result } from "better-result";
 
 import { AlbumShelf } from "@/components/AlbumShelf";
 import { ErrorComponent } from "@/components/ErrorComponent";
@@ -13,7 +12,7 @@ import "@/styles/routes/listening.css";
 const getData = createServerFn({ method: "GET" }).handler(async () => {
 	const listeningResult = await lastfm.recentActivity();
 	return {
-		listening: Result.isOk(listeningResult) ? listeningResult.value : null,
+		listening: listeningResult.unwrapOr(null),
 	};
 });
 

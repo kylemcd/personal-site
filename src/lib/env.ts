@@ -6,18 +6,14 @@ const EnvSchema = z
 	.object({
 		GARAGE61_API_KEY: optionalString,
 		LASTFM_API_KEY: optionalString,
-		IRACING_EMAIL: optionalString,
-		IRACING_ENCODED_PASSWORD: optionalString,
+		SETLIST_FM_API_KEY: optionalString,
 		MUSIC_BRAINZ_CLIENT_ID: optionalString,
-		MUSIC_BRAINZ_CLIENT_SECRET: optionalString,
-		ADMIN_AUTH: optionalString,
-		CALENDAR_AUTH: optionalString,
 		KV_CACHE_VERSION: optionalString,
-		KV_READ_ONLY_CACHE: z
+		DEV_FRESH_DATA: z
 			.enum(["", "true", "false", "1", "0"])
 			.optional()
 			.default(""),
-		KV_ENABLE_GENRE_OBSERVATION_WRITES: z
+		KV_READ_ONLY_CACHE: z
 			.enum(["", "true", "false", "1", "0"])
 			.optional()
 			.default(""),
@@ -43,12 +39,11 @@ if (!parsed.success) {
 
 export const env = {
 	...parsed.data,
+	DEV_FRESH_DATA:
+		parsed.data.DEV_FRESH_DATA === "true" || parsed.data.DEV_FRESH_DATA === "1",
 	KV_READ_ONLY_CACHE:
 		parsed.data.KV_READ_ONLY_CACHE === "true" ||
 		parsed.data.KV_READ_ONLY_CACHE === "1",
-	KV_ENABLE_GENRE_OBSERVATION_WRITES:
-		parsed.data.KV_ENABLE_GENRE_OBSERVATION_WRITES === "true" ||
-		parsed.data.KV_ENABLE_GENRE_OBSERVATION_WRITES === "1",
 	KV_ENABLE_LOOKUP_STATUS_WRITES:
 		parsed.data.KV_ENABLE_LOOKUP_STATUS_WRITES === "true" ||
 		parsed.data.KV_ENABLE_LOOKUP_STATUS_WRITES === "1",

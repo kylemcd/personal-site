@@ -1,0 +1,208 @@
+.wordmark {
+	--wordmark-compact-width: clamp(7rem, 18vw, 13rem);
+
+	display: block;
+	color: var(--color-text-1);
+	text-decoration: none;
+}
+
+.wordmark[data-variant="hero"] {
+	width: 100%;
+}
+
+.wordmark[data-variant="compact"] {
+	width: var(--wordmark-compact-width);
+}
+
+.wordmark-art {
+	--wordmark-ink: #fff;
+	--wordmark-side: #4d4d4d;
+	--wordmark-underline: #9f9f9f;
+	--wordmark-pointer-x: 50%;
+	--wordmark-pointer-y: 50%;
+
+	position: relative;
+	display: block;
+	width: 100%;
+	aspect-ratio: 1595 / 628;
+	container-type: inline-size;
+	overflow: hidden;
+}
+
+.wordmark-art::before {
+	position: absolute;
+	inset: 0;
+	background-color: var(--color-bg-1);
+	-webkit-mask:
+		url("/images/kpm-wordmark-frame.svg") center / contain no-repeat;
+	mask: url("/images/kpm-wordmark-frame.svg") center / contain no-repeat;
+	content: "";
+}
+
+[data-appearance="light"] .wordmark-art {
+	--wordmark-ink: #000;
+	--wordmark-side: #b2b2b2;
+	--wordmark-underline: #606060;
+}
+
+.wordmark-art-static,
+.wordmark-art-static-ink,
+.wordmark-art-shader {
+	position: absolute;
+	inset: 0;
+}
+
+.wordmark-art-static,
+.wordmark-art-static-ink {
+	opacity: 0;
+	transition: opacity 180ms ease-out;
+}
+
+.wordmark-art-static-border,
+.wordmark-art-static-ink {
+	background-color: var(--wordmark-ink);
+}
+
+.wordmark-art-static-border {
+	-webkit-mask:
+		url("/images/kpm-wordmark-border-mask.svg") center / contain no-repeat;
+	mask: url("/images/kpm-wordmark-border-mask.svg") center / contain no-repeat;
+}
+
+.wordmark-art-static-side {
+	background-color: var(--wordmark-side);
+	-webkit-mask:
+		url("/images/kpm-wordmark-side-mask.svg") center / contain no-repeat;
+	mask: url("/images/kpm-wordmark-side-mask.svg") center / contain no-repeat;
+}
+
+.wordmark-art-static-ink {
+	-webkit-mask:
+		url("/images/kpm-wordmark-ink-mask.svg") center / contain no-repeat;
+	mask: url("/images/kpm-wordmark-ink-mask.svg") center / contain no-repeat;
+}
+
+.wordmark-art-static-underline {
+	background-color: var(--wordmark-underline);
+	-webkit-mask:
+		url("/images/kpm-wordmark-underline-mask.svg") center / contain no-repeat;
+	mask:
+		url("/images/kpm-wordmark-underline-mask.svg") center / contain no-repeat;
+}
+
+.wordmark-art-shader {
+	opacity: 0;
+	transition: opacity 180ms ease-out;
+	pointer-events: none;
+}
+
+.wordmark-art-shader-border {
+	z-index: 1;
+	-webkit-mask:
+		url("/images/kpm-wordmark-border-mask.svg") center / contain no-repeat;
+	mask: url("/images/kpm-wordmark-border-mask.svg") center / contain no-repeat;
+}
+
+.wordmark-art-shader-side {
+	z-index: 2;
+	-webkit-mask:
+		url("/images/kpm-wordmark-side-mask.svg") center / contain no-repeat;
+	mask: url("/images/kpm-wordmark-side-mask.svg") center / contain no-repeat;
+}
+
+.wordmark-art-shader-ink {
+	z-index: 3;
+	-webkit-mask:
+		url("/images/kpm-wordmark-ink-mask.svg") center / contain no-repeat;
+	mask: url("/images/kpm-wordmark-ink-mask.svg") center / contain no-repeat;
+}
+
+.wordmark-art-shader-underline {
+	z-index: 4;
+	-webkit-mask:
+		url("/images/kpm-wordmark-underline-mask.svg") center / contain no-repeat;
+	mask:
+		url("/images/kpm-wordmark-underline-mask.svg") center / contain no-repeat;
+}
+
+.wordmark-art-disturbance {
+	position: absolute;
+	z-index: 5;
+	inset: 0;
+	overflow: hidden;
+	transition: opacity 280ms ease-out;
+	-webkit-mask-image: radial-gradient(
+		circle clamp(2rem, 19cqi, 14rem) at var(--wordmark-pointer-x)
+			var(--wordmark-pointer-y),
+		#000 0,
+		rgb(0 0 0 / 94%) 18%,
+		rgb(0 0 0 / 72%) 40%,
+		rgb(0 0 0 / 46%) 60%,
+		rgb(0 0 0 / 24%) 76%,
+		rgb(0 0 0 / 9%) 88%,
+		rgb(0 0 0 / 2%) 96%,
+		transparent 100%
+	);
+	mask-image: radial-gradient(
+		circle clamp(2rem, 19cqi, 14rem) at var(--wordmark-pointer-x)
+			var(--wordmark-pointer-y),
+		#000 0,
+		rgb(0 0 0 / 94%) 18%,
+		rgb(0 0 0 / 72%) 40%,
+		rgb(0 0 0 / 46%) 60%,
+		rgb(0 0 0 / 24%) 76%,
+		rgb(0 0 0 / 9%) 88%,
+		rgb(0 0 0 / 2%) 96%,
+		transparent 100%
+	);
+	pointer-events: none;
+}
+
+.wordmark-art-shader-disturbance {
+	-webkit-mask:
+		url("/images/kpm-wordmark-disturbance-mask.svg") center / contain no-repeat;
+	mask:
+		url("/images/kpm-wordmark-disturbance-mask.svg") center / contain no-repeat;
+}
+
+.wordmark-art[data-static-visible="true"] .wordmark-art-static,
+.wordmark-art[data-static-visible="true"] .wordmark-art-static-ink {
+	opacity: 1;
+}
+
+.wordmark-art[data-shader-ready="true"] .wordmark-art-shader {
+	opacity: 1;
+}
+
+.wordmark:hover,
+.wordmark:focus-visible {
+	color: var(--color-text-2);
+	text-decoration: none;
+}
+
+.wordmark:focus-visible {
+	outline: 2px solid var(--color-focus);
+	outline-offset: var(--spc-2);
+}
+
+@keyframes home-wordmark-collapse {
+	to {
+		width: var(--wordmark-compact-width);
+		padding: var(--site-header-compact-top) 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wordmark-art-shader {
+		display: none;
+	}
+
+	.wordmark-art-disturbance {
+		display: none;
+	}
+
+	.wordmark-art-static,
+	.wordmark-art-static-ink {
+		transition: none;
+	}
+}
