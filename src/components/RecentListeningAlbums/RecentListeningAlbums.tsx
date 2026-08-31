@@ -18,10 +18,10 @@ type RecentListeningAlbumsProps = {
 	titleHref?: string;
 };
 
-function RecentListeningAlbums({
+const RecentListeningAlbums = ({
 	albums,
 	titleHref,
-}: RecentListeningAlbumsProps) {
+}: RecentListeningAlbumsProps) => {
 	const items: Array<FeaturedMediaMosaicItem> = albums
 		.slice(0, HOMEPAGE_ALBUM_LIMIT)
 		.map((album) => ({
@@ -43,6 +43,6 @@ function RecentListeningAlbums({
 			titleHref={titleHref}
 		/>
 	);
-}
+};
 
 export { RecentListeningAlbums };

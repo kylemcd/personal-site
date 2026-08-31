@@ -23,7 +23,7 @@ import {
 
 class RssTestError extends TaggedError("RssTestError")<{
 	readonly message: string;
-}>() {}
+}> {}
 
 const publishedDocument = ({ index }: { index: number }) => ({
 	id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,

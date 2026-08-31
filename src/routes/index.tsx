@@ -14,7 +14,7 @@ import {
 	type RecentListeningAlbumTile,
 } from "@/components/RecentListeningAlbums";
 import { Text } from "@/components/Text";
-import { WritingList } from "@/components/WritingList";
+import { HomepageWritingList } from "@/components/WritingList";
 import { deezer } from "@/lib/deezer";
 import { garage61 } from "@/lib/garage61";
 import { goodreads } from "@/lib/goodreads";
@@ -54,13 +54,11 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 			lastfm.albumPlayCounts(homepageAlbums),
 		]);
 	const imageByArtist = new Map(
-		deezerArtistImagesRes
-			.unwrapOr([])
-			.map((image) => [image.name.toLocaleLowerCase(), image]),
+		[
+			...deezerArtistImagesRes.unwrapOr([]),
+			...spotifyArtistImagesRes.unwrapOr([]),
+		].map((image) => [image.name.toLocaleLowerCase(), image]),
 	);
-	for (const image of spotifyArtistImagesRes.unwrapOr([])) {
-		imageByArtist.set(image.name.toLocaleLowerCase(), image);
-	}
 	const recentConcertArtists: Array<RecentConcertArtistTile> =
 		recentConcerts.flatMap((artist) => {
 			const image = imageByArtist.get(artist.name.toLocaleLowerCase());
@@ -116,6 +114,9 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 	if (Result.isError(albumPlayCountsRes)) {
 		console.error("Last.fm albumPlayCounts failed:", albumPlayCountsRes.error);
 	}
+	if (Result.isError(writingRes)) {
+		console.error("Published posts failed:", writingRes.error);
+	}
 
 	return {
 		writing,
@@ -127,43 +128,7 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 	};
 });
 
-export const Route = createFileRoute("/")({
-	component: HomeRoute,
-	loader: () => getData(),
-	errorComponent: ErrorComponent,
-	head: () => buildHead({ title: "Kyle McDonald" }),
-});
-
-type HomepageSectionFallbackProps = {
-	href: string;
-	message: string;
-	title: string;
-};
-
-function HomepageSectionFallback({
-	href,
-	message,
-	title,
-}: HomepageSectionFallbackProps) {
-	return (
-		<div className="section-container">
-			<Text as="h2" size="2">
-				<a className="section-heading-link" href={href}>
-					<span className="section-heading-label">{title}</span>
-					<i
-						className="hn hn-angle-right section-heading-icon"
-						aria-hidden="true"
-					/>
-				</a>
-			</Text>
-			<Text as="p" size="1" color="2">
-				{message}
-			</Text>
-		</div>
-	);
-}
-
-function HomeRoute() {
+const HomeRoute = () => {
 	const {
 		writing,
 		books,
@@ -173,18 +138,17 @@ function HomeRoute() {
 		recentListeningAlbums,
 	} = Route.useLoaderData();
 	const hasListeningContent = recentListeningAlbums.length > 0;
-	const hasBooks = Boolean(
-		(books?.reading?.length ?? 0) > 0 || (books?.finished?.length ?? 0) > 0,
-	);
+	const hasBooks = books.reading.length > 0 || books.finished.length > 0;
 	const hasRacingOverview = Boolean(
 		racing?.derived.overview.recentTracks.length ||
 			racing?.derived.overview.recentCars.length ||
 			racing?.derived.overview.totalTimeOnTrackSeconds,
 	);
 	const hasConcerts = Boolean(concerts && concerts.totalShows > 0);
-	const homepageBooks = [...books.reading, ...books.finished].filter(
-		(book, index, allBooks) =>
-			allBooks.findIndex((candidate) => candidate.slug === book.slug) === index,
+	const homepageBooks = Array.from(
+		new Map(
+			[...books.reading, ...books.finished].map((book) => [book.slug, book]),
+		).values(),
 	);
 
 	return (
@@ -199,7 +163,7 @@ function HomeRoute() {
 						/>
 					</a>
 				</Text>
-				<WritingList writing={writing} />
+				<HomepageWritingList writing={writing} />
 			</div>
 			{racing && hasRacingOverview ? (
 				<div className="section-container section-container-flush-right">
@@ -262,4 +226,40 @@ function HomeRoute() {
 			)}
 		</>
 	);
-}
+};
+
+export const Route = createFileRoute("/")({
+	component: HomeRoute,
+	loader: () => getData(),
+	errorComponent: ErrorComponent,
+	head: () => buildHead({ title: "Kyle McDonald" }),
+});
+
+type HomepageSectionFallbackProps = {
+	href: string;
+	message: string;
+	title: string;
+};
+
+const HomepageSectionFallback = ({
+	href,
+	message,
+	title,
+}: HomepageSectionFallbackProps) => {
+	return (
+		<div className="section-container">
+			<Text as="h2" size="2">
+				<a className="section-heading-link" href={href}>
+					<span className="section-heading-label">{title}</span>
+					<i
+						className="hn hn-angle-right section-heading-icon"
+						aria-hidden="true"
+					/>
+				</a>
+			</Text>
+			<Text as="p" size="1" color="2">
+				{message}
+			</Text>
+		</div>
+	);
+};

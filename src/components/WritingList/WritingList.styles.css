@@ -5,8 +5,11 @@
 	flex-direction: column;
 }
 
-.writing-item:hover > .writing-item-title {
-	text-decoration: underline;
+.writing-item-title {
+	text-decoration-color: var(--color-link-underline);
+	text-decoration-line: underline;
+	text-decoration-thickness: var(--spc-px);
+	text-underline-offset: 0.08em;
 }
 
 @media (min-width: 768px) {

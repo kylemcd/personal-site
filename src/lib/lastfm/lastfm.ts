@@ -29,7 +29,7 @@ import {
 
 class LastFmDataError extends TaggedError("LastFmDataError")<{
 	readonly error: unknown;
-}>() {
+}> {
 	override message = "Failed to fetch recent albums from Last.fm";
 }
 const LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";

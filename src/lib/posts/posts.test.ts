@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 
 class TestError extends TaggedError("TestError")<{
 	readonly message: string;
-}>() {}
+}> {}
 
 vi.mock("@/lib/markdown", () => ({
 	markdown: {

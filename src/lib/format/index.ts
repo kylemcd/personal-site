@@ -22,10 +22,13 @@ export const formatPercentLabel = (
 
 export const formatDuration = (seconds: number): string => {
 	if (seconds <= 0) return "0m";
-	const days = Math.floor(seconds / 86400);
-	const hours = Math.floor((seconds % 86400) / 3600);
-	const minutes = Math.round((seconds % 3600) / 60);
-	if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-	if (hours > 0) return `${hours}h ${minutes}m`;
+	const totalMinutes = Math.round(seconds / 60);
+	const days = Math.floor(totalMinutes / 1440);
+	const hours = Math.floor((totalMinutes % 1440) / 60);
+	const minutes = totalMinutes % 60;
+	const unitSeparator = "\u2007";
+	if (days > 0)
+		return [`${days}d`, `${hours}h`, `${minutes}m`].join(unitSeparator);
+	if (hours > 0) return [`${hours}h`, `${minutes}m`].join(unitSeparator);
 	return `${minutes}m`;
 };

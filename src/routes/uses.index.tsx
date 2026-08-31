@@ -14,6 +14,16 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 	return { items: result.value };
 });
 
+const UsesRoute = () => {
+	const { items } = Route.useLoaderData();
+
+	return (
+		<div className="section-container uses-page-section">
+			<UsesTable items={items} />
+		</div>
+	);
+};
+
 export const Route = createFileRoute("/uses/")({
 	component: UsesRoute,
 	loader: () => getData(),
@@ -26,13 +36,3 @@ export const Route = createFileRoute("/uses/")({
 			image: "https://kpm.sh/open-graph/uses.png",
 		}),
 });
-
-function UsesRoute() {
-	const { items } = Route.useLoaderData();
-
-	return (
-		<div className="section-container uses-page-section">
-			<UsesTable items={items} />
-		</div>
-	);
-}

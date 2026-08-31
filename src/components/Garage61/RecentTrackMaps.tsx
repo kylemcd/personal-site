@@ -14,77 +14,100 @@ type RecentTrackMapsProps = { tracks: Array<RecentTrack> };
 type TrackMapAssets = NonNullable<ReturnType<typeof getTrackMapAssets>>;
 
 type TrackDialogStyle = CSSProperties & {
-	"--track-dialog-origin-x": string;
-	"--track-dialog-origin-y": string;
-	"--track-dialog-origin-scale": number;
+	"--track-dialog-origin-bottom": string;
+	"--track-dialog-origin-left": string;
+	"--track-dialog-origin-right": string;
+	"--track-dialog-origin-top": string;
 };
 
 const defaultDialogStyle: TrackDialogStyle = {
-	"--track-dialog-origin-x": "0px",
-	"--track-dialog-origin-y": "0px",
-	"--track-dialog-origin-scale": 0.2,
+	"--track-dialog-origin-bottom": "40dvh",
+	"--track-dialog-origin-left": "40vw",
+	"--track-dialog-origin-right": "40vw",
+	"--track-dialog-origin-top": "40dvh",
 };
 
-function TrackMapLayers({
+const TrackMapBaseLayers = ({
 	assets,
-	detail = false,
 	label,
 }: {
 	assets: TrackMapAssets;
-	detail?: boolean;
 	label: string;
-}) {
+}) => {
 	return (
 		<div
 			className="g61-racing-track-map-layers"
 			role="img"
-			aria-label={
-				detail
-					? `${label} track map with turn labels, pit road, and start and finish`
-					: `${label} track map`
-			}
+			aria-label={`${label} track map`}
 		>
 			<img
 				className="g61-racing-track-map-image g61-racing-track-map-image-inactive"
 				src={assets.inactive}
 				alt=""
-				loading={detail ? "eager" : "lazy"}
+				loading="lazy"
 				decoding="async"
 			/>
 			<img
 				className="g61-racing-track-map-image g61-racing-track-map-image-active"
 				src={assets.active}
 				alt=""
-				loading={detail ? "eager" : "lazy"}
+				loading="lazy"
 				decoding="async"
 			/>
-			{detail ? (
-				<>
-					<img
-						className="g61-racing-track-detail-image g61-racing-track-detail-pitroad"
-						src={assets.pitroad}
-						alt=""
-						decoding="async"
-					/>
-					<img
-						className="g61-racing-track-detail-image g61-racing-track-detail-start-finish"
-						src={assets.startFinish}
-						alt=""
-						decoding="async"
-					/>
-					<img
-						className="g61-racing-track-detail-image g61-racing-track-detail-turns"
-						src={assets.turns}
-						alt=""
-						decoding="async"
-					/>
-				</>
-			) : null}
 		</div>
 	);
-}
+};
 
-function RecentTrackMapItem({ track }: { track: RecentTrack }) {
+const TrackMapDetailLayers = ({
+	assets,
+	label,
+}: {
+	assets: TrackMapAssets;
+	label: string;
+}) => {
+	return (
+		<div
+			className="g61-racing-track-map-layers"
+			role="img"
+			aria-label={`${label} track map with turn labels, pit road, and start and finish`}
+		>
+			<img
+				className="g61-racing-track-map-image g61-racing-track-map-image-inactive"
+				src={assets.inactive}
+				alt=""
+				loading="eager"
+				decoding="async"
+			/>
+			<img
+				className="g61-racing-track-map-image g61-racing-track-map-image-active"
+				src={assets.active}
+				alt=""
+				loading="eager"
+				decoding="async"
+			/>
+			<img
+				className="g61-racing-track-detail-image g61-racing-track-detail-pitroad"
+				src={assets.pitroad}
+				alt=""
+				decoding="async"
+			/>
+			<img
+				className="g61-racing-track-detail-image g61-racing-track-detail-start-finish"
+				src={assets.startFinish}
+				alt=""
+				decoding="async"
+			/>
+			<img
+				className="g61-racing-track-detail-image g61-racing-track-detail-turns"
+				src={assets.turns}
+				alt=""
+				decoding="async"
+			/>
+		</div>
+	);
+};
+
+const RecentTrackMapItem = ({ track }: { track: RecentTrack }) => {
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const [dialogStyle, setDialogStyle] =
 		useState<TrackDialogStyle>(defaultDialogStyle);
@@ -100,14 +123,13 @@ function RecentTrackMapItem({ track }: { track: RecentTrack }) {
 		const bounds = triggerRef.current?.getBoundingClientRect();
 		if (!bounds) return;
 
-		const dialogWidth = window.innerWidth;
+		const viewportWidth = document.documentElement.clientWidth;
+		const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
 		setDialogStyle({
-			"--track-dialog-origin-x": `${bounds.left + bounds.width / 2 - window.innerWidth / 2}px`,
-			"--track-dialog-origin-y": `${bounds.top + bounds.height / 2 - window.innerHeight / 2}px`,
-			"--track-dialog-origin-scale": Math.max(
-				0.12,
-				Math.min(0.55, bounds.width / dialogWidth),
-			),
+			"--track-dialog-origin-bottom": `${viewportHeight - bounds.bottom}px`,
+			"--track-dialog-origin-left": `${bounds.left}px`,
+			"--track-dialog-origin-right": `${viewportWidth - bounds.right}px`,
+			"--track-dialog-origin-top": `${bounds.top}px`,
 		});
 	};
 
@@ -122,9 +144,9 @@ function RecentTrackMapItem({ track }: { track: RecentTrack }) {
 				>
 					<div className="g61-racing-track-map-visual">
 						{mapAssets ? (
-							<TrackMapLayers assets={mapAssets} label={trackLabel} />
+							<TrackMapBaseLayers assets={mapAssets} label={trackLabel} />
 						) : (
-							<Text as="span" size="0" color="3" family="mono">
+							<Text as="span" size="0" color="3" family="tabular">
 								Map unavailable
 							</Text>
 						)}
@@ -145,13 +167,13 @@ function RecentTrackMapItem({ track }: { track: RecentTrack }) {
 							{track.variant}
 						</Text>
 					) : null}
-					<Text as="p" size="0" color="2" family="mono">
+					<Text as="p" size="0" color="2" family="tabular">
 						{formatDuration(track.timeOnTrackSeconds)}
 					</Text>
 				</div>
 
 				{mapAssets ? (
-					<Dialog.Portal>
+					<Dialog.Portal keepMounted>
 						<Dialog.Backdrop className="g61-racing-track-dialog-backdrop" />
 						<Dialog.Popup
 							className="g61-racing-track-dialog-popup"
@@ -182,7 +204,7 @@ function RecentTrackMapItem({ track }: { track: RecentTrack }) {
 							</div>
 
 							<div className="g61-racing-track-dialog-visual">
-								<TrackMapLayers assets={mapAssets} detail label={trackLabel} />
+								<TrackMapDetailLayers assets={mapAssets} label={trackLabel} />
 							</div>
 
 							<div className="g61-racing-track-map-legend">
@@ -211,9 +233,9 @@ function RecentTrackMapItem({ track }: { track: RecentTrack }) {
 			</Dialog.Root>
 		</article>
 	);
-}
+};
 
-function RecentTrackMaps({ tracks }: RecentTrackMapsProps) {
+const RecentTrackMaps = ({ tracks }: RecentTrackMapsProps) => {
 	return (
 		<div className="g61-racing-track-map-grid">
 			{tracks.map((track) => (
@@ -224,6 +246,6 @@ function RecentTrackMaps({ tracks }: RecentTrackMapsProps) {
 			))}
 		</div>
 	);
-}
+};
 
 export { RecentTrackMaps };

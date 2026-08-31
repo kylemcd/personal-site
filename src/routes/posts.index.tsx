@@ -10,18 +10,7 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 	return await getPostsWritingData();
 });
 
-export const Route = createFileRoute("/posts/")({
-	component: PostsRoute,
-	loader: () => getData(),
-	head: () =>
-		buildHead({
-			title: "Writing - Kyle McDonald",
-			url: "https://kpm.sh/posts",
-			image: "https://kpm.sh/open-graph/posts.png",
-		}),
-});
-
-function PostsRoute() {
+const PostsRoute = () => {
 	const { writing } = Route.useLoaderData();
 
 	return (
@@ -32,4 +21,15 @@ function PostsRoute() {
 			<WritingList writing={writing} />
 		</div>
 	);
-}
+};
+
+export const Route = createFileRoute("/posts/")({
+	component: PostsRoute,
+	loader: () => getData(),
+	head: () =>
+		buildHead({
+			title: "Writing - Kyle McDonald",
+			url: "https://kpm.sh/posts",
+			image: "https://kpm.sh/open-graph/posts.png",
+		}),
+});

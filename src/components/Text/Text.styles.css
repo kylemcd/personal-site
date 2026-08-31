@@ -67,6 +67,11 @@
 	font-family: var(--font-family-mono);
 }
 
+[data-text-family="tabular"] {
+	font-family: var(--font-family-sans);
+	font-variant-numeric: tabular-nums;
+}
+
 [data-text-weight="400"] {
 	font-weight: 400;
 }

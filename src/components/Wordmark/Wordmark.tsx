@@ -14,6 +14,8 @@ type WordmarkProps = {
 	variant?: "hero" | "compact";
 };
 
+type ShaderRenderStatus = "idle" | "loading" | "ready" | "failed";
+
 type Appearance = "light" | "dark";
 
 type BaseShaderLayer = "border" | "ink" | "side" | "underline";
@@ -95,7 +97,7 @@ const SHADER_CONTEXT_ATTRIBUTES: WebGLContextAttributes = {
 	premultipliedAlpha: true,
 };
 
-function mixHexColors(from: string, to: string, progress: number): string {
+const mixHexColors = (from: string, to: string, progress: number): string => {
 	const fromValue = Number.parseInt(from.slice(1), 16);
 	const toValue = Number.parseInt(to.slice(1), 16);
 	const amount = Math.min(Math.max(progress, 0), 1);
@@ -108,26 +110,26 @@ function mixHexColors(from: string, to: string, progress: number): string {
 	});
 
 	return `#${channels.join("")}`;
-}
+};
 
-function clamp(value: number, min: number, max: number): number {
+const clamp = (value: number, min: number, max: number): number => {
 	return Math.min(Math.max(value, min), max);
-}
+};
 
-function getPointerPoint(
+const getPointerPoint = (
 	clientX: number,
 	clientY: number,
 	element: HTMLElement,
-): Point {
+): Point => {
 	const bounds = element.getBoundingClientRect();
 
 	return {
 		x: clamp(((clientX - bounds.left) / bounds.width) * 2 - 1, -1, 1),
 		y: clamp(((clientY - bounds.top) / bounds.height) * 2 - 1, -1, 1),
 	};
-}
+};
 
-function useWordmarkShader(scrollLinked: boolean, allowShader: boolean) {
+const useWordmarkShader = (scrollLinked: boolean, allowShader: boolean) => {
 	const [state, setState] = useState<{
 		appearance: Appearance;
 		ditherType: "4x4" | "8x8";
@@ -230,9 +232,9 @@ function useWordmarkShader(scrollLinked: boolean, allowShader: boolean) {
 	}, [allowShader, scrollLinked]);
 
 	return state;
-}
+};
 
-function useHoverReveal(active: boolean, enabled: boolean) {
+const useHoverReveal = (active: boolean, enabled: boolean) => {
 	const [amount, setAmount] = useState(0);
 	const amountRef = useRef(0);
 
@@ -276,9 +278,9 @@ function useHoverReveal(active: boolean, enabled: boolean) {
 	}, [active, enabled]);
 
 	return amount;
-}
+};
 
-function StaticWordmark() {
+const StaticWordmark = () => {
 	return (
 		<>
 			<span className="wordmark-art-static wordmark-art-static-border" />
@@ -287,14 +289,13 @@ function StaticWordmark() {
 			<span className="wordmark-art-static wordmark-art-static-underline" />
 		</>
 	);
-}
+};
 
-function Wordmark({ variant = "hero" }: WordmarkProps) {
+const Wordmark = ({ variant = "hero" }: WordmarkProps) => {
 	const [hovered, setHovered] = useState(false);
 	const [focused, setFocused] = useState(false);
 	const [touching, setTouching] = useState(false);
-	const [shaderReady, setShaderReady] = useState(false);
-	const [shaderFailed, setShaderFailed] = useState(false);
+	const [shaderStatus, setShaderStatus] = useState<ShaderRenderStatus>("idle");
 	const [pointerDisturbance, setPointerDisturbance] = useState(0);
 	const artRef = useRef<HTMLSpanElement>(null);
 	const disturbanceRef = useRef<HTMLSpanElement>(null);
@@ -316,9 +317,10 @@ function Wordmark({ variant = "hero" }: WordmarkProps) {
 	const shader = useWordmarkShader(variant === "hero", true);
 	const shaderProgress = useRef(shader.progress);
 	shaderProgress.current = shader.progress;
+	const shaderReady = shaderStatus === "ready";
 	const showStaticWordmark =
 		variant === "compact" ||
-		(shader.resolved && (!shader.enabled || shaderFailed));
+		(shader.resolved && (!shader.enabled || shaderStatus === "failed"));
 	const hoverReveal = useHoverReveal(
 		hovered || focused || touching,
 		shader.enabled,
@@ -518,22 +520,21 @@ function Wordmark({ variant = "hero" }: WordmarkProps) {
 
 	useEffect(() => {
 		if (!shader.enabled || !artRef.current) {
-			setShaderReady(false);
-			setShaderFailed(false);
+			setShaderStatus("idle");
 			return;
 		}
 
 		const art = artRef.current;
+		setShaderStatus("loading");
 		const updateReadiness = () => {
 			const canvases = art.querySelectorAll(".wordmark-art-shader canvas");
 			const ready = canvases.length === SHADER_LAYER_COUNT;
-			setShaderReady(ready);
-			if (ready) setShaderFailed(false);
+			if (ready) setShaderStatus("ready");
 		};
 		const observer = new MutationObserver(updateReadiness);
 		const fallbackTimer = window.setTimeout(() => {
 			const canvases = art.querySelectorAll(".wordmark-art-shader canvas");
-			if (canvases.length !== SHADER_LAYER_COUNT) setShaderFailed(true);
+			if (canvases.length !== SHADER_LAYER_COUNT) setShaderStatus("failed");
 		}, 1_500);
 
 		observer.observe(art, { childList: true, subtree: true });
@@ -816,6 +817,6 @@ function Wordmark({ variant = "hero" }: WordmarkProps) {
 			</span>
 		</Link>
 	);
-}
+};
 
 export { Wordmark };

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { type Ref, useEffect, useRef } from "react";
 
 import { Text } from "@/components/Text/Text";
 import type { Book } from "@/lib/goodreads";
@@ -12,15 +12,42 @@ type BookshelfProps = {
 
 type BookCardProps = {
 	book: Book;
-	masonry?: boolean;
+	bookRef?: Ref<HTMLDivElement>;
 };
 
-function BookCard({ book, masonry = false }: BookCardProps) {
+const BookCard = ({ book, bookRef }: BookCardProps) => {
+	return (
+		<div className="book" ref={bookRef}>
+			{book.cover ? (
+				<div className="cover">
+					<img src={book.cover} alt={book.title} />
+				</div>
+			) : (
+				<div className="text-cover">
+					<Text as="p" size="1" align="center" weight="500">
+						{book.title}
+					</Text>
+					<Text as="p" size="0" align="center">
+						{book.authors.map((author) => author.name).join(", ")}
+					</Text>
+				</div>
+			)}
+			<a
+				className="link"
+				href={`https://www.goodreads.com/book/show/${book.slug}`}
+				target="_blank"
+				rel="noopener noreferrer"
+			>
+				<span className="sr-only">View {book.title} on Goodreads</span>
+			</a>
+		</div>
+	);
+};
+
+const MasonryBookCard = ({ book }: { book: Book }) => {
 	const bookRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		if (!masonry) return;
-
 		const bookElement = bookRef.current;
 		const bookshelfElement = bookElement?.parentElement;
 		if (!bookElement || !bookshelfElement) return;
@@ -62,46 +89,25 @@ function BookCard({ book, masonry = false }: BookCardProps) {
 			cancelAnimationFrame(animationFrame);
 			resizeObserver.disconnect();
 		};
-	}, [masonry]);
+	}, []);
 
-	return (
-		<div className="book" ref={bookRef}>
-			{book.cover ? (
-				<div className="cover">
-					<img src={book.cover} alt={book.title} />
-				</div>
-			) : (
-				<div className="text-cover">
-					<Text as="p" size="1" align="center" weight="500">
-						{book.title}
-					</Text>
-					<Text as="p" size="0" align="center">
-						{book.authors.map((author) => author.name).join(", ")}
-					</Text>
-				</div>
-			)}
-			<a
-				className="link"
-				href={`https://www.goodreads.com/book/show/${book.slug}`}
-				target="_blank"
-				rel="noopener noreferrer"
-			>
-				<span className="sr-only">View {book.title} on Goodreads</span>
-			</a>
-		</div>
-	);
-}
+	return <BookCard book={book} bookRef={bookRef} />;
+};
 
-function Bookshelf({ books, variant = "row" }: BookshelfProps) {
-	if (!books) return null;
+const Bookshelf = ({ books, variant = "row" }: BookshelfProps) => {
+	if (books.length === 0) return null;
 
 	return (
 		<div className="bookshelf" data-variant={variant}>
-			{books.map((book) => (
-				<BookCard book={book} key={book.slug} masonry={variant === "masonry"} />
-			))}
+			{books.map((book) =>
+				variant === "masonry" ? (
+					<MasonryBookCard book={book} key={book.slug} />
+				) : (
+					<BookCard book={book} key={book.slug} />
+				),
+			)}
 		</div>
 	);
-}
+};
 
 export { Bookshelf };

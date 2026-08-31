@@ -1,10 +1,11 @@
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { Footer } from "@/components/Footer";
 import { SiteHeader } from "@/components/SiteHeader";
 import { buildMeta } from "@/lib/meta";
 import "@/styles/global.css";
 
-function initializeTheme() {
+const initializeTheme = () => {
 	const themeCookie = document.cookie
 		.split("; ")
 		.find((row) => row.startsWith("theme="))
@@ -20,23 +21,11 @@ function initializeTheme() {
 			prefersDark ? "dark" : "light",
 		);
 	}
-}
+};
 
 const themeScript = `(${initializeTheme.toString()})();`;
 
-export const Route = createRootRoute({
-	head: () => ({
-		meta: [
-			{ charSet: "utf-8" },
-			{ name: "viewport", content: "width=device-width, initial-scale=1" },
-			...buildMeta({ title: "Kyle McDonald" }),
-		],
-	}),
-
-	shellComponent: RootDocument,
-});
-
-function RootDocument({ children }: { children: React.ReactNode }) {
+const RootDocument = ({ children }: { children: ReactNode }) => {
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<head>
@@ -67,4 +56,16 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			</body>
 		</html>
 	);
-}
+};
+
+export const Route = createRootRoute({
+	head: () => ({
+		meta: [
+			{ charSet: "utf-8" },
+			{ name: "viewport", content: "width=device-width, initial-scale=1" },
+			...buildMeta({ title: "Kyle McDonald" }),
+		],
+	}),
+
+	shellComponent: RootDocument,
+});

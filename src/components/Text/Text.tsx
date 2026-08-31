@@ -1,16 +1,18 @@
+import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
+
 import "./Text.styles.css";
 
-type TextProps<T extends React.ElementType> = {
+type TextProps<T extends ElementType> = {
 	as?: T;
 	size?: "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
 	color?: "1" | "2" | "3" | "light";
 	weight?: "400" | "500" | "600";
-	family?: "sans" | "mono";
+	family?: "sans" | "mono" | "tabular";
 	align?: "left" | "center" | "right";
-	children?: React.ReactNode;
-} & React.ComponentPropsWithoutRef<T>;
+	children?: ReactNode;
+} & ComponentPropsWithoutRef<T>;
 
-function Text<T extends React.ElementType>({
+const Text = <T extends ElementType>({
 	as,
 	size = "3",
 	color = "1",
@@ -18,7 +20,7 @@ function Text<T extends React.ElementType>({
 	family = "sans",
 	align = "left",
 	...props
-}: TextProps<T>) {
+}: TextProps<T>) => {
 	const Component = as || "span";
 	return (
 		<Component
@@ -30,6 +32,6 @@ function Text<T extends React.ElementType>({
 			{...props}
 		/>
 	);
-}
+};
 
 export { Text };

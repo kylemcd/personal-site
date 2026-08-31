@@ -1,3 +1,15 @@
+.experience-groups {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spc-4);
+}
+
+.experience-group {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spc-1);
+}
+
 .experience-list {
 	display: flex;
 	flex-direction: column;
@@ -6,33 +18,88 @@
 }
 
 .experience-list-item {
+	display: grid;
+	grid-template-columns: 1.5rem minmax(0, 1fr);
 	align-items: center;
-	display: flex;
-	flex-direction: row;
-	justify-content: space-between;
-	gap: var(--spc-4);
-	width: var(--spc-full);
+	column-gap: var(--spc-2);
 	padding: var(--spc-1) 0;
 }
 
-.experience-list-item-info {
-	align-items: center;
+.experience-list-item-logo {
+	display: block;
+	align-self: center;
+	justify-self: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	overflow: hidden;
+	border-radius: var(--rnd-2);
+}
+
+.experience-logo {
+	--experience-logo-background: #000;
+	--experience-logo-mark: #fff;
+	--experience-logo-accent: #ff543d;
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.experience-logo-background {
+	fill: var(--experience-logo-background);
+}
+
+.experience-logo-mark {
+	fill: var(--experience-logo-mark);
+}
+
+.experience-logo-accent {
+	fill: var(--experience-logo-accent);
+}
+
+.experience-logo-raster {
+	position: relative;
+}
+
+.experience-logo-image {
+	position: absolute;
+	inset: 0;
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.experience-logo[data-logo="foxtrot"] .experience-logo-image {
+	transform: scale(1.14);
+}
+
+.experience-logo-image-dark {
+	display: none;
+}
+
+[data-appearance="dark"] .experience-logo-image-light {
+	display: none;
+}
+
+[data-appearance="dark"] .experience-logo-image-dark {
+	display: block;
+}
+
+[data-appearance="dark"] .experience-logo[data-logo="knock"] {
+	--experience-logo-background: #fafafa;
+	--experience-logo-mark: #202326;
+}
+
+.experience-list-item-copy {
 	display: flex;
-	flex-direction: row;
-	gap: var(--spc-3);
-	order: 3;
-}
-
-.experience-list-item-info-date {
-	font-variant-numeric: tabular-nums;
-}
-
-.experience-list-item-link-container {
 	align-items: center;
-	display: flex;
-	gap: var(--spc-2);
+	column-gap: 0.25em;
+	min-width: 0;
 }
 
-.experience-list-item-link:hover {
-	text-decoration: underline;
+.experience-list-item-link {
+	text-decoration-color: var(--color-link-underline);
+	text-decoration-line: underline;
+	text-decoration-thickness: var(--spc-px);
+	text-underline-offset: 0.08em;
 }

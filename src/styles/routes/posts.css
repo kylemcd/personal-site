@@ -191,7 +191,10 @@
 }
 
 [data-post] a {
-	text-decoration: underline;
+	text-decoration-color: var(--color-link-underline);
+	text-decoration-line: underline;
+	text-decoration-thickness: var(--spc-px);
+	text-underline-offset: 0.08em;
 }
 
 @media (max-width: 640px) {

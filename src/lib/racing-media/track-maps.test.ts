@@ -14,7 +14,7 @@ describe("R2 racing track maps", () => {
 		).toBe("tracks/iracing/192/active.svg");
 		expect(
 			getRacingTrackMapPath({ platformId: 192, layer: "start-finish" }),
-		).toBe("/media/racing/tracks/192/start-finish.svg?source=r2-svg-v1");
+		).toBe("/media/racing/tracks/192/start-finish.svg?source=r2-svg-v2");
 	});
 
 	it("parses only valid track-map routes", () => {

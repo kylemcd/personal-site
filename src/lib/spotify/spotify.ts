@@ -50,7 +50,7 @@ class SpotifyArtistImageError extends TaggedError("SpotifyArtistImageError")<{
 	readonly artistName: string;
 	readonly cause: unknown;
 	readonly message: string;
-}>() {}
+}> {}
 
 const normalizeName = (value: string): string =>
 	value

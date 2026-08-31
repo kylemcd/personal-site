@@ -147,7 +147,7 @@ describe("Garage61", () => {
 			dialog
 				.querySelector(".g61-racing-track-detail-turns")
 				?.getAttribute("src"),
-		).toBe("/media/racing/tracks/179/turns.svg?source=r2-svg-v1");
+		).toBe("/media/racing/tracks/179/turns.svg?source=r2-svg-v2");
 	});
 
 	it("renders R2 car images without requiring a checked-in source entry", () => {

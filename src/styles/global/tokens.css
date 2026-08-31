@@ -5,6 +5,7 @@
 	--color-text-1: rgb(245, 245, 242);
 	--color-text-2: rgb(166, 165, 160);
 	--color-text-3: rgb(104, 103, 99);
+	--color-link-underline: rgb(132, 131, 126);
 
 	--color-text-light: rgb(245, 245, 242);
 	--color-bg-dark: rgb(5, 5, 5);
@@ -46,6 +47,7 @@
 	--color-text-1: rgb(8, 8, 8);
 	--color-text-2: rgb(65, 64, 61);
 	--color-text-3: rgb(112, 110, 105);
+	--color-link-underline: rgb(146, 144, 138);
 
 	--color-ui-1: rgb(218, 217, 211);
 	--color-ui-2: rgb(185, 183, 176);

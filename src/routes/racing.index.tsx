@@ -17,19 +17,7 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 	return { racing: racingResult.value };
 });
 
-export const Route = createFileRoute("/racing/")({
-	component: RacingRoute,
-	loader: () => getData(),
-	errorComponent: ErrorComponent,
-	head: () =>
-		buildHead({
-			title: "Racing - Kyle McDonald",
-			url: "https://kpm.sh/racing",
-			image: "https://kpm.sh/open-graph/racing.png",
-		}),
-});
-
-function RacingRoute() {
+const RacingRoute = () => {
 	const { racing } = Route.useLoaderData();
 	const hasRacingOverview = Boolean(
 		racing?.derived.overview.recentTracks.length ||
@@ -52,4 +40,16 @@ function RacingRoute() {
 			<Garage61 overview={racing.derived.overview} />
 		</div>
 	);
-}
+};
+
+export const Route = createFileRoute("/racing/")({
+	component: RacingRoute,
+	loader: () => getData(),
+	errorComponent: ErrorComponent,
+	head: () =>
+		buildHead({
+			title: "Racing - Kyle McDonald",
+			url: "https://kpm.sh/racing",
+			image: "https://kpm.sh/open-graph/racing.png",
+		}),
+});

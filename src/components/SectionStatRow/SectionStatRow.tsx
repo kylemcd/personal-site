@@ -1,23 +1,25 @@
+import type { HTMLAttributes, ReactNode } from "react";
+
 import "./SectionStatRow.styles.css";
 
 type SectionStatItem = {
 	key: string;
-	label: React.ReactNode;
-	value: React.ReactNode;
-	subline?: React.ReactNode;
+	label: ReactNode;
+	value: ReactNode;
+	subline?: ReactNode;
 };
 
 type SectionStatRowProps = {
 	items: Array<SectionStatItem>;
 	align?: "start" | "center";
-} & React.HTMLAttributes<HTMLDivElement>;
+} & HTMLAttributes<HTMLDivElement>;
 
-function SectionStatRow({
+const SectionStatRow = ({
 	items,
 	align = "start",
 	className,
 	...rest
-}: SectionStatRowProps) {
+}: SectionStatRowProps) => {
 	const rowClasses = ["section-stat-row", className].filter(Boolean).join(" ");
 
 	return (
@@ -31,6 +33,6 @@ function SectionStatRow({
 			))}
 		</div>
 	);
-}
+};
 
 export { SectionStatRow };

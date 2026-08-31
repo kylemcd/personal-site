@@ -8,7 +8,7 @@ import { Wordmark } from "@/components/Wordmark";
 
 import "./SiteHeader.styles.css";
 
-function SiteHeader() {
+const SiteHeader = () => {
 	const { pathname } = useLocation();
 	const compact = pathname !== "/";
 	const headerRef = useRef<HTMLElement>(null);
@@ -115,6 +115,6 @@ function SiteHeader() {
 			</div>
 		</header>
 	);
-}
+};
 
 export { SiteHeader };

@@ -11,7 +11,7 @@ import slugify from "slugify";
 
 import { prismTokensToMarkdocTags } from "./helpers";
 
-// We need to import like this to avoid weird server / client boundary cjs issues.
+// Markdoc's CommonJS default export is the only shape shared by both bundles.
 const { Tag } = markdocPkg;
 
 export const nodes = {
@@ -21,7 +21,7 @@ export const nodes = {
 			level: { type: Number, required: true, default: 1 },
 			className: { type: String },
 		},
-		transform(node: Node, config: Config) {
+		transform: (node: Node, config: Config) => {
 			const { level } = node.attributes;
 
 			const textContent = node.transformChildren(config);
@@ -39,15 +39,13 @@ export const nodes = {
 			content: { type: String, required: true },
 			language: { type: String, default: "text" },
 		},
-		transform(node: Node) {
+		transform: (node: Node) => {
 			const { content, language } = node.attributes;
 
-			/* ───────────────────────── mermaid block ─────────────────────────── */
 			if (language === "mermaid") {
 				return new Tag("pre", { class: "mermaid" }, content);
 			}
 
-			/* ───────────────────────── prism block ─────────────────────────── */
 			const grammar = (Prism.languages[language] ??
 				Prism.languages.text) as import("prismjs").Grammar;
 			const html = prismTokensToMarkdocTags(Prism.tokenize(content, grammar));

@@ -21,7 +21,7 @@ import type { ConcertsData, Setlist, SetlistArtist } from "./schema";
 
 class SetlistFmDataError extends TaggedError("SetlistFmDataError")<{
 	readonly error: unknown;
-}>() {
+}> {
 	override message = "Failed to load attended concerts";
 }
 

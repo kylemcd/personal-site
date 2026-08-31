@@ -4,7 +4,7 @@ import { getPostsWritingData } from "@/lib/posts/posts";
 
 class MarkdownTestError extends TaggedError("MarkdownTestError")<{
 	readonly message: string;
-}>() {}
+}> {}
 
 vi.mock("@/lib/posts/published-content", () => ({
 	publishedContent: {

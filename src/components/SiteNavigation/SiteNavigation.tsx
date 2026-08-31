@@ -15,7 +15,7 @@ const NAVIGATION_ITEMS = [
 	{ label: "Uses", to: "/uses" },
 ] as const;
 
-function SiteNavigation() {
+const SiteNavigation = () => {
 	const { pathname } = useLocation();
 
 	return (
@@ -70,6 +70,6 @@ function SiteNavigation() {
 			</Menu.Root>
 		</nav>
 	);
-}
+};
 
 export { SiteNavigation };

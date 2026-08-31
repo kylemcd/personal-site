@@ -74,7 +74,7 @@ const formatGapDays = (days: number | null): string =>
 const formatAvgLength = (avg: number): string =>
 	avg > 0 ? `${avg.toFixed(1)} songs` : "—";
 
-function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
+const ConcertsSection = ({ concerts, titleHref }: ConcertsSectionProps) => {
 	const hasShows = concerts.totalShows > 0;
 	const topGenres = concerts.topGenres ?? [];
 	const hasGenres = topGenres.length > 2;
@@ -121,7 +121,7 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 					as="p"
 					size="0"
 					color="2"
-					family="mono"
+					family="tabular"
 					className="concerts-section-window"
 				>
 					{concerts.firstShowYear
@@ -144,7 +144,7 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 							<Text
 								as="p"
 								size="3"
-								family="mono"
+								family="tabular"
 								className="concerts-kpi-value"
 							>
 								{concerts.totalShows}
@@ -157,7 +157,7 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 							<Text
 								as="p"
 								size="3"
-								family="mono"
+								family="tabular"
 								className="concerts-kpi-value"
 							>
 								{concerts.uniqueArtists}
@@ -171,7 +171,7 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 								<Text
 									as="p"
 									size="3"
-									family="mono"
+									family="tabular"
 									className="concerts-kpi-value"
 								>
 									{formatAvgLength(concerts.setlistStats.averageLength)}
@@ -186,7 +186,7 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 								<Text
 									as="p"
 									size="3"
-									family="mono"
+									family="tabular"
 									className="concerts-kpi-value"
 								>
 									{`${concerts.setlistStats.longestSetlist.songCount} songs`}
@@ -208,7 +208,7 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 							<Text
 								as="p"
 								size="3"
-								family="mono"
+								family="tabular"
 								className="concerts-kpi-value"
 							>
 								{concerts.showsByYear
@@ -223,7 +223,7 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 							<Text
 								as="p"
 								size="3"
-								family="mono"
+								family="tabular"
 								className="concerts-kpi-value"
 							>
 								{formatGapDays(concerts.records.avgDaysBetweenShows)}
@@ -236,7 +236,7 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 							<Text
 								as="p"
 								size="3"
-								family="mono"
+								family="tabular"
 								className="concerts-kpi-value"
 							>
 								{concerts.records.biggestMonth
@@ -261,7 +261,7 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 							<Text
 								as="p"
 								size="3"
-								family="mono"
+								family="tabular"
 								className="concerts-kpi-value"
 							>
 								{concerts.records.biggestWeek
@@ -400,7 +400,7 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 													as="p"
 													size="0"
 													color="2"
-													family="mono"
+													family="tabular"
 													className="concerts-recent-date"
 												>
 													{dateLabel}
@@ -454,6 +454,6 @@ function ConcertsSection({ concerts, titleHref }: ConcertsSectionProps) {
 			)}
 		</div>
 	);
-}
+};
 
 export { ConcertsSection };

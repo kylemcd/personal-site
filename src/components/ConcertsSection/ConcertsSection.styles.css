@@ -111,15 +111,10 @@
 }
 
 .concerts-recent-artist-link {
-	text-decoration: underline;
+	text-decoration-color: var(--color-link-underline);
+	text-decoration-line: underline;
 	text-decoration-thickness: var(--spc-px);
-	text-underline-offset: calc(var(--spc-px) * 2);
-	text-decoration-color: var(--color-text-3);
-	transition: color 0.1s ease-out;
-}
-
-.concerts-recent-artist-link:hover {
-	color: var(--color-text-3);
+	text-underline-offset: 0.08em;
 }
 
 .concerts-recent-separator {

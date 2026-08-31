@@ -17,12 +17,12 @@ type FeaturedMediaMosaicProps = {
 	titleHref?: string | undefined;
 };
 
-function FeaturedMediaMosaic({
+const FeaturedMediaMosaic = ({
 	items,
 	layout = "featured",
 	title,
 	titleHref,
-}: FeaturedMediaMosaicProps) {
+}: FeaturedMediaMosaicProps) => {
 	if (items.length === 0) return null;
 
 	return (
@@ -94,6 +94,6 @@ function FeaturedMediaMosaic({
 			</div>
 		</section>
 	);
-}
+};
 
 export { FeaturedMediaMosaic };

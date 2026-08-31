@@ -14,19 +14,7 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 	};
 });
 
-export const Route = createFileRoute("/concerts/")({
-	component: ConcertsRoute,
-	loader: () => getData(),
-	errorComponent: ErrorComponent,
-	head: () =>
-		buildHead({
-			title: "Concerts - Kyle McDonald",
-			url: "https://kpm.sh/concerts",
-			image: "https://kpm.sh/open-graph/concerts.png",
-		}),
-});
-
-function ConcertsRoute() {
+const ConcertsRoute = () => {
 	const { concerts } = Route.useLoaderData();
 	const hasConcerts = Boolean(concerts && concerts.totalShows > 0);
 
@@ -45,4 +33,16 @@ function ConcertsRoute() {
 			<ConcertsSection concerts={concerts} />
 		</div>
 	);
-}
+};
+
+export const Route = createFileRoute("/concerts/")({
+	component: ConcertsRoute,
+	loader: () => getData(),
+	errorComponent: ErrorComponent,
+	head: () =>
+		buildHead({
+			title: "Concerts - Kyle McDonald",
+			url: "https://kpm.sh/concerts",
+			image: "https://kpm.sh/open-graph/concerts.png",
+		}),
+});

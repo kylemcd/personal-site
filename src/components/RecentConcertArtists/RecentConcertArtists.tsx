@@ -15,10 +15,10 @@ type RecentConcertArtistsProps = {
 	titleHref?: string;
 };
 
-function RecentConcertArtists({
+const RecentConcertArtists = ({
 	artists,
 	titleHref,
-}: RecentConcertArtistsProps) {
+}: RecentConcertArtistsProps) => {
 	const items: Array<FeaturedMediaMosaicItem> = artists.map((artist) => ({
 		accessibleLabel: `${artist.name}, seen at ${artist.showCount} ${artist.showCount === 1 ? "show" : "shows"}`,
 		href: artist.artistPageUrl,
@@ -30,6 +30,6 @@ function RecentConcertArtists({
 	return (
 		<FeaturedMediaMosaic items={items} title="Concerts" titleHref={titleHref} />
 	);
-}
+};
 
 export { RecentConcertArtists };

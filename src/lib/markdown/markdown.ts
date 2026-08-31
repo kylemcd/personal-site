@@ -6,7 +6,7 @@ import { type ZodType, z } from "zod";
 import { toErrorDetails } from "@/lib/error-details";
 import { nodes } from "./nodes";
 
-// We need to import like this to avoid weird server / client boundary cjs issues.
+// Markdoc's CommonJS default export is the only shape shared by both bundles.
 const { transform, parse, renderers } = markdocPkg;
 
 type MarkdownErrorDetails = {
@@ -16,13 +16,13 @@ type MarkdownErrorDetails = {
 
 class InvalidMarkdownError extends TaggedError(
 	"InvalidMarkdownError",
-)<MarkdownErrorDetails>() {
+)<MarkdownErrorDetails> {
 	override message = "Invalid markdown content provided.";
 }
 
 class ParseMarkdownError extends TaggedError(
 	"ParseMarkdownError",
-)<MarkdownErrorDetails>() {
+)<MarkdownErrorDetails> {
 	override message = "Unable to parse the provided markdown content.";
 }
 
@@ -53,7 +53,7 @@ const toHtml = ({
 
 class InvalidFrontmatterError extends TaggedError(
 	"InvalidFrontmatterError",
-)<MarkdownErrorDetails>() {
+)<MarkdownErrorDetails> {
 	override message = "Invalid frontmatter provided.";
 }
 
@@ -132,7 +132,6 @@ export type TableOfContentsItem = {
 };
 
 const toTableOfContents = (html: string): Array<TableOfContentsItem> => {
-	// Use regex to find all headings and their IDs
 	const headingRegex = /<h([1-6])[^>]*?id="([^"]*?)"[^>]*?>([^<]*?)<\/h[1-6]>/g;
 	const headings = Array.from(html.matchAll(headingRegex)).map(
 		([, level = "1", id = "", text = ""]) => ({
@@ -142,7 +141,6 @@ const toTableOfContents = (html: string): Array<TableOfContentsItem> => {
 		}),
 	);
 
-	// Convert to TableOfContentsItems
 	const items = headings.map((heading) => ({
 		text: heading.text,
 		level: heading.level,
@@ -150,7 +148,6 @@ const toTableOfContents = (html: string): Array<TableOfContentsItem> => {
 		children: [],
 	}));
 
-	// Nest the items
 	const result: Array<TableOfContentsItem> = [];
 	const stack: Array<TableOfContentsItem> = [];
 

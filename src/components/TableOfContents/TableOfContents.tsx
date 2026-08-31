@@ -1,11 +1,19 @@
-import React from "react";
+import {
+	type CSSProperties,
+	createContext,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 
 import { Text } from "@/components/Text";
 import type { TableOfContentsItem } from "@/lib/markdown";
 
 import "./TableOfContents.styles.css";
 
-const TableOfContentsContext = React.createContext<{
+const TableOfContentsContext = createContext<{
 	activeId: string | null;
 }>({ activeId: null });
 
@@ -18,7 +26,7 @@ const TableOfContentsListItem = ({
 	item,
 	itemIndex,
 }: TableOfContentsItemProps) => {
-	const { activeId } = React.useContext(TableOfContentsContext);
+	const { activeId } = useContext(TableOfContentsContext);
 	const isActive = activeId === item.id || (!activeId && itemIndex === 0);
 
 	return (
@@ -57,14 +65,13 @@ const flattenItems = (
 ): Array<TableOfContentsItem> =>
 	items.flatMap((item) => [item, ...flattenItems(item.children)]);
 
-function TableOfContents({ items }: TableOfContentsProps) {
-	const [activeId, setActiveId] = React.useState<string | null>(null);
-	const flatItems = React.useMemo(() => flattenItems(items), [items]);
-	const [containerStyle, setContainerStyle] =
-		React.useState<React.CSSProperties>();
-	const containerRef = React.useRef<HTMLDivElement>(null);
+const TableOfContents = ({ items }: TableOfContentsProps) => {
+	const [activeId, setActiveId] = useState<string | null>(null);
+	const flatItems = useMemo(() => flattenItems(items), [items]);
+	const [containerStyle, setContainerStyle] = useState<CSSProperties>();
+	const containerRef = useRef<HTMLDivElement>(null);
 
-	React.useEffect(() => {
+	useEffect(() => {
 		const headings = flatItems
 			.map(({ id }) => document.getElementById(id))
 			.filter((heading): heading is HTMLElement => heading !== null);
@@ -99,7 +106,7 @@ function TableOfContents({ items }: TableOfContentsProps) {
 		};
 	}, [flatItems]);
 
-	React.useEffect(() => {
+	useEffect(() => {
 		const container = containerRef.current;
 		if (!container) return;
 
@@ -176,6 +183,6 @@ function TableOfContents({ items }: TableOfContentsProps) {
 			</TableOfContentsContext.Provider>
 		</div>
 	);
-}
+};
 
 export { TableOfContents };

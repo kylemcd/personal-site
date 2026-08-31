@@ -87,7 +87,7 @@
 
 .section-heading-link:hover .section-heading-label {
 	text-decoration: underline;
-	text-decoration-color: var(--color-text-2);
+	text-decoration-color: var(--color-link-underline);
 	text-underline-offset: 3px;
 }
 

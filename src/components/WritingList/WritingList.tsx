@@ -7,25 +7,50 @@ type WritingListProps = {
 	writing: Array<{ title: string; slug: string; date: string }>;
 };
 
-function WritingList({ writing }: WritingListProps) {
+type WritingListItemProps = {
+	date?: string;
+	slug: string;
+	title: string;
+};
+
+const WritingListItem = ({ date, slug, title }: WritingListItemProps) => {
+	return (
+		<a className="list-item writing-item" href={`/posts/${slug}`}>
+			<Text size="1" className="writing-item-title">
+				{title}
+			</Text>
+			{date ? (
+				<Text size="0" color="2" className="writing-item-date">
+					{formatDateInCentral(date)}
+				</Text>
+			) : null}
+		</a>
+	);
+};
+
+const WritingList = ({ writing }: WritingListProps) => {
 	return (
 		<div className="list">
 			{writing.map((post) => (
-				<a
+				<WritingListItem
 					key={post.slug}
-					className="list-item writing-item"
-					href={`/posts/${post.slug}`}
-				>
-					<Text size="1" className="writing-item-title">
-						{post.title}
-					</Text>
-					<Text size="0" color="2" className="writing-item-date">
-						{formatDateInCentral(post.date)}
-					</Text>
-				</a>
+					date={post.date}
+					slug={post.slug}
+					title={post.title}
+				/>
 			))}
 		</div>
 	);
-}
+};
 
-export { WritingList };
+const HomepageWritingList = ({ writing }: WritingListProps) => {
+	return (
+		<div className="list">
+			{writing.map((post) => (
+				<WritingListItem key={post.slug} slug={post.slug} title={post.title} />
+			))}
+		</div>
+	);
+};
+
+export { HomepageWritingList, WritingList };

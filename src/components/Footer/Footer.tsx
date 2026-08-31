@@ -29,7 +29,7 @@ const SOCIAL_LINKS = [
 	},
 ] as const;
 
-function Footer() {
+const Footer = () => {
 	return (
 		<footer className="footer-container">
 			<Text as="span" size="1" color="2">
@@ -53,6 +53,6 @@ function Footer() {
 			</nav>
 		</footer>
 	);
-}
+};
 
 export { Footer };

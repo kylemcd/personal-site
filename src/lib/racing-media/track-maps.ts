@@ -2,7 +2,7 @@ import { respondWithRacingMediaObject } from "./r2-response";
 
 const RACING_TRACK_MAP_ROUTE_PREFIX = "/media/racing/tracks/";
 const RACING_TRACK_MAP_OBJECT_PREFIX = "tracks/iracing/";
-const RACING_TRACK_MAP_CACHE_NAMESPACE = "r2-svg-v1";
+const RACING_TRACK_MAP_CACHE_NAMESPACE = "r2-svg-v2";
 
 const trackMapLayers = [
 	"active",

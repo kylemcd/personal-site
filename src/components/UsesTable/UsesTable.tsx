@@ -131,7 +131,7 @@ const selectedTagSummary = (
 	return `${selectedTagKeys.length} selected`;
 };
 
-function UsesTable({ items, titleHref }: UsesTableProps) {
+const UsesTable = ({ items, titleHref }: UsesTableProps) => {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedTagKeys, setSelectedTagKeys] = useState<string[]>([]);
 
@@ -263,7 +263,7 @@ function UsesTable({ items, titleHref }: UsesTableProps) {
 							{filteredItems.map((item) => (
 								<tr
 									key={`${item.order}-${item.name}`}
-									className={item.link ? "uses-table-row-linkable" : undefined}
+									data-link={item.link ? "true" : "false"}
 								>
 									<td>
 										{item.link ? (
@@ -319,6 +319,6 @@ function UsesTable({ items, titleHref }: UsesTableProps) {
 			)}
 		</div>
 	);
-}
+};
 
 export { UsesTable };

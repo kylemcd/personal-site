@@ -21,7 +21,7 @@ vi.mock("@tanstack/react-start", () => ({
 
 class TestComputeError extends TaggedError("TestComputeError")<{
 	readonly message: string;
-}>() {}
+}> {}
 
 const keyFor = (name: string) => `test:${name}:${Date.now()}:${Math.random()}`;
 

@@ -10,42 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as UsesIndexRouteImport } from './routes/uses.index'
-import { Route as ReadingIndexRouteImport } from './routes/reading.index'
-import { Route as RacingIndexRouteImport } from './routes/racing.index'
-import { Route as PostsIndexRouteImport } from './routes/posts.index'
-import { Route as ListeningIndexRouteImport } from './routes/listening.index'
 import { Route as ConcertsIndexRouteImport } from './routes/concerts.index'
+import { Route as ListeningIndexRouteImport } from './routes/listening.index'
+import { Route as PostsIndexRouteImport } from './routes/posts.index'
 import { Route as PostsSlugRouteImport } from './routes/posts.$slug'
+import { Route as RacingIndexRouteImport } from './routes/racing.index'
+import { Route as ReadingIndexRouteImport } from './routes/reading.index'
+import { Route as UsesIndexRouteImport } from './routes/uses.index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UsesIndexRoute = UsesIndexRouteImport.update({
-  id: '/uses/',
-  path: '/uses/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReadingIndexRoute = ReadingIndexRouteImport.update({
-  id: '/reading/',
-  path: '/reading/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RacingIndexRoute = RacingIndexRouteImport.update({
-  id: '/racing/',
-  path: '/racing/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PostsIndexRoute = PostsIndexRouteImport.update({
-  id: '/posts/',
-  path: '/posts/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ListeningIndexRoute = ListeningIndexRouteImport.update({
-  id: '/listening/',
-  path: '/listening/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConcertsIndexRoute = ConcertsIndexRouteImport.update({
@@ -53,9 +28,34 @@ const ConcertsIndexRoute = ConcertsIndexRouteImport.update({
   path: '/concerts/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ListeningIndexRoute = ListeningIndexRouteImport.update({
+  id: '/listening/',
+  path: '/listening/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PostsIndexRoute = PostsIndexRouteImport.update({
+  id: '/posts/',
+  path: '/posts/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PostsSlugRoute = PostsSlugRouteImport.update({
   id: '/posts/$slug',
   path: '/posts/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RacingIndexRoute = RacingIndexRouteImport.update({
+  id: '/racing/',
+  path: '/racing/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReadingIndexRoute = ReadingIndexRouteImport.update({
+  id: '/reading/',
+  path: '/reading/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsesIndexRoute = UsesIndexRouteImport.update({
+  id: '/uses/',
+  path: '/uses/',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -143,32 +143,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/uses/': {
-      id: '/uses/'
-      path: '/uses'
-      fullPath: '/uses/'
-      preLoaderRoute: typeof UsesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reading/': {
-      id: '/reading/'
-      path: '/reading'
-      fullPath: '/reading/'
-      preLoaderRoute: typeof ReadingIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/racing/': {
-      id: '/racing/'
-      path: '/racing'
-      fullPath: '/racing/'
-      preLoaderRoute: typeof RacingIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/posts/': {
-      id: '/posts/'
-      path: '/posts'
-      fullPath: '/posts/'
-      preLoaderRoute: typeof PostsIndexRouteImport
+    '/concerts/': {
+      id: '/concerts/'
+      path: '/concerts'
+      fullPath: '/concerts/'
+      preLoaderRoute: typeof ConcertsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/listening/': {
@@ -178,11 +157,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListeningIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/concerts/': {
-      id: '/concerts/'
-      path: '/concerts'
-      fullPath: '/concerts/'
-      preLoaderRoute: typeof ConcertsIndexRouteImport
+    '/posts/': {
+      id: '/posts/'
+      path: '/posts'
+      fullPath: '/posts/'
+      preLoaderRoute: typeof PostsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posts/$slug': {
@@ -190,6 +169,27 @@ declare module '@tanstack/react-router' {
       path: '/posts/$slug'
       fullPath: '/posts/$slug'
       preLoaderRoute: typeof PostsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/racing/': {
+      id: '/racing/'
+      path: '/racing'
+      fullPath: '/racing/'
+      preLoaderRoute: typeof RacingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reading/': {
+      id: '/reading/'
+      path: '/reading'
+      fullPath: '/reading/'
+      preLoaderRoute: typeof ReadingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/uses/': {
+      id: '/uses/'
+      path: '/uses'
+      fullPath: '/uses/'
+      preLoaderRoute: typeof UsesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
   }

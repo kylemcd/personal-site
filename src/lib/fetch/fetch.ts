@@ -6,14 +6,14 @@ import type { z } from "zod";
  */
 export class FetchNetworkError extends TaggedError("FetchNetworkError")<{
 	readonly error: unknown;
-}>() {}
+}> {}
 
 /**
  * The request timed out before a response was received.
  */
 export class FetchTimeoutError extends TaggedError("FetchTimeoutError")<{
 	readonly timeoutMs: number;
-}>() {}
+}> {}
 
 /**
  * A non-2xx HTTP status was returned by the server.
@@ -21,7 +21,7 @@ export class FetchTimeoutError extends TaggedError("FetchTimeoutError")<{
 export class FetchResponseError extends TaggedError("FetchResponseError")<{
 	readonly response: Response;
 	readonly bodySnippet?: string;
-}>() {
+}> {
 	get status() {
 		return this.response.status;
 	}
@@ -35,14 +35,14 @@ export class FetchResponseError extends TaggedError("FetchResponseError")<{
  */
 export class JsonParseError extends TaggedError("JsonParseError")<{
 	readonly error: unknown;
-}>() {}
+}> {}
 
 /**
  * The decoded JSON did not conform to the provided Schema.
  */
 export class SchemaParseError extends TaggedError("SchemaParseError")<{
 	readonly error: unknown;
-}>() {}
+}> {}
 
 /**
  * Enhanced response type that includes both the parsed data and headers

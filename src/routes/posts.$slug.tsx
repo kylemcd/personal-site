@@ -33,39 +33,34 @@ const getPost = createServerFn({ method: "GET" })
 		return result.value;
 	});
 
-export const Route = createFileRoute("/posts/$slug")({
-	component: PostRoute,
-	loader: ({ params }) => getPost({ data: { slug: params.slug } }),
-	errorComponent: ErrorComponent,
-	head: ({ loaderData, params }) => {
-		const postTitle = loaderData?.frontmatter?.title;
-		const fullTitle = postTitle
-			? `${postTitle} - Kyle McDonald`
-			: "Kyle McDonald";
-		const imageUrl = `https://kpm.sh/open-graph/${params.slug}.png`;
-
-		return buildHead({
-			title: fullTitle,
-			url: `https://kpm.sh/posts/${params.slug}`,
-			image: imageUrl,
-			imageAlt: postTitle ?? "Open graph image",
-			ogType: "article",
-		});
-	},
-});
-
-function PostRoute() {
+const PostRoute = () => {
 	const { frontmatter, content, tableOfContents, readingTime, hasMermaid } =
 		Route.useLoaderData();
 
 	useEffect(() => {
-		if (hasMermaid) {
-			(async () => {
+		if (!hasMermaid) return;
+
+		let ignore = false;
+		const renderMermaid = async () => {
+			try {
 				const { default: mermaid } = await import("mermaid");
+				if (ignore) return;
+
 				mermaid.initialize({ startOnLoad: true });
-				mermaid.run();
-			})();
-		}
+				await mermaid.run();
+			} catch (error) {
+				if (!ignore) {
+					const message =
+						error instanceof Error ? error.message : String(error);
+					console.error("Mermaid rendering failed:", message);
+				}
+			}
+		};
+
+		void renderMermaid();
+		return () => {
+			ignore = true;
+		};
 	}, [hasMermaid]);
 
 	return (
@@ -122,10 +117,31 @@ function PostRoute() {
 				<div
 					className="post-content"
 					data-post
-					// biome-ignore lint/security/noDangerouslySetInnerHtml: Sort of necessary for markdoc
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: Markdoc produces the trusted server-rendered article HTML.
 					dangerouslySetInnerHTML={{ __html: content }}
 				/>
 			</div>
 		</div>
 	);
-}
+};
+
+export const Route = createFileRoute("/posts/$slug")({
+	component: PostRoute,
+	loader: ({ params }) => getPost({ data: { slug: params.slug } }),
+	errorComponent: ErrorComponent,
+	head: ({ loaderData, params }) => {
+		const postTitle = loaderData?.frontmatter?.title;
+		const fullTitle = postTitle
+			? `${postTitle} - Kyle McDonald`
+			: "Kyle McDonald";
+		const imageUrl = `https://kpm.sh/open-graph/${params.slug}.png`;
+
+		return buildHead({
+			title: fullTitle,
+			url: `https://kpm.sh/posts/${params.slug}`,
+			image: imageUrl,
+			imageAlt: postTitle ?? "Open graph image",
+			ogType: "article",
+		});
+	},
+});

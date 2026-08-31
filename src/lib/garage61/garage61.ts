@@ -25,7 +25,7 @@ import {
 
 class Garage61Error extends TaggedError("Garage61Error")<{
 	readonly error: unknown;
-}>() {
+}> {
 	override message = "Failed to fetch data from Garage61";
 }
 

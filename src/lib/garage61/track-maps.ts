@@ -29,13 +29,13 @@ type TrackMapAssets = {
 	pitroad: string;
 };
 
-function getTrackMapAssets({
+const getTrackMapAssets = ({
 	platformId,
 	garage61TrackId,
 }: {
 	platformId?: number | null;
 	garage61TrackId: number;
-}): TrackMapAssets | null {
+}): TrackMapAssets | null => {
 	const resolvedPlatformId =
 		platformId ?? legacyPlatformIdsByGarage61Id[garage61TrackId];
 	if (
@@ -67,6 +67,6 @@ function getTrackMapAssets({
 			layer: "pitroad",
 		}),
 	};
-}
+};
 
 export { getTrackMapAssets };

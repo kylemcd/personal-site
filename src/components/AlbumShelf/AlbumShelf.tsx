@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 import { HorizontalScrollContainer } from "@/components/HorizontalScrollContainer";
 import { Text } from "@/components/Text";
@@ -12,25 +12,14 @@ type CoverArtProps = {
 	className: string;
 };
 
-function CoverArt({ src, alt, className }: CoverArtProps) {
+const CoverArt = ({ src, alt, className }: CoverArtProps) => {
 	const [failed, setFailed] = useState(false);
-	const imageRef = useRef<HTMLImageElement>(null);
-
-	useEffect(() => {
-		setFailed(false);
-		if (!src.trim()) return;
-
-		const img = imageRef.current;
-		if (!img) return;
-		if (img.complete && img.naturalWidth === 0) {
-			setFailed(true);
-		}
-	}, [src]);
 
 	if (failed || !src.trim()) {
 		return (
 			<div
-				className={`${className} cover-art-fallback`}
+				className={className}
+				data-cover-unavailable="true"
 				role="img"
 				aria-label={`${alt} cover unavailable`}
 			>
@@ -43,14 +32,13 @@ function CoverArt({ src, alt, className }: CoverArtProps) {
 
 	return (
 		<img
-			ref={imageRef}
 			src={src}
 			alt={alt}
 			className={className}
 			onError={() => setFailed(true)}
 		/>
 	);
-}
+};
 
 type AlbumShelfProps = {
 	albums: ReadonlyArray<Album>;
@@ -61,7 +49,7 @@ type AlbumCardProps = {
 	album: Album;
 };
 
-function AlbumCard({ album }: AlbumCardProps) {
+const AlbumCard = ({ album }: AlbumCardProps) => {
 	return (
 		<a
 			className="album"
@@ -69,7 +57,12 @@ function AlbumCard({ album }: AlbumCardProps) {
 			target="_blank"
 			rel="noopener noreferrer"
 		>
-			<CoverArt src={album.image} alt={album.name} className="album-image" />
+			<CoverArt
+				key={album.image}
+				src={album.image}
+				alt={album.name}
+				className="album-image"
+			/>
 			<div className="album-info">
 				<Text as="p" size="0" weight="500">
 					{album.name}
@@ -80,22 +73,26 @@ function AlbumCard({ album }: AlbumCardProps) {
 			</div>
 		</a>
 	);
-}
+};
 
-function AlbumShelf({ albums, variant = "scroll" }: AlbumShelfProps) {
-	const content = albums.map((album) => (
-		<AlbumCard album={album} key={album.mbid} />
-	));
+const AlbumCards = ({ albums }: { albums: ReadonlyArray<Album> }) => {
+	return albums.map((album) => <AlbumCard album={album} key={album.url} />);
+};
 
+const AlbumShelf = ({ albums, variant = "scroll" }: AlbumShelfProps) => {
 	if (variant === "grid") {
-		return <div className="album-grid">{content}</div>;
+		return (
+			<div className="album-grid">
+				<AlbumCards albums={albums} />
+			</div>
+		);
 	}
 
 	return (
 		<HorizontalScrollContainer className="album-shelf">
-			{content}
+			<AlbumCards albums={albums} />
 		</HorizontalScrollContainer>
 	);
-}
+};
 
 export { AlbumShelf };

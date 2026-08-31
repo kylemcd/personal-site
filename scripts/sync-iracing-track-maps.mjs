@@ -9,11 +9,12 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { embedTrackMapFont } from "./embed-track-map-font.mjs";
 import { uploadRacingTrackMapDirectory } from "./upload-racing-track-maps.mjs";
 
 const metadataUrl =
 	"https://raw.githubusercontent.com/meowmachine/racing-track-maps-vector/main/from-iracing/iracing-tracks-metadata.json";
-const layers = [
+const availableLayers = [
 	"background",
 	"active",
 	"inactive",
@@ -21,6 +22,20 @@ const layers = [
 	"start-finish",
 	"turns",
 ];
+const layersArgument = process.argv.find((argument) =>
+	argument.startsWith("--layers="),
+);
+const layers = layersArgument
+	? layersArgument.slice("--layers=".length).split(",").filter(Boolean)
+	: availableLayers;
+const invalidLayers = layers.filter(
+	(layer) => !availableLayers.includes(layer),
+);
+if (layers.length === 0 || invalidLayers.length > 0) {
+	throw new Error(
+		`Invalid track-map layers: ${invalidLayers.join(", ") || "none provided"}.`,
+	);
+}
 const temporaryDirectory = await mkdtemp(
 	path.join(tmpdir(), "kpm-iracing-track-maps-"),
 );
@@ -33,6 +48,9 @@ const sourceArgument = process.argv.find((argument) =>
 );
 const localSourceDirectory = sourceArgument
 	? path.resolve(sourceArgument.slice("--source=".length))
+	: null;
+const turnLabelFont = layers.includes("turns")
+	? await readFile(path.resolve("public/fonts/opengraph-inter-medium.woff"))
 	: null;
 
 const parseMetadata = (raw) => JSON.parse(raw.replace(/^\uFEFF/, ""));
@@ -65,13 +83,20 @@ async function writeLayer(configuration, layer) {
 	const destination = path.join(configurationDirectory, `${layer}.svg`);
 
 	if (localSourceDirectory) {
-		await copyFile(
-			path.join(
-				localSourceDirectory,
-				...configuration.svg_local_path.split("/"),
-				`${layer}.svg`,
-			),
+		const source = path.join(
+			localSourceDirectory,
+			...configuration.svg_local_path.split("/"),
+			`${layer}.svg`,
+		);
+		if (layer !== "turns") {
+			await copyFile(source, destination);
+			return;
+		}
+
+		if (!turnLabelFont) throw new Error("Turn-label font was not loaded.");
+		await writeFile(
 			destination,
+			embedTrackMapFont(await readFile(source, "utf8"), turnLabelFont),
 		);
 		return;
 	}
@@ -82,7 +107,17 @@ async function writeLayer(configuration, layer) {
 			`Could not fetch track ${configuration.track_id} ${layer}.svg (${response.status}).`,
 		);
 	}
-	await writeFile(destination, Buffer.from(await response.arrayBuffer()));
+	const source = Buffer.from(await response.arrayBuffer());
+	if (layer !== "turns") {
+		await writeFile(destination, source);
+		return;
+	}
+
+	if (!turnLabelFont) throw new Error("Turn-label font was not loaded.");
+	await writeFile(
+		destination,
+		embedTrackMapFont(source.toString("utf8"), turnLabelFont),
+	);
 }
 
 async function runWithConcurrency(tasks, concurrency) {

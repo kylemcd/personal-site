@@ -29,14 +29,15 @@ const createWaveformBars = (
 	seed: string,
 	count: number,
 ): Array<WaveformBar> => {
-	let state = 0;
-	for (const character of seed) {
-		state = (state * 31 + character.charCodeAt(0)) >>> 0;
-	}
+	if (count <= 0) return [];
+
+	let state = Array.from(seed).reduce(
+		(current, character) => (current * 31 + character.charCodeAt(0)) >>> 0,
+		0,
+	);
 	if (state === 0) state = 0x6d2b79f5;
 
-	const bars: Array<WaveformBar> = [];
-	for (let index = 0; index < count; index += 1) {
+	return Array.from({ length: count }, (_, index): WaveformBar => {
 		state = (state * 1664525 + 1013904223) >>> 0;
 		const noise = state / 4294967295;
 		// Blend periodic waves + deterministic noise to create clustered peaks
@@ -46,23 +47,21 @@ const createWaveformBars = (
 		const pulse = 0.58 * phaseA + 0.3 * phaseB + 0.12 * noise;
 		const height = Math.round(7 + pulse * 58);
 		const warmCutoff = Math.floor(count * 0.42);
-		bars.push({
+		return {
 			id: `${state}-${index}`,
 			order: index,
 			height,
 			warm: index <= warmCutoff,
-		});
-	}
-
-	return bars;
+		};
+	});
 };
 
-function WrappedListening({
+const WrappedListening = ({
 	wrapped,
 	nowPlaying,
 	variant = "compact",
 	titleHref,
-}: WrappedListeningProps) {
+}: WrappedListeningProps) => {
 	const isRich = variant === "rich";
 	const trackLimit = isRich ? 10 : 5;
 	const artistLimit = isRich ? 10 : 5;
@@ -112,18 +111,6 @@ function WrappedListening({
 				isRich ? 48 : 40,
 			)
 		: [];
-
-	const sectionTitle = titleHref ? (
-		<a className="section-heading-link" href={titleHref}>
-			<span className="section-heading-label">Listening</span>
-			<i
-				className="hn hn-angle-right section-heading-icon"
-				aria-hidden="true"
-			/>
-		</a>
-	) : (
-		"Listening"
-	);
 
 	const trackShareRows: Array<StatBarListRow> = topTracks.map((track) => ({
 		key: `${track.name}-${track.artist}-${track.plays}`,
@@ -199,18 +186,26 @@ function WrappedListening({
 	}));
 
 	return (
-		<div
-			className={`wrapped-listening-redesign${isRich ? " wrapped-listening-redesign-rich" : ""}`}
-		>
+		<div className="wrapped-listening-redesign" data-variant={variant}>
 			<div className="wrapped-listening-top">
 				<Text as="h2" size="2" className="wrapped-listening-title">
-					{sectionTitle}
+					{titleHref ? (
+						<a className="section-heading-link" href={titleHref}>
+							<span className="section-heading-label">Listening</span>
+							<i
+								className="hn hn-angle-right section-heading-icon"
+								aria-hidden="true"
+							/>
+						</a>
+					) : (
+						"Listening"
+					)}
 				</Text>
 				<Text
 					as="p"
 					size="0"
 					color="2"
-					family="mono"
+					family="tabular"
 					className="wrapped-listening-window"
 				>
 					last 30 days
@@ -233,7 +228,7 @@ function WrappedListening({
 							/>
 						) : (
 							<div className="wrapped-live-cover-fallback" aria-hidden="true">
-								<Text as="span" size="4" family="mono" color="2">
+								<Text as="span" size="4" family="tabular" color="2">
 									{liveTrackName.charAt(0).toUpperCase()}
 								</Text>
 							</div>
@@ -244,7 +239,7 @@ function WrappedListening({
 							as="p"
 							size="0"
 							color="2"
-							family="mono"
+							family="tabular"
 							className="wrapped-live-label"
 						>
 							<span className="wrapped-live-dot" aria-hidden="true" />
@@ -300,7 +295,8 @@ function WrappedListening({
 						{waveformBars.map((bar) => (
 							<span
 								key={bar.id}
-								className={`wrapped-waveform-bar${bar.warm ? " is-warm" : ""}`}
+								className="wrapped-waveform-bar"
+								data-warm={bar.warm ? "true" : "false"}
 								style={{
 									height: `${bar.height}px`,
 									animationDelay: `${(bar.order % 9) * 90}ms`,
@@ -328,7 +324,12 @@ function WrappedListening({
 							</Text>
 						),
 						value: (
-							<Text as="p" size="6" family="mono" className="wrapped-kpi-value">
+							<Text
+								as="p"
+								size="6"
+								family="tabular"
+								className="wrapped-kpi-value"
+							>
 								{wrapped.totalScrobbles}
 							</Text>
 						),
@@ -349,8 +350,8 @@ function WrappedListening({
 							<Text
 								as="p"
 								size="6"
-								family="mono"
-								className="wrapped-kpi-value wrapped-kpi-duration-value"
+								family="tabular"
+								className="wrapped-kpi-value"
 							>
 								{formatDuration(wrapped.totalListeningSeconds)}
 							</Text>
@@ -372,8 +373,8 @@ function WrappedListening({
 							<Text
 								as="p"
 								size="6"
-								family="mono"
-								className="wrapped-kpi-value wrapped-kpi-duration-value"
+								family="tabular"
+								className="wrapped-kpi-value"
 							>
 								{formatDuration(wrapped.averageSessionSeconds)}
 							</Text>
@@ -392,7 +393,12 @@ function WrappedListening({
 							</Text>
 						),
 						value: (
-							<Text as="p" size="6" family="mono" className="wrapped-kpi-value">
+							<Text
+								as="p"
+								size="6"
+								family="tabular"
+								className="wrapped-kpi-value"
+							>
 								{wrapped.uniqueArtists}
 							</Text>
 						),
@@ -467,6 +473,6 @@ function WrappedListening({
 			) : null}
 		</div>
 	);
-}
+};
 
 export { WrappedListening };

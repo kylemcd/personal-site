@@ -1,4 +1,4 @@
-function ErrorComponent({ error }: { error: unknown }) {
+const ErrorComponent = ({ error }: { error: unknown }) => {
 	const message =
 		error instanceof Error ? error.message : "An unexpected error occurred";
 	const cause = error instanceof Error ? error.cause : undefined;
@@ -9,6 +9,6 @@ function ErrorComponent({ error }: { error: unknown }) {
 			{cause ? <pre>{JSON.stringify(cause, null, 2)}</pre> : null}
 		</div>
 	);
-}
+};
 
 export { ErrorComponent };

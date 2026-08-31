@@ -185,18 +185,26 @@
 	border-bottom: 1px solid var(--color-ui-1);
 }
 
-.uses-table-row-linkable {
+.uses-table tr[data-link="true"] {
 	position: relative;
 	cursor: pointer;
 }
 
-.uses-table-row-linkable:hover td {
+.uses-table tr[data-link="true"]:hover td {
 	background-color: var(--color-bg-2);
 }
 
 .uses-row-link {
 	color: inherit;
 	text-decoration: none;
+}
+
+.uses-row-link > [data-text-size] {
+	display: inline-block;
+	text-decoration-color: var(--color-link-underline);
+	text-decoration-line: underline;
+	text-decoration-thickness: var(--spc-px);
+	text-underline-offset: 0.08em;
 }
 
 .uses-row-link::after {

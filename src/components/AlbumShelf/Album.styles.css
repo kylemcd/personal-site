@@ -1,4 +1,3 @@
-/* Listening container */
 .listening-container {
 	display: flex;
 	gap: var(--spc-8);
@@ -80,7 +79,7 @@
 	}
 }
 
-.cover-art-fallback {
+[data-cover-unavailable="true"] {
 	display: flex;
 	align-items: center;
 	justify-content: center;

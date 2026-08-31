@@ -36,7 +36,7 @@ class DeezerArtistImageError extends TaggedError("DeezerArtistImageError")<{
 	readonly artistName: string;
 	readonly cause: unknown;
 	readonly message: string;
-}>() {}
+}> {}
 
 const normalizeName = (value: string): string =>
 	value

@@ -1,6 +1,6 @@
 import "./SiteIntro.styles.css";
 
-function SiteIntro() {
+const SiteIntro = () => {
 	return (
 		<div className="site-intro">
 			<p>
@@ -21,6 +21,6 @@ function SiteIntro() {
 			</p>
 		</div>
 	);
-}
+};
 
 export { SiteIntro };

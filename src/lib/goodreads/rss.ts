@@ -5,7 +5,7 @@ import type { Book } from "./schema";
 
 class ParseGoodreadsError extends TaggedError("ParseGoodreadsError")<{
 	readonly error: unknown;
-}>() {
+}> {
 	override message = "Failed to parse Goodreads RSS";
 }
 

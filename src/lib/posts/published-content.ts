@@ -44,7 +44,7 @@ class PublishedContentError extends TaggedError("PublishedContentError")<{
 	readonly status?: number;
 	readonly code?: string;
 	readonly cause?: unknown;
-}>() {}
+}> {}
 
 const binding = (): Result<Fetcher, PublishedContentError> => {
 	const fetcher = cloudflareEnv.PUBLISHED_CONTENT;

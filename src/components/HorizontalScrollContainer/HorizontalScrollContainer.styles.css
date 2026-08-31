@@ -38,7 +38,7 @@
 	pointer-events: none;
 }
 
-.horizontal-scroll-container:not(.is-scrolled-right)::before {
+.horizontal-scroll-container[data-scrolled-right="false"]::before {
 	opacity: 0;
 }
 
@@ -47,12 +47,10 @@
 	width: 100%;
 	padding-bottom: var(--spc-8);
 	margin-bottom: calc(var(--spc-8) * -1);
-	/* Firefox scrollbar styling */
 	scrollbar-width: thin;
 	scrollbar-color: var(--color-ui-1) transparent;
 }
 
-/* Webkit (Chrome, Safari, Edge) scrollbar styling */
 .horizontal-scroll-container-items::-webkit-scrollbar {
 	height: 6px;
 	background-color: transparent;

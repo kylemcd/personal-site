@@ -37,7 +37,7 @@ type JsonCacheOptions = {
 class KvPutError extends TaggedError("KvPutError")<{
 	readonly error: unknown;
 	readonly key: string;
-}>() {
+}> {
 	override message = "Failed to write to KV store";
 }
 
@@ -427,7 +427,7 @@ const getOrComputeJson = async <A, E>({
 	compute,
 }: JsonGetOrComputeOptions<A, E>): Promise<Result<A, E | KvPutError>> => {
 	const scopedKey = toScopedKey(key);
-	return singleFlight(scopedKey, async () => {
+	return singleFlight<A, E>(scopedKey, async () => {
 		let cached: CacheEnvelope<A> | null = null;
 
 		for (const readKey of getReadKeys(key)) {
@@ -496,7 +496,7 @@ const refreshJson = async <A, E>({
 	retentionTtlSeconds,
 	compute,
 }: JsonRefreshOptions<A, E>): Promise<Result<A, E | KvPutError>> => {
-	return singleFlight(toScopedKey(key), async () => {
+	return singleFlight<A, E>(toScopedKey(key), async () => {
 		const valueResult = await computeWithStatus(key, compute);
 		if (Result.isError(valueResult)) return valueResult;
 

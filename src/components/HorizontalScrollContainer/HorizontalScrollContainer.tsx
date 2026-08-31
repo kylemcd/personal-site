@@ -1,24 +1,31 @@
-import { useEffect, useRef, useState } from "react";
+import {
+	type HTMLAttributes,
+	type ReactNode,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 
 import "./HorizontalScrollContainer.styles.css";
 
 type HorizontalScrollContainerProps = {
-	children: React.ReactNode;
-} & React.HTMLAttributes<HTMLDivElement>;
+	children: ReactNode;
+} & HTMLAttributes<HTMLDivElement>;
 
-function HorizontalScrollContainer({
+const HorizontalScrollContainer = ({
 	children,
+	className,
 	...props
-}: HorizontalScrollContainerProps) {
+}: HorizontalScrollContainerProps) => {
 	const itemsRef = useRef<HTMLDivElement>(null);
-	const [hasScrolledRight, setShowLeftGradient] = useState(false);
+	const [hasScrolledRight, setHasScrolledRight] = useState(false);
 
 	useEffect(() => {
 		const element = itemsRef.current;
 		if (!element) return;
 
 		const updateGradients = () => {
-			setShowLeftGradient(element.scrollLeft > 0.5);
+			setHasScrolledRight(element.scrollLeft > 0.5);
 		};
 
 		updateGradients();
@@ -38,17 +45,18 @@ function HorizontalScrollContainer({
 
 	return (
 		<div
-			className={`horizontal-scroll-container${hasScrolledRight ? " is-scrolled-right" : ""}`}
+			className="horizontal-scroll-container"
+			data-scrolled-right={hasScrolledRight}
 		>
 			<div
 				{...props}
 				ref={itemsRef}
-				className={`horizontal-scroll-container-items ${props.className ?? ""}`}
+				className={`horizontal-scroll-container-items ${className ?? ""}`}
 			>
 				{children}
 			</div>
 		</div>
 	);
-}
+};
 
 export { HorizontalScrollContainer };

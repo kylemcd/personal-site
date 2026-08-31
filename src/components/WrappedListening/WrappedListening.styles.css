@@ -34,10 +34,6 @@
 	max-width: 100%;
 }
 
-.wrapped-kpi-duration-value {
-	word-spacing: -0.18em;
-}
-
 .wrapped-kpi-suffix {
 	font-size: 0.6em;
 	color: var(--color-text-2);
@@ -133,7 +129,7 @@
 	animation-iteration-count: infinite;
 }
 
-.wrapped-waveform-bar.is-warm {
+.wrapped-waveform-bar[data-warm="true"] {
 	background: var(--color-text-1);
 	opacity: 0.95;
 }
@@ -204,15 +200,10 @@
 }
 
 .wrapped-inline-link {
-	text-decoration: underline;
+	text-decoration-color: var(--color-link-underline);
+	text-decoration-line: underline;
 	text-decoration-thickness: var(--spc-px);
-	text-underline-offset: calc(var(--spc-px) * 2);
-	text-decoration-color: var(--color-text-3);
-	transition: color 0.1s ease-out;
-}
-
-.wrapped-inline-link:hover {
-	color: var(--color-text-3);
+	text-underline-offset: 0.08em;
 }
 
 @keyframes wrapped-wave-pulse {

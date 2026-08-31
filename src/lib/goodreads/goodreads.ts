@@ -21,7 +21,7 @@ class FetchGoodreadsError extends TaggedError("FetchGoodreadsError")<{
 	readonly status?: number;
 	readonly statusText?: string;
 	readonly url?: string;
-}>() {
+}> {
 	override message = "Failed to fetch Goodreads books";
 }
 

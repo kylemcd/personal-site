@@ -95,7 +95,7 @@ export const toErrorSummary = (error: unknown): string => {
 	}
 };
 
-export function makeRefreshWorkflow<Env extends BaseEnv>() {
+export const makeRefreshWorkflow = <Env extends BaseEnv>() => {
 	return <
 		A,
 		E,
@@ -144,4 +144,4 @@ export function makeRefreshWorkflow<Env extends BaseEnv>() {
 				});
 			}
 		};
-}
+};

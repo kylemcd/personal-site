@@ -12,7 +12,7 @@ type Garage61Props = {
 	titleHref?: string;
 };
 
-function Garage61({ overview, titleHref }: Garage61Props) {
+const Garage61 = ({ overview, titleHref }: Garage61Props) => {
 	const sessionTimeBreakdown = overview.insights.sessionTimeBreakdown;
 	const hasRecent =
 		overview.recentTracks.length > 0 || overview.recentCars.length > 0;
@@ -20,35 +20,25 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 
 	const recentTracks = overview.recentTracks.slice(0, 5);
 	const recentCars = overview.recentCars.slice(0, 5);
+	const windowLabel = overview.windowLabel.toLowerCase();
 
 	if (!shouldRender) return null;
 
 	return (
 		<div className="g61-racing">
-			<div className="g61-racing-top">
-				<Text as="h2" size="2" className="g61-racing-title">
-					{titleHref ? (
-						<a className="section-heading-link" href={titleHref}>
-							<span className="section-heading-label">Racing</span>
-							<i
-								className="hn hn-angle-right section-heading-icon"
-								aria-hidden="true"
-							/>
-						</a>
-					) : (
-						"Racing"
-					)}
-				</Text>
-				<Text
-					as="p"
-					size="0"
-					color="2"
-					family="mono"
-					className="g61-racing-window"
-				>
-					{overview.windowLabel.toLowerCase()}
-				</Text>
-			</div>
+			<Text as="h2" size="2" className="g61-racing-title">
+				{titleHref ? (
+					<a className="section-heading-link" href={titleHref}>
+						<span className="section-heading-label">Racing</span>
+						<i
+							className="hn hn-angle-right section-heading-icon"
+							aria-hidden="true"
+						/>
+					</a>
+				) : (
+					"Racing"
+				)}
+			</Text>
 
 			<SectionStatRow
 				className="g61-racing-kpis"
@@ -64,10 +54,22 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 							<Text
 								as="p"
 								size="6"
-								family="mono"
-								className="g61-racing-kpi-value g61-racing-kpi-time-value"
+								family="tabular"
+								className="g61-racing-kpi-value"
 							>
 								{formatDuration(overview.totalTimeOnTrackSeconds)}
+							</Text>
+						),
+						subline: (
+							<Text
+								as="p"
+								size="0"
+								color="2"
+								family="tabular"
+								className="g61-racing-window"
+							>
+								{windowLabel.charAt(0).toUpperCase()}
+								{windowLabel.slice(1)}
 							</Text>
 						),
 					},
@@ -82,7 +84,7 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 							<Text
 								as="p"
 								size="6"
-								family="mono"
+								family="tabular"
 								className="g61-racing-kpi-value"
 							>
 								{formatPercentLabel(overview.cleanLapPercentage)}
@@ -110,7 +112,7 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 							<Text
 								as="p"
 								size="6"
-								family="mono"
+								family="tabular"
 								className="g61-racing-kpi-value"
 							>
 								{overview.insights.cleanestCombo
@@ -142,7 +144,7 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 							<Text
 								as="p"
 								size="6"
-								family="mono"
+								family="tabular"
 								className="g61-racing-kpi-value"
 							>
 								{sessionTimeBreakdown
@@ -167,12 +169,12 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 									/>
 								</div>
 								<div className="g61-racing-balance-labels">
-									<Text as="p" size="0" color="2" family="mono">
+									<Text as="p" size="0" color="2" family="tabular">
 										{sessionTimeBreakdown
 											? `Practice ${formatDuration(sessionTimeBreakdown.practiceTimeOnTrackSeconds)}`
 											: "Practice n/a"}
 									</Text>
-									<Text as="p" size="0" color="2" family="mono">
+									<Text as="p" size="0" color="2" family="tabular">
 										{sessionTimeBreakdown
 											? `Racing ${formatDuration(sessionTimeBreakdown.racingTimeOnTrackSeconds)}`
 											: "Racing n/a"}
@@ -205,6 +207,6 @@ function Garage61({ overview, titleHref }: Garage61Props) {
 			</div>
 		</div>
 	);
-}
+};
 
 export { Garage61 };

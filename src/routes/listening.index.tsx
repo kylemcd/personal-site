@@ -16,19 +16,7 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 	};
 });
 
-export const Route = createFileRoute("/listening/")({
-	component: ListeningRoute,
-	loader: () => getData(),
-	errorComponent: ErrorComponent,
-	head: () =>
-		buildHead({
-			title: "Listening - Kyle McDonald",
-			url: "https://kpm.sh/listening",
-			image: "https://kpm.sh/open-graph/listening.png",
-		}),
-});
-
-function ListeningRoute() {
+const ListeningRoute = () => {
 	const { listening } = Route.useLoaderData();
 	const hasListeningContent = Boolean(
 		listening &&
@@ -68,4 +56,16 @@ function ListeningRoute() {
 			</div>
 		</div>
 	);
-}
+};
+
+export const Route = createFileRoute("/listening/")({
+	component: ListeningRoute,
+	loader: () => getData(),
+	errorComponent: ErrorComponent,
+	head: () =>
+		buildHead({
+			title: "Listening - Kyle McDonald",
+			url: "https://kpm.sh/listening",
+			image: "https://kpm.sh/open-graph/listening.png",
+		}),
+});

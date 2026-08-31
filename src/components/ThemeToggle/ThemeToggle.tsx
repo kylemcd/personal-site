@@ -1,38 +1,56 @@
 import { Menu } from "@base-ui/react/menu";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 import "./ThemeToggle.styles.css";
 
 type Appearance = "light" | "dark";
 
-function getAppearance(): Appearance {
+const APPEARANCE_CHANGE_EVENT = "kpm:appearance-change";
+
+const getAppearance = (): Appearance => {
 	return document.documentElement.getAttribute("data-appearance") === "light"
 		? "light"
 		: "dark";
-}
+};
 
-function setAppearance(appearance: Appearance) {
-	document.documentElement.setAttribute("data-appearance", appearance);
-
+const persistAppearance = async (appearance: Appearance): Promise<void> => {
 	if (window.cookieStore) {
-		void window.cookieStore.set({
-			name: "theme",
-			value: appearance,
-			path: "/",
-		});
-		return;
+		try {
+			await window.cookieStore.set({
+				name: "theme",
+				value: appearance,
+				path: "/",
+			});
+			return;
+		} catch {
+			// Fall through to the broadly supported cookie API.
+		}
 	}
 
 	// biome-ignore lint/suspicious/noDocumentCookie: fallback for browsers without the Cookie Store API
 	document.cookie = `theme=${appearance}; path=/; max-age=31536000; SameSite=Lax`;
-}
+};
 
-function ThemeToggle() {
-	const [appearance, setCurrentAppearance] = useState<Appearance>("dark");
+const setAppearance = (appearance: Appearance) => {
+	document.documentElement.setAttribute("data-appearance", appearance);
+	window.dispatchEvent(new Event(APPEARANCE_CHANGE_EVENT));
+	void persistAppearance(appearance);
+};
 
-	useEffect(() => {
-		setCurrentAppearance(getAppearance());
-	}, []);
+const subscribeToAppearance = (onStoreChange: () => void) => {
+	window.addEventListener(APPEARANCE_CHANGE_EVENT, onStoreChange);
+	return () =>
+		window.removeEventListener(APPEARANCE_CHANGE_EVENT, onStoreChange);
+};
+
+const getServerAppearance = (): Appearance => "dark";
+
+const ThemeToggle = () => {
+	const appearance = useSyncExternalStore(
+		subscribeToAppearance,
+		getAppearance,
+		getServerAppearance,
+	);
 
 	const onValueChange = (value: unknown) => {
 		if (value !== "light" && value !== "dark") {
@@ -40,7 +58,6 @@ function ThemeToggle() {
 		}
 
 		setAppearance(value);
-		setCurrentAppearance(value);
 	};
 
 	return (
@@ -71,6 +88,6 @@ function ThemeToggle() {
 			</Menu.RadioItem>
 		</Menu.RadioGroup>
 	);
-}
+};
 
 export { ThemeToggle };

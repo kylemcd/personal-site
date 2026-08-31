@@ -18,7 +18,7 @@ import {
 
 export class LastFmGenreError extends TaggedError("LastFmGenreError")<{
 	readonly error: unknown;
-}>() {
+}> {
 	override message = "Failed to fetch genre data from Last.fm";
 }
 

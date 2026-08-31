@@ -22,6 +22,7 @@ const wordmark = `data:image/svg+xml;base64,${Buffer.from(
 ).toString("base64")}`;
 
 type OpenGraphImageProps = {
+	footerText?: string | undefined;
 	label: string;
 	title: string;
 };
@@ -29,6 +30,7 @@ type OpenGraphImageProps = {
 const staticPageImages: ReadonlyArray<OpenGraphImageProps & { path: string }> =
 	[
 		{
+			footerText: "",
 			label: "Personal site",
 			path: "home",
 			title: "Kyle McDonald",
@@ -71,7 +73,11 @@ const titleSize = (title: string): number => {
 	return 72;
 };
 
-const OpenGraphImage = ({ label, title }: OpenGraphImageProps) => (
+const OpenGraphImage = ({
+	footerText = "Kyle McDonald",
+	label,
+	title,
+}: OpenGraphImageProps) => (
 	<div
 		style={{
 			background: "#ffffff",
@@ -136,31 +142,35 @@ const OpenGraphImage = ({ label, title }: OpenGraphImageProps) => (
 				width: "100%",
 			}}
 		>
-			<span>© 2011–2026 — Kyle McDonald</span>
+			<span>{footerText}</span>
 			<span>kpm.sh</span>
 		</div>
 	</div>
 );
 
 const constructImage = async ({
+	footerText,
 	label,
 	path,
 	title,
 }: OpenGraphImageProps & {
 	path: string;
 }): Promise<{ path: string; pngData: Uint8Array }> => {
-	const svg = await satori(<OpenGraphImage label={label} title={title} />, {
-		fonts: [
-			{
-				data: readFileSync("./public/fonts/opengraph-inter-medium.woff"),
-				name: "Inter",
-				style: "normal",
-				weight: 500,
-			},
-		],
-		height: OG_HEIGHT,
-		width: OG_WIDTH,
-	});
+	const svg = await satori(
+		<OpenGraphImage footerText={footerText} label={label} title={title} />,
+		{
+			fonts: [
+				{
+					data: readFileSync("./public/fonts/opengraph-inter-medium.woff"),
+					name: "Inter",
+					style: "normal",
+					weight: 500,
+				},
+			],
+			height: OG_HEIGHT,
+			width: OG_WIDTH,
+		},
+	);
 
 	return {
 		path,
@@ -224,7 +234,13 @@ const generateImages = async (): Promise<void> => {
 	}
 };
 
-generateImages().catch((error: unknown) => {
-	console.error("Unable to generate Open Graph images", error);
-	process.exitCode = 1;
-});
+const runImageGeneration = async (): Promise<void> => {
+	try {
+		await generateImages();
+	} catch (error: unknown) {
+		console.error("Unable to generate Open Graph images", error);
+		process.exitCode = 1;
+	}
+};
+
+await runImageGeneration();

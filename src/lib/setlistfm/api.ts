@@ -63,7 +63,7 @@ class SetlistFmApiError extends TaggedError("SetlistFmApiError")<{
 	readonly error: unknown;
 	readonly status?: number;
 	readonly url?: string;
-}>() {
+}> {
 	override message =
 		"Failed to fetch attended concerts from the Setlist.fm API";
 }

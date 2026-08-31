@@ -7,11 +7,11 @@ describe("getTrackMapAssets", () => {
 		expect(
 			getTrackMapAssets({ platformId: 192, garage61TrackId: 105 }),
 		).toEqual({
-			active: "/media/racing/tracks/192/active.svg?source=r2-svg-v1",
-			inactive: "/media/racing/tracks/192/inactive.svg?source=r2-svg-v1",
-			turns: "/media/racing/tracks/192/turns.svg?source=r2-svg-v1",
-			startFinish: "/media/racing/tracks/192/start-finish.svg?source=r2-svg-v1",
-			pitroad: "/media/racing/tracks/192/pitroad.svg?source=r2-svg-v1",
+			active: "/media/racing/tracks/192/active.svg?source=r2-svg-v2",
+			inactive: "/media/racing/tracks/192/inactive.svg?source=r2-svg-v2",
+			turns: "/media/racing/tracks/192/turns.svg?source=r2-svg-v2",
+			startFinish: "/media/racing/tracks/192/start-finish.svg?source=r2-svg-v2",
+			pitroad: "/media/racing/tracks/192/pitroad.svg?source=r2-svg-v2",
 		});
 	});
 
@@ -19,11 +19,11 @@ describe("getTrackMapAssets", () => {
 		expect(
 			getTrackMapAssets({ platformId: null, garage61TrackId: 104 }),
 		).toEqual({
-			active: "/media/racing/tracks/179/active.svg?source=r2-svg-v1",
-			inactive: "/media/racing/tracks/179/inactive.svg?source=r2-svg-v1",
-			turns: "/media/racing/tracks/179/turns.svg?source=r2-svg-v1",
-			startFinish: "/media/racing/tracks/179/start-finish.svg?source=r2-svg-v1",
-			pitroad: "/media/racing/tracks/179/pitroad.svg?source=r2-svg-v1",
+			active: "/media/racing/tracks/179/active.svg?source=r2-svg-v2",
+			inactive: "/media/racing/tracks/179/inactive.svg?source=r2-svg-v2",
+			turns: "/media/racing/tracks/179/turns.svg?source=r2-svg-v2",
+			startFinish: "/media/racing/tracks/179/start-finish.svg?source=r2-svg-v2",
+			pitroad: "/media/racing/tracks/179/pitroad.svg?source=r2-svg-v2",
 		});
 	});
 
@@ -37,11 +37,11 @@ describe("getTrackMapAssets", () => {
 		expect(
 			getTrackMapAssets({ platformId: 586, garage61TrackId: 504 }),
 		).toEqual({
-			active: "/media/racing/tracks/586/active.svg?source=r2-svg-v1",
-			inactive: "/media/racing/tracks/586/inactive.svg?source=r2-svg-v1",
-			turns: "/media/racing/tracks/586/turns.svg?source=r2-svg-v1",
-			startFinish: "/media/racing/tracks/586/start-finish.svg?source=r2-svg-v1",
-			pitroad: "/media/racing/tracks/586/pitroad.svg?source=r2-svg-v1",
+			active: "/media/racing/tracks/586/active.svg?source=r2-svg-v2",
+			inactive: "/media/racing/tracks/586/inactive.svg?source=r2-svg-v2",
+			turns: "/media/racing/tracks/586/turns.svg?source=r2-svg-v2",
+			startFinish: "/media/racing/tracks/586/start-finish.svg?source=r2-svg-v2",
+			pitroad: "/media/racing/tracks/586/pitroad.svg?source=r2-svg-v2",
 		});
 	});
 });

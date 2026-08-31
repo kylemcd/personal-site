@@ -1,3 +1,5 @@
+import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
+
 import { MetricBar } from "@/components/MetricBar";
 import { Text } from "@/components/Text";
 
@@ -7,9 +9,9 @@ type TextSize = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
 
 type StatBarListRow = {
 	key: string;
-	title: React.ReactNode;
-	subtitleLeft?: React.ReactNode;
-	subtitleRight?: React.ReactNode;
+	title: ReactNode;
+	subtitleLeft?: ReactNode;
+	subtitleRight?: ReactNode;
 	percent: number;
 	percentLabel: string;
 };
@@ -20,9 +22,9 @@ type StatBarListProps = {
 	percentColor?: string;
 	titleSize?: TextSize;
 	variant?: "default" | "listening" | "racing";
-} & React.HTMLAttributes<HTMLDivElement>;
+} & HTMLAttributes<HTMLDivElement>;
 
-function StatBarList({
+const StatBarList = ({
 	rows,
 	barColor,
 	percentColor,
@@ -30,7 +32,7 @@ function StatBarList({
 	variant = "default",
 	className,
 	...rest
-}: StatBarListProps) {
+}: StatBarListProps) => {
 	const listClasses = [
 		"share-list",
 		variant === "default" ? null : `share-list-${variant}`,
@@ -66,11 +68,11 @@ function StatBarList({
 						<Text
 							as="p"
 							size="0"
-							family="mono"
+							family="tabular"
 							className="share-list-percent"
 							style={
 								percentColor
-									? ({ color: percentColor } as React.CSSProperties)
+									? ({ color: percentColor } as CSSProperties)
 									: undefined
 							}
 						>
@@ -81,7 +83,7 @@ function StatBarList({
 			))}
 		</div>
 	);
-}
+};
 
 export type { StatBarListRow };
 export { StatBarList };

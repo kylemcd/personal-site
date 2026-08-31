@@ -76,7 +76,7 @@ type RssStore = {
 class RssCacheError extends TaggedError("RssCacheError")<{
 	readonly message: string;
 	readonly cause: unknown;
-}>() {}
+}> {}
 
 type RssFeedError =
 	| PublishedContentError

@@ -33,12 +33,12 @@ class UsesParseError extends TaggedError("UsesParseError")<{
 	readonly message: string;
 	readonly reason: UsesParseErrorReason;
 	readonly missingColumns?: ReadonlyArray<string>;
-}>() {}
+}> {}
 
 class UsesContentError extends TaggedError("UsesContentError")<{
 	readonly message: string;
 	readonly path: string;
-}>() {}
+}> {}
 
 const isTableRow = (line: string): boolean => line.includes("|");
 

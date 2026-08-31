@@ -20,19 +20,7 @@ const getData = createServerFn({ method: "GET" }).handler(async () => {
 	return { books };
 });
 
-export const Route = createFileRoute("/reading/")({
-	component: ReadingRoute,
-	loader: () => getData(),
-	errorComponent: ErrorComponent,
-	head: () =>
-		buildHead({
-			title: "Reading - Kyle McDonald",
-			url: "https://kpm.sh/reading",
-			image: "https://kpm.sh/open-graph/reading.png",
-		}),
-});
-
-function ReadingRoute() {
+const ReadingRoute = () => {
 	const { books } = Route.useLoaderData();
 	const hasReading = (books?.reading?.length ?? 0) > 0;
 	const hasFinished = (books?.finished?.length ?? 0) > 0;
@@ -67,4 +55,16 @@ function ReadingRoute() {
 			)}
 		</div>
 	);
-}
+};
+
+export const Route = createFileRoute("/reading/")({
+	component: ReadingRoute,
+	loader: () => getData(),
+	errorComponent: ErrorComponent,
+	head: () =>
+		buildHead({
+			title: "Reading - Kyle McDonald",
+			url: "https://kpm.sh/reading",
+			image: "https://kpm.sh/open-graph/reading.png",
+		}),
+});

@@ -1,1 +1,1 @@
-export { WritingList } from "./WritingList";
+export { HomepageWritingList, WritingList } from "./WritingList";

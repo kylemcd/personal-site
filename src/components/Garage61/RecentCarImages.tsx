@@ -7,7 +7,7 @@ import { getRacingCarImagePath } from "@/lib/racing-media/car-images";
 
 type RecentCar = Garage61Summary["derived"]["overview"]["recentCars"][number];
 
-function RecentCarImage({ car }: { car: RecentCar }) {
+const RecentCarImage = ({ car }: { car: RecentCar }) => {
 	const [imageUnavailable, setImageUnavailable] = useState(false);
 	const imagePath = getRacingCarImagePath(car.platformId);
 
@@ -33,15 +33,15 @@ function RecentCarImage({ car }: { car: RecentCar }) {
 				<Text as="p" size="1">
 					{car.name}
 				</Text>
-				<Text as="p" size="0" color="2" family="mono">
+				<Text as="p" size="0" color="2" family="tabular">
 					{formatDuration(car.timeOnTrackSeconds)}
 				</Text>
 			</div>
 		</article>
 	);
-}
+};
 
-function RecentCarImages({ cars }: { cars: ReadonlyArray<RecentCar> }) {
+const RecentCarImages = ({ cars }: { cars: ReadonlyArray<RecentCar> }) => {
 	return (
 		<div className="g61-racing-car-image-grid">
 			{cars.map((car) => (
@@ -49,6 +49,6 @@ function RecentCarImages({ cars }: { cars: ReadonlyArray<RecentCar> }) {
 			))}
 		</div>
 	);
-}
+};
 
 export { RecentCarImages };

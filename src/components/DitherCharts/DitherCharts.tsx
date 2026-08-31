@@ -113,13 +113,13 @@ const isConcertHistoryDatum = (value: unknown): value is ConcertHistoryDatum =>
 	"showCount" in value &&
 	"year" in value;
 
-export function DitherConcertHistoryChart({
+export const DitherConcertHistoryChart = ({
 	data,
 	height = 300,
 }: {
 	data: ReadonlyArray<ConcertHistoryDatum>;
 	height?: number;
-}) {
+}) => {
 	const definition = useMemo(() => {
 		const years = data.map((entry) => entry.year);
 		const plottedData = data.map((entry) => ({
@@ -292,9 +292,9 @@ export function DitherConcertHistoryChart({
 			/>
 		</div>
 	);
-}
+};
 
-export function DitherRadarChart({
+export const DitherRadarChart = ({
 	data,
 	height = 240,
 	ariaLabel,
@@ -302,7 +302,7 @@ export function DitherRadarChart({
 	data: ReadonlyArray<DitherRadarDatum>;
 	height?: number;
 	ariaLabel: string;
-}) {
+}) => {
 	const gradientId = `kpm-radar-gradient-${toSvgIdSegment(ariaLabel)}`;
 	const renderSvg = useMemo(
 		() =>
@@ -410,15 +410,15 @@ export function DitherRadarChart({
 			renderSvg={renderSvg}
 		/>
 	);
-}
+};
 
-export function DitherTreemapChart({
+export const DitherTreemapChart = ({
 	data,
 	height = 220,
 }: {
 	data: ReadonlyArray<DitherTreemapDatum>;
 	height?: number;
-}) {
+}) => {
 	const definition = useMemo(
 		() =>
 			defineChart({
@@ -480,4 +480,4 @@ export function DitherTreemapChart({
 			renderSvg={renderTreemapChartSvg}
 		/>
 	);
-}
+};
