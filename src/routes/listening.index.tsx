@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { AlbumShelf } from "@/components/AlbumShelf";
 import { ErrorComponent } from "@/components/ErrorComponent";
+import { PageSectionHeading } from "@/components/SectionHeading";
 import { Text } from "@/components/Text";
 import { WrappedListening } from "@/components/WrappedListening";
 import { lastfm } from "@/lib/lastfm";
@@ -28,6 +29,7 @@ const ListeningRoute = () => {
 	if (!hasListeningContent || !listening) {
 		return (
 			<div className="section-container">
+				<PageSectionHeading title="Listening" />
 				<Text as="p" size="1" color="2">
 					No listening data available right now.
 				</Text>
@@ -42,15 +44,18 @@ const ListeningRoute = () => {
 					<WrappedListening
 						wrapped={listening.wrapped}
 						nowPlaying={listening.nowPlaying}
-						variant="rich"
 					/>
-				) : null}
+				) : (
+					<div className="section-title-padded">
+						<PageSectionHeading title="Listening" />
+					</div>
+				)}
 				{listening.albums.length > 0 ? (
 					<div className="listening-section listening-recent-section">
 						<Text as="h3" size="1" weight="500">
 							Recently played
 						</Text>
-						<AlbumShelf albums={listening.albums} variant="scroll" />
+						<AlbumShelf albums={listening.albums} />
 					</div>
 				) : null}
 			</div>
@@ -64,7 +69,7 @@ export const Route = createFileRoute("/listening/")({
 	errorComponent: ErrorComponent,
 	head: () =>
 		buildHead({
-			title: "Listening - Kyle McDonald",
+			title: "Listening - KPM",
 			url: "https://kpm.sh/listening",
 			image: "https://kpm.sh/open-graph/listening.png",
 		}),

@@ -131,9 +131,7 @@ export const Route = createFileRoute("/posts/$slug")({
 	errorComponent: ErrorComponent,
 	head: ({ loaderData, params }) => {
 		const postTitle = loaderData?.frontmatter?.title;
-		const fullTitle = postTitle
-			? `${postTitle} - Kyle McDonald`
-			: "Kyle McDonald";
+		const fullTitle = postTitle ? `${postTitle} - KPM` : "KPM";
 		const imageUrl = `https://kpm.sh/open-graph/${params.slug}.png`;
 
 		return buildHead({

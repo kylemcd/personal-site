@@ -1,26 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-(
-	vi.mock as unknown as (
-		path: string,
-		factory: () => unknown,
-		options: { virtual: boolean },
-	) => void
-)(
-	"cloudflare:workers",
-	() => ({
-		DurableObject: class {},
-		env: {},
-		WorkflowEntrypoint: class {
-			env: unknown;
+vi.mock("cloudflare:workers", () => ({
+	DurableObject: class {},
+	env: {},
+	WorkflowEntrypoint: class {
+		env: unknown;
 
-			constructor(_ctx: unknown, env: unknown) {
-				this.env = env;
-			}
-		},
-	}),
-	{ virtual: true },
-);
+		constructor(_ctx: unknown, env: unknown) {
+			this.env = env;
+		}
+	},
+}));
 
 describe("StaleDataMonitorWorkflow", () => {
 	beforeEach(() => {

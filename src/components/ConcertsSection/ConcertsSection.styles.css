@@ -12,10 +12,6 @@
 	gap: var(--spc-3);
 }
 
-.concerts-section-title {
-	flex: 0 0 auto;
-}
-
 .concerts-section-window {
 	margin-top: var(--spc-1);
 	text-transform: lowercase;

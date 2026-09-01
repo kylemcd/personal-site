@@ -30,7 +30,7 @@ export const Route = createFileRoute("/uses/")({
 	errorComponent: ErrorComponent,
 	head: () =>
 		buildHead({
-			title: "Uses - Kyle McDonald",
+			title: "Uses - KPM",
 			description: "All of the hardware, software, etc that I use.",
 			url: "https://kpm.sh/uses",
 			image: "https://kpm.sh/open-graph/uses.png",

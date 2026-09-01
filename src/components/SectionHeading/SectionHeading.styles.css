@@ -1,0 +1,92 @@
+.section-wordmark-heading {
+	line-height: 1;
+	min-width: 0;
+}
+
+.section-wordmark-heading[data-section="listening"] {
+	--section-wordmark-height: 1.875rem;
+}
+
+.section-wordmark-heading[data-section="concerts"] {
+	--section-wordmark-height: 2.5rem;
+}
+
+.page-section-heading {
+	display: flex;
+	align-items: center;
+	min-height: 2.75rem;
+}
+
+.homepage-section-heading .section-heading-link {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	width: fit-content;
+	max-width: 100%;
+	min-height: 2.75rem;
+	border-radius: var(--rnd-3);
+	color: var(--color-text-1);
+}
+
+.section-wordmark {
+	display: block;
+	width: calc(
+		var(--section-wordmark-height, 2rem) *
+		(var(--section-wordmark-aspect-ratio))
+	);
+	max-width: 100%;
+	min-width: 0;
+	aspect-ratio: var(--section-wordmark-aspect-ratio);
+	background: currentColor;
+	-webkit-mask: var(--section-wordmark-image) left center / contain no-repeat;
+	mask: var(--section-wordmark-image) left center / contain no-repeat;
+}
+
+.homepage-section-heading .section-wordmark {
+	max-width: calc(100% - 1.625rem);
+}
+
+.homepage-section-heading .section-heading-icon {
+	flex: none;
+	font-size: 1rem;
+	transform: none;
+}
+
+.homepage-section-heading .section-heading-link:hover,
+.homepage-section-heading .section-heading-link:focus-visible {
+	color: var(--color-text-1);
+}
+
+.homepage-section-heading .section-heading-link:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 4px;
+}
+
+.homepage-section-heading .section-heading-link:hover .section-heading-icon,
+.homepage-section-heading
+	.section-heading-link:focus-visible
+	.section-heading-icon {
+	transform: translateX(0.125rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.homepage-section-heading .section-heading-icon {
+		transition: none;
+	}
+}
+
+@media (forced-colors: active) {
+	.section-wordmark {
+		display: none;
+	}
+
+	.section-wordmark-label {
+		position: static;
+		width: auto;
+		height: auto;
+		margin: 0;
+		overflow: visible;
+		clip: auto;
+		white-space: normal;
+	}
+}

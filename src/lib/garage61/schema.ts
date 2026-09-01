@@ -1,14 +1,9 @@
-type JsonPrimitive = string | number | boolean | null;
-type JsonValue = JsonPrimitive | { [key: string]: JsonValue } | JsonValue[];
-
 export type Garage61Summary = {
 	profile: {
 		id: number;
 		name: string;
 		image?: string;
 	};
-	statistics: JsonValue;
-	sessions: JsonValue;
 	// Fingerprint of the statistics rows this summary was built from. The whole
 	// summary is derived from those rows, so an unchanged fingerprint means a
 	// rebuild would produce identical output and can be skipped.
@@ -16,26 +11,6 @@ export type Garage61Summary = {
 	derived: {
 		sessionCount: number | null;
 		trackCount: number | null;
-		fastestLaps: Array<{
-			track: string;
-			car: string;
-			lapTimeMs: number;
-			lapTime: string;
-			sessionDate: string | null;
-			sessionUrl: string | null;
-		}>;
-		recentStatistics: Array<{
-			day: string | null;
-			trackId: number | null;
-			carId: number | null;
-			track: string;
-			car: string;
-			sessionType: string | null;
-			events: number | null;
-			lapsDriven: number | null;
-			cleanLapsDriven: number | null;
-			timeOnTrack: number | null;
-		}>;
 		overview: {
 			windowLabel: string;
 			totalTimeOnTrackSeconds: number;
@@ -75,13 +50,6 @@ export type Garage61Summary = {
 					cleanLaps: number;
 					totalLaps: number;
 				} | null;
-				trackConfidence: Array<{
-					track: string;
-					laps: number;
-					cleanLaps: number;
-					cleanPercentage: number | null;
-					avgLapSeconds: number | null;
-				}>;
 			};
 		};
 	};

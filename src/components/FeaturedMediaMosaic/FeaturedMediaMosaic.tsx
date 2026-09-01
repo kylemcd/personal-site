@@ -1,3 +1,7 @@
+import {
+	HomepageSectionHeading,
+	type SectionTitle,
+} from "@/components/SectionHeading";
 import { Text } from "@/components/Text";
 
 import "./FeaturedMediaMosaic.styles.css";
@@ -13,7 +17,7 @@ export type FeaturedMediaMosaicItem = {
 type FeaturedMediaMosaicProps = {
 	items: ReadonlyArray<FeaturedMediaMosaicItem>;
 	layout?: "featured" | "uniform";
-	title: string;
+	title: SectionTitle;
 	titleHref?: string | undefined;
 };
 
@@ -27,19 +31,13 @@ const FeaturedMediaMosaic = ({
 
 	return (
 		<section className="featured-media-mosaic">
-			<Text as="h2" size="2">
-				{titleHref ? (
-					<a className="section-heading-link" href={titleHref}>
-						<span className="section-heading-label">{title}</span>
-						<i
-							className="hn hn-angle-right section-heading-icon"
-							aria-hidden="true"
-						/>
-					</a>
-				) : (
-					title
-				)}
-			</Text>
+			{titleHref ? (
+				<HomepageSectionHeading href={titleHref} title={title} />
+			) : (
+				<Text as="h2" size="2">
+					{title}
+				</Text>
+			)}
 			<div className="featured-media-mosaic-grid" data-layout={layout}>
 				{items.map((item, index) => {
 					const isFeatured = layout === "featured" && index === 0;

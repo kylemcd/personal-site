@@ -3,6 +3,7 @@ import {
 	DitherTreemapChart,
 	type DitherTreemapDatum,
 } from "@/components/DitherCharts";
+import { PageSectionHeading } from "@/components/SectionHeading";
 import { SectionStatRow } from "@/components/SectionStatRow";
 import { StatBarList, type StatBarListRow } from "@/components/StatBarList";
 import { Text } from "@/components/Text";
@@ -14,8 +15,6 @@ import "./WrappedListening.styles.css";
 type WrappedListeningProps = {
 	wrapped: WrappedData;
 	nowPlaying?: NowPlayingAlbum | null;
-	variant?: "compact" | "rich";
-	titleHref?: string;
 };
 
 type WaveformBar = {
@@ -56,20 +55,10 @@ const createWaveformBars = (
 	});
 };
 
-const WrappedListening = ({
-	wrapped,
-	nowPlaying,
-	variant = "compact",
-	titleHref,
-}: WrappedListeningProps) => {
-	const isRich = variant === "rich";
-	const trackLimit = isRich ? 10 : 5;
-	const artistLimit = isRich ? 10 : 5;
-	const albumLimit = isRich ? 8 : 0;
-
-	const topTracks = wrapped.topTracks.slice(0, trackLimit);
-	const topArtists = wrapped.topArtists.slice(0, artistLimit);
-	const topAlbums = wrapped.topAlbums.slice(0, albumLimit);
+const WrappedListening = ({ wrapped, nowPlaying }: WrappedListeningProps) => {
+	const topTracks = wrapped.topTracks.slice(0, 10);
+	const topArtists = wrapped.topArtists.slice(0, 10);
+	const topAlbums = wrapped.topAlbums.slice(0, 8);
 	const topGenres = (wrapped.topGenres ?? []).slice(0, 6);
 	const topArtistsTreemapBase = wrapped.topArtists
 		.filter((artist) => artist.plays > 0)
@@ -108,7 +97,7 @@ const WrappedListening = ({
 	const waveformBars = hasLiveNowPlaying
 		? createWaveformBars(
 				`${liveTrackName}|${liveArtist}|${wrapped.totalScrobbles}`,
-				isRich ? 48 : 40,
+				48,
 			)
 		: [];
 
@@ -186,21 +175,9 @@ const WrappedListening = ({
 	}));
 
 	return (
-		<div className="wrapped-listening-redesign" data-variant={variant}>
+		<div className="wrapped-listening-redesign">
 			<div className="wrapped-listening-top">
-				<Text as="h2" size="2" className="wrapped-listening-title">
-					{titleHref ? (
-						<a className="section-heading-link" href={titleHref}>
-							<span className="section-heading-label">Listening</span>
-							<i
-								className="hn hn-angle-right section-heading-icon"
-								aria-hidden="true"
-							/>
-						</a>
-					) : (
-						"Listening"
-					)}
-				</Text>
+				<PageSectionHeading title="Listening" />
 				<Text
 					as="p"
 					size="0"
@@ -245,12 +222,7 @@ const WrappedListening = ({
 							<span className="wrapped-live-dot" aria-hidden="true" />
 							Live
 						</Text>
-						<Text
-							as="p"
-							size={isRich ? "7" : "6"}
-							weight="500"
-							className="wrapped-live-track"
-						>
+						<Text as="p" size="7" weight="500" className="wrapped-live-track">
 							<a
 								href={liveUrl}
 								target="_blank"
@@ -455,7 +427,7 @@ const WrappedListening = ({
 				</div>
 			</div>
 
-			{isRich && topAlbums.length > 0 ? (
+			{topAlbums.length > 0 ? (
 				<div className="wrapped-list-panel wrapped-albums-panel">
 					<div className="wrapped-list-head">
 						<Text as="p" size="0" color="2">

@@ -1,12 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-(
-	vi.mock as unknown as (
-		path: string,
-		factory: () => unknown,
-		options: { virtual: boolean },
-	) => void
-)("cloudflare:workers", () => ({ env: {} }), { virtual: true });
+vi.mock("cloudflare:workers", () => ({ env: {} }));
 
 import { canonicalizeGenreTag } from "./genre-taxonomy";
 

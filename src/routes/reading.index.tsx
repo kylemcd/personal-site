@@ -4,6 +4,7 @@ import { Result } from "better-result";
 
 import { Bookshelf } from "@/components/Bookshelf";
 import { ErrorComponent } from "@/components/ErrorComponent";
+import { PageSectionHeading } from "@/components/SectionHeading";
 import { Text } from "@/components/Text";
 import { goodreads } from "@/lib/goodreads";
 import { buildHead } from "@/lib/meta";
@@ -28,6 +29,7 @@ const ReadingRoute = () => {
 	if (!hasReading && !hasFinished) {
 		return (
 			<div className="section-container">
+				<PageSectionHeading title="Reading" />
 				<Text as="p" size="1" color="2">
 					No reading data available right now.
 				</Text>
@@ -39,14 +41,13 @@ const ReadingRoute = () => {
 		<div className="section-stack">
 			{hasReading && (
 				<div className="section-container">
-					<Text as="h2" size="2">
-						Reading
-					</Text>
+					<PageSectionHeading title="Reading" />
 					<Bookshelf books={books.reading} variant="grid" />
 				</div>
 			)}
 			{hasFinished && (
 				<div className="section-container">
+					{!hasReading && <PageSectionHeading title="Reading" />}
 					<Text as="h2" size="2">
 						Finished
 					</Text>
@@ -63,7 +64,7 @@ export const Route = createFileRoute("/reading/")({
 	errorComponent: ErrorComponent,
 	head: () =>
 		buildHead({
-			title: "Reading - Kyle McDonald",
+			title: "Reading - KPM",
 			url: "https://kpm.sh/reading",
 			image: "https://kpm.sh/open-graph/reading.png",
 		}),

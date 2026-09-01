@@ -129,7 +129,7 @@ const getPointerPoint = (
 	};
 };
 
-const useWordmarkShader = (scrollLinked: boolean, allowShader: boolean) => {
+const useWordmarkShader = (scrollLinked: boolean) => {
 	const [state, setState] = useState<{
 		appearance: Appearance;
 		ditherType: "4x4" | "8x8";
@@ -167,8 +167,7 @@ const useWordmarkShader = (scrollLinked: boolean, allowShader: boolean) => {
 				document.documentElement.getAttribute("data-appearance") === "light"
 					? "light"
 					: "dark";
-			const shaderEnabled =
-				allowShader && supportsShader && !motionPreference.matches;
+			const shaderEnabled = supportsShader && !motionPreference.matches;
 			const ditherType = mobileDither.matches ? "4x4" : "8x8";
 			const mobileMotionEnabled = shaderEnabled && mobileMotion.matches;
 			const rootFontSize =
@@ -229,7 +228,7 @@ const useWordmarkShader = (scrollLinked: boolean, allowShader: boolean) => {
 			window.removeEventListener("resize", requestUpdate);
 			window.cancelAnimationFrame(animationFrame);
 		};
-	}, [allowShader, scrollLinked]);
+	}, [scrollLinked]);
 
 	return state;
 };
@@ -314,7 +313,7 @@ const Wordmark = ({ variant = "hero" }: WordmarkProps) => {
 	});
 	const suppressNextClick = useRef(false);
 	const disturbanceDecay = useRef(0);
-	const shader = useWordmarkShader(variant === "hero", true);
+	const shader = useWordmarkShader(variant === "hero");
 	const shaderProgress = useRef(shader.progress);
 	shaderProgress.current = shader.progress;
 	const shaderReady = shaderStatus === "ready";
@@ -353,7 +352,7 @@ const Wordmark = ({ variant = "hero" }: WordmarkProps) => {
 			: { back: "#ffffff00", front: "#ffffff" };
 
 	const setDisturbanceShaderHost = useCallback((node: HTMLElement | null) => {
-		disturbanceShaderHost.current = node as ShaderHost | null;
+		disturbanceShaderHost.current = node;
 	}, []);
 
 	const applyPointerOffsets = useCallback((point: Point) => {

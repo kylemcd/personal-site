@@ -4,6 +4,7 @@ import { Result } from "better-result";
 
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { Garage61 } from "@/components/Garage61";
+import { PageSectionHeading } from "@/components/SectionHeading";
 import { Text } from "@/components/Text";
 import { garage61 } from "@/lib/garage61";
 import { buildHead } from "@/lib/meta";
@@ -28,6 +29,7 @@ const RacingRoute = () => {
 	if (!racing || !hasRacingOverview) {
 		return (
 			<div className="section-container">
+				<PageSectionHeading title="Racing" />
 				<Text as="p" size="1" color="2">
 					No racing data available right now.
 				</Text>
@@ -48,7 +50,7 @@ export const Route = createFileRoute("/racing/")({
 	errorComponent: ErrorComponent,
 	head: () =>
 		buildHead({
-			title: "Racing - Kyle McDonald",
+			title: "Racing - KPM",
 			url: "https://kpm.sh/racing",
 			image: "https://kpm.sh/open-graph/racing.png",
 		}),

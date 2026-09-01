@@ -62,15 +62,6 @@ const buildOverview = (): Garage61Summary["derived"]["overview"] => ({
 			cleanLaps: 24,
 			totalLaps: 25,
 		},
-		trackConfidence: [
-			{
-				track: "Long Beach Street Circuit",
-				laps: 25,
-				cleanLaps: 24,
-				cleanPercentage: 96,
-				avgLapSeconds: 74.2,
-			},
-		],
 	},
 });
 

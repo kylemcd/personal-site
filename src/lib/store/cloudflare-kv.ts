@@ -5,15 +5,7 @@ import { env } from "@/lib/env";
 import { toErrorDetails } from "@/lib/error-details";
 import { asRecord } from "@/lib/record";
 
-type KvNamespaceLike = {
-	get: (key: string, type: "text") => Promise<string | null>;
-	put: (
-		key: string,
-		value: string,
-		options?: { expirationTtl?: number },
-	) => Promise<void>;
-	delete: (key: string) => Promise<void>;
-};
+type KvNamespaceLike = Pick<KVNamespace, "get" | "put" | "delete">;
 
 type MemoryCacheEntry = {
 	value: string;
@@ -42,11 +34,6 @@ class KvPutError extends TaggedError("KvPutError")<{
 }
 
 type JsonGetOrComputeOptions<A, E> = JsonCacheOptions & {
-	ttlSeconds: number;
-	compute: () => Promise<Result<A, E>>;
-};
-
-type JsonRefreshOptions<A, E> = JsonCacheOptions & {
 	ttlSeconds: number;
 	compute: () => Promise<Result<A, E>>;
 };
@@ -155,7 +142,7 @@ const resolveKvNamespace = (): KvNamespaceLike | null => {
 	return null;
 };
 
-const getFromMemory = <A>(key: string): A | null => {
+const getFromMemory = (key: string): string | null => {
 	const entry = inMemoryStore.get(key);
 	if (!entry) return null;
 	if (entry.expiresAt !== null && entry.expiresAt <= Date.now()) {
@@ -163,12 +150,7 @@ const getFromMemory = <A>(key: string): A | null => {
 		return null;
 	}
 
-	try {
-		return JSON.parse(entry.value) as A;
-	} catch {
-		inMemoryStore.delete(key);
-		return null;
-	}
+	return entry.value;
 };
 
 const writeToMemory = <A>(
@@ -251,37 +233,8 @@ const readEnvelope = async <A>(
 		}
 	}
 
-	const memValue = getFromMemory<CacheEnvelope<A> | A>(scopedKey);
-	if (memValue === null) return null;
-	if (
-		typeof memValue === "object" &&
-		memValue !== null &&
-		"__cacheEnvelope" in memValue &&
-		"value" in memValue
-	) {
-		const record = memValue as CacheEnvelope<A>;
-		return {
-			__cacheEnvelope: CACHE_ENVELOPE_VERSION,
-			value: record.value,
-			refreshAfter:
-				typeof record.refreshAfter === "number" &&
-				Number.isFinite(record.refreshAfter)
-					? record.refreshAfter
-					: null,
-			retryAfter:
-				typeof record.retryAfter === "number" &&
-				Number.isFinite(record.retryAfter)
-					? record.retryAfter
-					: null,
-		};
-	}
-
-	return {
-		__cacheEnvelope: CACHE_ENVELOPE_VERSION,
-		value: memValue as A,
-		refreshAfter: null,
-		retryAfter: null,
-	};
+	const raw = getFromMemory(scopedKey);
+	return raw === null ? null : parseEnvelope<A>(raw);
 };
 
 const getRetentionTtlSeconds = ({
@@ -408,14 +361,12 @@ const singleFlight = <A, E>(
 		| undefined;
 	if (existing) return existing;
 
-	const promise = compute();
-	const storedPromise = promise as Promise<Result<unknown, unknown>>;
-	inFlightComputations.set(key, storedPromise);
-	void promise.finally(() => {
-		if (inFlightComputations.get(key) === storedPromise) {
+	const promise = compute().finally(() => {
+		if (inFlightComputations.get(key) === promise) {
 			inFlightComputations.delete(key);
 		}
 	});
+	inFlightComputations.set(key, promise);
 	return promise;
 };
 
@@ -495,7 +446,7 @@ const refreshJson = async <A, E>({
 	ttlSeconds,
 	retentionTtlSeconds,
 	compute,
-}: JsonRefreshOptions<A, E>): Promise<Result<A, E | KvPutError>> => {
+}: JsonGetOrComputeOptions<A, E>): Promise<Result<A, E | KvPutError>> => {
 	return singleFlight<A, E>(toScopedKey(key), async () => {
 		const valueResult = await computeWithStatus(key, compute);
 		if (Result.isError(valueResult)) return valueResult;

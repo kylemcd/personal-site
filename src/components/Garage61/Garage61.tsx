@@ -1,3 +1,7 @@
+import {
+	HomepageSectionHeading,
+	PageSectionHeading,
+} from "@/components/SectionHeading";
 import { SectionStatRow } from "@/components/SectionStatRow";
 import { Text } from "@/components/Text";
 import { clampPercent, formatDuration, formatPercentLabel } from "@/lib/format";
@@ -26,19 +30,11 @@ const Garage61 = ({ overview, titleHref }: Garage61Props) => {
 
 	return (
 		<div className="g61-racing">
-			<Text as="h2" size="2" className="g61-racing-title">
-				{titleHref ? (
-					<a className="section-heading-link" href={titleHref}>
-						<span className="section-heading-label">Racing</span>
-						<i
-							className="hn hn-angle-right section-heading-icon"
-							aria-hidden="true"
-						/>
-					</a>
-				) : (
-					"Racing"
-				)}
-			</Text>
+			{titleHref ? (
+				<HomepageSectionHeading href={titleHref} title="Racing" />
+			) : (
+				<PageSectionHeading title="Racing" />
+			)}
 
 			<SectionStatRow
 				className="g61-racing-kpis"

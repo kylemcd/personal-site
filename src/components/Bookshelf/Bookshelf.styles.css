@@ -1,38 +1,23 @@
-.bookshelf-container {
-	display: flex;
-	gap: var(--spc-8);
-}
-
-.bookshelf-section {
-	display: flex;
-	flex-direction: column;
-	flex: 0 0 auto;
-	gap: var(--spc-4);
-}
-
 .bookshelf {
 	text-align: center;
-	display: flex;
+	display: grid;
 	justify-content: center;
 	align-items: flex-start;
 	gap: var(--spc-4);
+	width: 100%;
 }
 
 .bookshelf[data-variant="grid"] {
-	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
-	width: 100%;
 }
 
 .bookshelf[data-variant="masonry"] {
 	/* JavaScript-enhanced grid fallback for browsers without Grid Lanes. */
 	--bookshelf-masonry-gap: var(--spc-4);
 
-	display: grid;
 	grid-template-columns: repeat(6, minmax(0, 1fr));
 	grid-auto-rows: 1px;
 	grid-auto-flow: dense;
-	width: 100%;
 	column-gap: var(--bookshelf-masonry-gap);
 	row-gap: 0;
 	align-items: start;
@@ -45,23 +30,17 @@
 
 .bookshelf .book {
 	height: auto;
-	width: 180px;
+	width: 100%;
 	display: inline-block;
 	position: relative;
 	vertical-align: top;
 	transition: all ease-in-out 0.2s;
 	border-radius: 0 6px 6px 0;
 	overflow: hidden;
-	flex: 0 0 auto;
-}
-
-.bookshelf[data-variant="grid"] .book {
-	width: 100%;
 }
 
 .bookshelf[data-variant="masonry"] .book {
 	display: block;
-	width: 100%;
 	grid-column: var(--book-column);
 	grid-row-end: span var(--book-row-span, 1);
 	visibility: hidden;

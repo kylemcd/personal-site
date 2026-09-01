@@ -1,137 +1,26 @@
 import { Input } from "@base-ui/react/input";
 import { Select } from "@base-ui/react/select";
-import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 
 import { Text } from "@/components/Text";
 import type { UseItem } from "@/lib/uses";
 
 import { filterUsesItems } from "./filterUses";
+import {
+	buildTagOptions,
+	buildTagPillStyles,
+	selectedTagSummary,
+} from "./tag-options";
 import "./UsesTable.styles.css";
 
 type UsesTableProps = {
 	items: ReadonlyArray<UseItem>;
-	titleHref?: string;
 };
-
-type TagOption = {
-	key: string;
-	label: string;
-};
-
-type TagPillStyle = CSSProperties &
-	Record<
-		| "--tag-hue"
-		| "--tag-sat"
-		| "--tag-light"
-		| "--tag-border-sat"
-		| "--tag-border-light"
-		| "--tag-light-sat"
-		| "--tag-light-bg"
-		| "--tag-light-border-sat"
-		| "--tag-light-border",
-		string
-	>;
 
 const isExternalLink = (link: string): boolean =>
 	/^https?:\/\//i.test(link) || link.startsWith("//");
 
-const buildTagOptions = (items: ReadonlyArray<UseItem>): TagOption[] => {
-	const optionMap = new Map<string, string>();
-
-	for (const item of items) {
-		for (const tag of item.tags) {
-			const label = tag.trim();
-			if (!label) {
-				continue;
-			}
-
-			const key = label.toLowerCase();
-			if (!optionMap.has(key)) {
-				optionMap.set(key, label);
-			}
-		}
-	}
-
-	return Array.from(optionMap.entries())
-		.map(([key, label]) => ({ key, label }))
-		.sort((a, b) => a.label.localeCompare(b.label));
-};
-
-const buildTagPillStyles = (
-	tagOptions: ReadonlyArray<TagOption>,
-): ReadonlyMap<string, TagPillStyle> => {
-	const circularHueDistance = (a: number, b: number): number => {
-		const diff = Math.abs(a - b);
-		return Math.min(diff, 360 - diff);
-	};
-
-	const hashTagKey = (tagKey: string): number => {
-		let hash = 2166136261;
-		for (let i = 0; i < tagKey.length; i += 1) {
-			hash ^= tagKey.charCodeAt(i);
-			hash = Math.imul(hash, 16777619);
-		}
-
-		return hash >>> 0;
-	};
-
-	const usedHues: number[] = [];
-	const styleMap = new Map<string, TagPillStyle>();
-
-	tagOptions.forEach((tag) => {
-		const hash = hashTagKey(tag.key);
-		let hue = hash % 360;
-		let attempts = 0;
-
-		// Nudge hue by golden-angle increments until it is distinct enough
-		// from hues already assigned in this markdown-derived tag list.
-		while (
-			usedHues.some((usedHue) => circularHueDistance(usedHue, hue) < 20) &&
-			attempts < 24
-		) {
-			hue = (hue + 137.508) % 360;
-			attempts += 1;
-		}
-
-		usedHues.push(hue);
-
-		const satOffset = (hash >>> 4) % 3;
-		const lightOffset = (hash >>> 7) % 2;
-
-		styleMap.set(tag.key, {
-			"--tag-hue": `${hue.toFixed(2)}deg`,
-			"--tag-sat": `${38 + satOffset * 6}%`,
-			"--tag-light": `${28 + lightOffset * 4}%`,
-			"--tag-border-sat": `${54 + satOffset * 5}%`,
-			"--tag-border-light": `${48 + lightOffset * 4}%`,
-			"--tag-light-sat": `${48 + satOffset * 4}%`,
-			"--tag-light-bg": `${74 + lightOffset * 3}%`,
-			"--tag-light-border-sat": `${58 + satOffset * 4}%`,
-			"--tag-light-border": `${52 + lightOffset * 4}%`,
-		});
-	});
-
-	return styleMap;
-};
-
-const selectedTagSummary = (
-	selectedTagKeys: ReadonlyArray<string>,
-	tagOptions: ReadonlyArray<TagOption>,
-): string => {
-	if (selectedTagKeys.length === 0) {
-		return "All tags";
-	}
-
-	if (selectedTagKeys.length === 1) {
-		const selected = tagOptions.find((tag) => tag.key === selectedTagKeys[0]);
-		return selected?.label ?? "1 selected";
-	}
-
-	return `${selectedTagKeys.length} selected`;
-};
-
-const UsesTable = ({ items, titleHref }: UsesTableProps) => {
+const UsesTable = ({ items }: UsesTableProps) => {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedTagKeys, setSelectedTagKeys] = useState<string[]>([]);
 
@@ -155,17 +44,7 @@ const UsesTable = ({ items, titleHref }: UsesTableProps) => {
 		<div className="uses-table-root">
 			<div className="uses-controls">
 				<Text as="h2" size="2" className="uses-controls-title">
-					{titleHref ? (
-						<a className="section-heading-link" href={titleHref}>
-							<span className="section-heading-label">Uses</span>
-							<i
-								className="hn hn-angle-right section-heading-icon"
-								aria-hidden="true"
-							/>
-						</a>
-					) : (
-						"Uses"
-					)}
+					Uses
 				</Text>
 				<div className="uses-controls-right">
 					<div className="uses-search">
@@ -298,9 +177,6 @@ const UsesTable = ({ items, titleHref }: UsesTableProps) => {
 									<td>
 										<div className="uses-tags-cell">
 											{item.tags.map((tag) => (
-												// Use the normalized key to keep colors consistent
-												// across table rows and dropdown options.
-												// Tags are normalized similarly in buildTagOptions.
 												<span
 													key={`${item.name}-${tag}`}
 													className="uses-tag-pill"

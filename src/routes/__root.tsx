@@ -38,7 +38,15 @@ const RootDocument = ({ children }: { children: ReactNode }) => {
 					title="Kyle McDonald's RSS Feed"
 					href="https://kpm.sh/rss.xml"
 				/>
-				<link rel="icon" href="/images/avatar.png" type="image/png" />
+				<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+				<link
+					rel="icon"
+					href="/favicon-32.png"
+					type="image/png"
+					sizes="32x32"
+				/>
+				<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+				<link rel="manifest" href="/manifest.json" />
 			</head>
 			<body>
 				<div className="site-shell">
@@ -63,7 +71,7 @@ export const Route = createRootRoute({
 		meta: [
 			{ charSet: "utf-8" },
 			{ name: "viewport", content: "width=device-width, initial-scale=1" },
-			...buildMeta({ title: "Kyle McDonald" }),
+			...buildMeta({ title: "KPM" }),
 		],
 	}),
 

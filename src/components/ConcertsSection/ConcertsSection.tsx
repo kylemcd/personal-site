@@ -2,6 +2,7 @@ import {
 	DitherConcertHistoryChart,
 	DitherRadarChart,
 } from "@/components/DitherCharts";
+import { PageSectionHeading } from "@/components/SectionHeading";
 import { Text } from "@/components/Text";
 import type { ConcertsData } from "@/lib/setlistfm";
 
@@ -9,7 +10,6 @@ import "./ConcertsSection.styles.css";
 
 type ConcertsSectionProps = {
 	concerts: ConcertsData;
-	titleHref?: string;
 };
 
 const formatShowDate = (dateIso: string): string => {
@@ -74,7 +74,7 @@ const formatGapDays = (days: number | null): string =>
 const formatAvgLength = (avg: number): string =>
 	avg > 0 ? `${avg.toFixed(1)} songs` : "—";
 
-const ConcertsSection = ({ concerts, titleHref }: ConcertsSectionProps) => {
+const ConcertsSection = ({ concerts }: ConcertsSectionProps) => {
 	const hasShows = concerts.totalShows > 0;
 	const topGenres = concerts.topGenres ?? [];
 	const hasGenres = topGenres.length > 2;
@@ -104,19 +104,7 @@ const ConcertsSection = ({ concerts, titleHref }: ConcertsSectionProps) => {
 	return (
 		<div className="concerts-section">
 			<div className="concerts-section-top">
-				<Text as="h2" size="2" className="concerts-section-title">
-					{titleHref ? (
-						<a className="section-heading-link" href={titleHref}>
-							<span className="section-heading-label">Concerts</span>
-							<i
-								className="hn hn-angle-right section-heading-icon"
-								aria-hidden="true"
-							/>
-						</a>
-					) : (
-						"Concerts"
-					)}
-				</Text>
+				<PageSectionHeading title="Concerts" />
 				<Text
 					as="p"
 					size="0"

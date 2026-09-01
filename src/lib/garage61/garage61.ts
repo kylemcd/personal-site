@@ -51,7 +51,6 @@ const GARAGE61_SUMMARY_TIMEOUT_MS = 25_000;
 const GARAGE61_REQUEST_CONCURRENCY = 4;
 const LAST_30_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_RECENT_ITEMS = 10;
-const TRACK_CONFIDENCE_MAX_ITEMS = 12;
 const CLEANEST_COMBO_MIN_LAPS = 20;
 const authHeaders = (apiKey: string) => ({
 	Authorization: `Bearer ${apiKey}`,
@@ -79,13 +78,20 @@ const withTimeout = async <A, E>(
 	timeoutMs: number,
 	onTimeout: () => E,
 ): Promise<Result<A, E>> => {
-	const timeoutResult = await Promise.race([
-		promise,
-		new Promise<Result<A, E>>((resolve) =>
-			setTimeout(() => resolve(Result.err(onTimeout())), timeoutMs),
-		),
-	]);
-	return timeoutResult;
+	let timeoutId: ReturnType<typeof setTimeout> | undefined;
+	try {
+		return await Promise.race([
+			promise,
+			new Promise<Result<A, E>>((resolve) => {
+				timeoutId = setTimeout(
+					() => resolve(Result.err(onTimeout())),
+					timeoutMs,
+				);
+			}),
+		]);
+	} finally {
+		clearTimeout(timeoutId);
+	}
 };
 
 const fetchGarage61 = async <A>(
@@ -114,7 +120,7 @@ const fetchGarage61 = async <A>(
 
 	garage61CachedRequests.set(key, {
 		expiresAt: now + GARAGE61_CACHE_TTL_MS,
-		request: request as Promise<Result<Garage61Response, unknown>>,
+		request,
 	});
 
 	const result = await request;
@@ -135,13 +141,9 @@ const forEachConcurrent = <A, B, E>(
 
 const emptySummary = (): Garage61Summary => ({
 	profile: { id: 0, name: "Kyle" },
-	statistics: null,
-	sessions: null,
 	derived: {
 		sessionCount: null,
 		trackCount: null,
-		fastestLaps: [],
-		recentStatistics: [],
 		overview: {
 			windowLabel: "Last 30 Days",
 			totalTimeOnTrackSeconds: 0,
@@ -153,7 +155,6 @@ const emptySummary = (): Garage61Summary => ({
 			insights: {
 				sessionTimeBreakdown: null,
 				cleanestCombo: null,
-				trackConfidence: [],
 			},
 		},
 	},
@@ -521,52 +522,8 @@ const stableNameId = (kind: "track" | "car", name: string): number => {
 	return normalized === 0 ? -1 : -normalized;
 };
 
-const median = (values: ReadonlyArray<number>): number => {
-	if (values.length === 0) return 0;
-	const sorted = [...values].sort((a, b) => a - b);
-	const mid = Math.floor(sorted.length / 2);
-	return sorted.length % 2 === 0
-		? ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2
-		: (sorted[mid] ?? 0);
-};
-
-const filteredWeightedAverage = (
-	samples: ReadonlyArray<{ avgLapSeconds: number; laps: number }>,
-): number | null => {
-	if (samples.length === 0) return null;
-	if (samples.length < 5) {
-		const totalLaps = samples.reduce((sum, s) => sum + s.laps, 0);
-		if (totalLaps <= 0) return null;
-		return (
-			samples.reduce((sum, s) => sum + s.avgLapSeconds * s.laps, 0) / totalLaps
-		);
-	}
-
-	const values = samples.map((s) => s.avgLapSeconds);
-	const center = median(values);
-	const deviations = values.map((v) => Math.abs(v - center));
-	const mad = median(deviations);
-	if (mad <= 0) {
-		const totalLaps = samples.reduce((sum, s) => sum + s.laps, 0);
-		if (totalLaps <= 0) return null;
-		return (
-			samples.reduce((sum, s) => sum + s.avgLapSeconds * s.laps, 0) / totalLaps
-		);
-	}
-
-	const filtered = samples.filter((s) => {
-		const mz = (0.6745 * Math.abs(s.avgLapSeconds - center)) / mad;
-		return mz <= 3.5;
-	});
-	const safe = filtered.length >= 3 ? filtered : samples;
-	const totalLaps = safe.reduce((sum, s) => sum + s.laps, 0);
-	if (totalLaps <= 0) return null;
-	return safe.reduce((sum, s) => sum + s.avgLapSeconds * s.laps, 0) / totalLaps;
-};
-
 type StatisticsSnapshot = {
 	meData: unknown;
-	statisticsData: unknown;
 	allStatisticsRows: ReadonlyArray<StatisticsRow>;
 	windowLabel: string;
 };
@@ -600,7 +557,6 @@ const fetchStatisticsSnapshot = async (
 	if (last30Rows.length > 0) {
 		return Result.ok({
 			meData,
-			statisticsData: last30StatsResult.value.data,
 			allStatisticsRows: last30Rows,
 			windowLabel: "Last 30 Days",
 		});
@@ -618,7 +574,6 @@ const fetchStatisticsSnapshot = async (
 
 	return Result.ok({
 		meData,
-		statisticsData: fallbackStatsResult.value.data,
 		allStatisticsRows: extractRecentStatistics(fallbackStatsResult.value.data),
 		windowLabel: "Last 6 Months",
 	});
@@ -904,7 +859,6 @@ const buildSummary = async (
 				totalLapsDriven,
 			),
 		}));
-	const recentStatistics = nonOvalRaceQualiStatistics.slice(0, 25);
 
 	const comboMap = new Map<
 		string,
@@ -915,18 +869,7 @@ const buildSummary = async (
 			cleanLaps: number;
 		}
 	>();
-	const trackAggMap = new Map<
-		string,
-		{
-			track: string;
-			totalTime: number;
-			laps: number;
-			cleanLaps: number;
-			daySamples: Array<{ avgLapSeconds: number; laps: number }>;
-		}
-	>();
 	for (const row of nonOvalRaceQualiStatistics) {
-		const time = row.timeOnTrack ?? 0;
 		const laps = row.lapsDriven ?? 0;
 		const clean = row.cleanLapsDriven ?? 0;
 		const comboKey =
@@ -943,26 +886,6 @@ const buildSummary = async (
 				car: row.car,
 				totalLaps: laps,
 				cleanLaps: clean,
-			});
-		}
-
-		const trackKey = normalizeName(row.track);
-		const trackAgg = trackAggMap.get(trackKey);
-		if (trackAgg) {
-			trackAgg.totalTime += time;
-			trackAgg.laps += laps;
-			trackAgg.cleanLaps += clean;
-			if (laps > 0 && time > 0) {
-				trackAgg.daySamples.push({ avgLapSeconds: time / laps, laps });
-			}
-		} else {
-			trackAggMap.set(trackKey, {
-				track: row.track,
-				totalTime: time,
-				laps,
-				cleanLaps: clean,
-				daySamples:
-					laps > 0 && time > 0 ? [{ avgLapSeconds: time / laps, laps }] : [],
 			});
 		}
 	}
@@ -985,40 +908,8 @@ const buildSummary = async (
 		}
 	}
 
-	const trackConfidence = [...trackAggMap.values()]
-		.map((track) => ({
-			track: track.track,
-			laps: roundTo(track.laps, 0),
-			cleanLaps: roundTo(track.cleanLaps, 0),
-			cleanPercentage:
-				track.laps > 0
-					? roundPercent((track.cleanLaps / track.laps) * 100)
-					: null,
-			avgLapSeconds:
-				track.laps > 0
-					? roundTo(
-							filteredWeightedAverage(track.daySamples) ??
-								track.totalTime / track.laps,
-							3,
-						)
-					: null,
-		}))
-		.sort((a, b) => {
-			const cleanA = a.cleanPercentage ?? -1;
-			const cleanB = b.cleanPercentage ?? -1;
-			if (cleanB !== cleanA) return cleanB - cleanA;
-			if (b.laps !== a.laps) return b.laps - a.laps;
-			if (a.avgLapSeconds === null && b.avgLapSeconds === null) return 0;
-			if (a.avgLapSeconds === null) return 1;
-			if (b.avgLapSeconds === null) return -1;
-			return a.avgLapSeconds - b.avgLapSeconds;
-		})
-		.slice(0, TRACK_CONFIDENCE_MAX_ITEMS);
-
 	return Result.ok({
 		profile: parseProfile(snapshot.meData),
-		statistics: snapshot.statisticsData as Garage61Summary["statistics"],
-		sessions: null,
 		statisticsFingerprint: fingerprint,
 		derived: {
 			sessionCount:
@@ -1027,8 +918,6 @@ const buildSummary = async (
 					: null,
 			trackCount:
 				raceQualiTrackIds.length > 0 ? raceQualiTrackIds.length : null,
-			fastestLaps: [],
-			recentStatistics,
 			overview: {
 				windowLabel,
 				totalTimeOnTrackSeconds,
@@ -1040,7 +929,6 @@ const buildSummary = async (
 				insights: {
 					sessionTimeBreakdown,
 					cleanestCombo,
-					trackConfidence,
 				},
 			},
 		},
@@ -1070,7 +958,7 @@ const summaryUncached = async (
 			return Result.ok(cachedResult.value);
 		}
 
-		return buildSummary(garage61ApiKey, snapshot, fingerprint);
+		return await buildSummary(garage61ApiKey, snapshot, fingerprint);
 	} catch (error) {
 		return Result.err(new Garage61Error({ error }));
 	}

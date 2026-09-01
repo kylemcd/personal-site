@@ -1,5 +1,11 @@
 import { Result } from "better-result";
 
+const getConcurrency = (itemCount: number, requested = itemCount) =>
+	Math.min(
+		itemCount,
+		Math.max(1, Number.isFinite(requested) ? Math.floor(requested) : itemCount),
+	);
+
 export const combineResults = <A, E>(
 	results: ReadonlyArray<Result<A, E>>,
 ): Result<ReadonlyArray<A>, E> => {
@@ -16,7 +22,7 @@ export const forEachAsyncResult = async <A, B, E>(
 	fn: (item: A) => Promise<Result<B, E>>,
 	options?: { concurrency?: number },
 ): Promise<Result<ReadonlyArray<B>, E>> => {
-	const concurrency = Math.max(1, (options?.concurrency ?? items.length) || 1);
+	const concurrency = getConcurrency(items.length, options?.concurrency);
 	const output: B[] = new Array(items.length);
 	const entries = items.entries();
 	let failure: { error: E } | undefined;
@@ -30,7 +36,7 @@ export const forEachAsyncResult = async <A, B, E>(
 
 			const result = await fn(item);
 			if (Result.isError(result)) {
-				failure = { error: result.error };
+				failure ??= { error: result.error };
 				return;
 			}
 			output[current] = result.value;
@@ -48,7 +54,7 @@ export const mapAsyncConcurrent = async <A, B>(
 	mapper: (item: A) => Promise<B>,
 	options?: { concurrency?: number },
 ): Promise<Array<B>> => {
-	const concurrency = Math.max(1, (options?.concurrency ?? items.length) || 1);
+	const concurrency = getConcurrency(items.length, options?.concurrency);
 	const output: B[] = new Array(items.length);
 	const entries = items.entries();
 

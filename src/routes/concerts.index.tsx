@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { ConcertsSection } from "@/components/ConcertsSection";
 import { ErrorComponent } from "@/components/ErrorComponent";
+import { PageSectionHeading } from "@/components/SectionHeading";
 import { Text } from "@/components/Text";
 import { buildHead } from "@/lib/meta";
 import { setlistfm } from "@/lib/setlistfm";
@@ -21,6 +22,7 @@ const ConcertsRoute = () => {
 	if (!hasConcerts || !concerts) {
 		return (
 			<div className="section-container">
+				<PageSectionHeading title="Concerts" />
 				<Text as="p" size="1" color="2">
 					No concert data available right now.
 				</Text>
@@ -41,7 +43,7 @@ export const Route = createFileRoute("/concerts/")({
 	errorComponent: ErrorComponent,
 	head: () =>
 		buildHead({
-			title: "Concerts - Kyle McDonald",
+			title: "Concerts - KPM",
 			url: "https://kpm.sh/concerts",
 			image: "https://kpm.sh/open-graph/concerts.png",
 		}),

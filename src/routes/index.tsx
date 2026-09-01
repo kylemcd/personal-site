@@ -13,6 +13,10 @@ import {
 	RecentListeningAlbums,
 	type RecentListeningAlbumTile,
 } from "@/components/RecentListeningAlbums";
+import {
+	HomepageSectionHeading,
+	type SectionTitle,
+} from "@/components/SectionHeading";
 import { Text } from "@/components/Text";
 import { HomepageWritingList } from "@/components/WritingList";
 import { deezer } from "@/lib/deezer";
@@ -154,15 +158,7 @@ const HomeRoute = () => {
 	return (
 		<>
 			<div className="section-container">
-				<Text as="h2" size="2">
-					<a className="section-heading-link" href="/posts">
-						<span className="section-heading-label">Writing</span>
-						<i
-							className="hn hn-angle-right section-heading-icon"
-							aria-hidden="true"
-						/>
-					</a>
-				</Text>
+				<HomepageSectionHeading href="/posts" title="Writing" />
 				<HomepageWritingList writing={writing} />
 			</div>
 			{racing && hasRacingOverview ? (
@@ -206,15 +202,7 @@ const HomeRoute = () => {
 			)}
 			{hasBooks ? (
 				<div className="section-container">
-					<Text as="h2" size="2">
-						<a className="section-heading-link" href="/reading">
-							<span className="section-heading-label">Reading</span>
-							<i
-								className="hn hn-angle-right section-heading-icon"
-								aria-hidden="true"
-							/>
-						</a>
-					</Text>
+					<HomepageSectionHeading href="/reading" title="Reading" />
 					<Bookshelf books={homepageBooks} variant="masonry" />
 				</div>
 			) : (
@@ -232,13 +220,13 @@ export const Route = createFileRoute("/")({
 	component: HomeRoute,
 	loader: () => getData(),
 	errorComponent: ErrorComponent,
-	head: () => buildHead({ title: "Kyle McDonald" }),
+	head: () => buildHead({ title: "KPM" }),
 });
 
 type HomepageSectionFallbackProps = {
 	href: string;
 	message: string;
-	title: string;
+	title: SectionTitle;
 };
 
 const HomepageSectionFallback = ({
@@ -248,15 +236,7 @@ const HomepageSectionFallback = ({
 }: HomepageSectionFallbackProps) => {
 	return (
 		<div className="section-container">
-			<Text as="h2" size="2">
-				<a className="section-heading-link" href={href}>
-					<span className="section-heading-label">{title}</span>
-					<i
-						className="hn hn-angle-right section-heading-icon"
-						aria-hidden="true"
-					/>
-				</a>
-			</Text>
+			<HomepageSectionHeading href={href} title={title} />
 			<Text as="p" size="1" color="2">
 				{message}
 			</Text>

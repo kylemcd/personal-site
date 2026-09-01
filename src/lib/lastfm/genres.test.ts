@@ -2,20 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { buildTopGenresFromWeights, normalizeGenreTag } from "./genres";
 
-(
-	vi.mock as unknown as (
-		path: string,
-		factory: () => unknown,
-		options: { virtual: boolean },
-	) => void
-)(
-	"cloudflare:workers",
-	() => ({
-		DurableObject: class {},
-		env: {},
-	}),
-	{ virtual: true },
-);
+vi.mock("cloudflare:workers", () => ({
+	DurableObject: class {},
+	env: {},
+}));
 
 vi.mock("@tanstack/react-start", () => ({
 	getGlobalStartContext: () => ({}),

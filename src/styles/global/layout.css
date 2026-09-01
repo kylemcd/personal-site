@@ -59,7 +59,7 @@
 	margin-left: var(--site-gutter);
 }
 
-.section-container > h2 {
+.section-container > :is(h1, h2) {
 	margin-bottom: var(--spc-6);
 }
 

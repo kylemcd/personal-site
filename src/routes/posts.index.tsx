@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 
-import { Text } from "@/components/Text";
+import { PageSectionHeading } from "@/components/SectionHeading";
 import { WritingList } from "@/components/WritingList";
 import { buildHead } from "@/lib/meta";
 import { getPostsWritingData } from "@/lib/posts/posts";
@@ -15,9 +15,7 @@ const PostsRoute = () => {
 
 	return (
 		<div className="section-container">
-			<Text as="h2" size="2">
-				Writing
-			</Text>
+			<PageSectionHeading title="Writing" />
 			<WritingList writing={writing} />
 		</div>
 	);
@@ -28,7 +26,7 @@ export const Route = createFileRoute("/posts/")({
 	loader: () => getData(),
 	head: () =>
 		buildHead({
-			title: "Writing - Kyle McDonald",
+			title: "Writing - KPM",
 			url: "https://kpm.sh/posts",
 			image: "https://kpm.sh/open-graph/posts.png",
 		}),

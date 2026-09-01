@@ -1,19 +1,9 @@
 import { Result, TaggedError } from "better-result";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-(
-	vi.mock as unknown as (
-		path: string,
-		factory: () => unknown,
-		options: { virtual: boolean },
-	) => void
-)(
-	"cloudflare:workers",
-	() => ({
-		env: {},
-	}),
-	{ virtual: true },
-);
+vi.mock("cloudflare:workers", () => ({
+	env: {},
+}));
 
 vi.mock("@tanstack/react-start", () => ({
 	getGlobalStartContext: () => ({}),
@@ -221,6 +211,28 @@ describe("cloudflare-kv result cache", () => {
 			expect(Result.isOk(result)).toBe(true);
 			if (Result.isOk(result)) expect(result.value).toBe(42);
 		}
+	});
+
+	it("cleans up rejected computations without a detached rejection", async () => {
+		const { refreshJson } = await import("./cloudflare-kv");
+		const key = keyFor("rejected-compute");
+		const error = new Error("Unexpected compute failure");
+		await expect(
+			refreshJson({
+				key,
+				ttlSeconds: 60,
+				compute: async () => {
+					throw error;
+				},
+			}),
+		).rejects.toBe(error);
+
+		const retry = await refreshJson({
+			key,
+			ttlSeconds: 60,
+			compute: async () => Result.ok(42),
+		});
+		expect(retry.unwrapOr(null)).toBe(42);
 	});
 
 	it("returns a typed error and avoids memory cache when KV writes fail", async () => {

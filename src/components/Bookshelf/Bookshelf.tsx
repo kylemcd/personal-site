@@ -7,7 +7,7 @@ import "./Bookshelf.styles.css";
 
 type BookshelfProps = {
 	books: ReadonlyArray<Book>;
-	variant?: "row" | "grid" | "masonry";
+	variant?: "grid" | "masonry";
 };
 
 type BookCardProps = {
@@ -94,7 +94,7 @@ const MasonryBookCard = ({ book }: { book: Book }) => {
 	return <BookCard book={book} bookRef={bookRef} />;
 };
 
-const Bookshelf = ({ books, variant = "row" }: BookshelfProps) => {
+const Bookshelf = ({ books, variant = "grid" }: BookshelfProps) => {
 	if (books.length === 0) return null;
 
 	return (

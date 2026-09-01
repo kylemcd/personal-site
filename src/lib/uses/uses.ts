@@ -4,11 +4,11 @@ const USES_MARKDOWN_PATH = "../../../content/uses.md";
 const REQUIRED_COLUMNS = ["Name", "Description", "Tags"] as const;
 const OPTIONAL_LINK_COLUMNS = ["Link", "URL", "Href"] as const;
 
-const USES_FILES = import.meta.glob("../../../content/uses.md", {
+const USES_FILES = import.meta.glob<string>("../../../content/uses.md", {
 	query: "?raw",
 	import: "default",
 	eager: true,
-}) as Record<string, string>;
+});
 
 export type UseItem = {
 	name: string;

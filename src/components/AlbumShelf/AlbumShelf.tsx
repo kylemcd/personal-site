@@ -42,7 +42,6 @@ const CoverArt = ({ src, alt, className }: CoverArtProps) => {
 
 type AlbumShelfProps = {
 	albums: ReadonlyArray<Album>;
-	variant?: "scroll" | "grid";
 };
 
 type AlbumCardProps = {
@@ -75,22 +74,12 @@ const AlbumCard = ({ album }: AlbumCardProps) => {
 	);
 };
 
-const AlbumCards = ({ albums }: { albums: ReadonlyArray<Album> }) => {
-	return albums.map((album) => <AlbumCard album={album} key={album.url} />);
-};
-
-const AlbumShelf = ({ albums, variant = "scroll" }: AlbumShelfProps) => {
-	if (variant === "grid") {
-		return (
-			<div className="album-grid">
-				<AlbumCards albums={albums} />
-			</div>
-		);
-	}
-
+const AlbumShelf = ({ albums }: AlbumShelfProps) => {
 	return (
 		<HorizontalScrollContainer className="album-shelf">
-			<AlbumCards albums={albums} />
+			{albums.map((album) => (
+				<AlbumCard album={album} key={album.url} />
+			))}
 		</HorizontalScrollContainer>
 	);
 };

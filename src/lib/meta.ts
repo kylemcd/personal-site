@@ -1,6 +1,6 @@
 import { SITE_URL } from "@/lib/site";
 
-const SITE_NAME = "Kyle McDonald";
+const SITE_NAME = "KPM";
 const DEFAULT_DESCRIPTION =
 	"Kyle McDonald's personal site where you can find his writings, projects, and other fun stuff.";
 const DEFAULT_OG_IMAGE = `${SITE_URL}/open-graph/home.png`;

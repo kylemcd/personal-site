@@ -9,7 +9,7 @@ export class FetchNetworkError extends TaggedError("FetchNetworkError")<{
 }> {}
 
 /**
- * The request timed out before a response was received.
+ * The request timed out before the response body finished loading.
  */
 export class FetchTimeoutError extends TaggedError("FetchTimeoutError")<{
 	readonly timeoutMs: number;
@@ -52,20 +52,8 @@ export type FetchResponse<A> = {
 	readonly headers: Headers;
 };
 
-// ---------------------------------------------------------------------------
-//  Core helper
-// ---------------------------------------------------------------------------
-
 /**
- * Generic JSON fetch helper.
- *
- *  • Performs a fetch request
- *  • Verifies the HTTP status is 2xx
- *  • Parses the body as JSON
- *  • Optionally validates / transforms the data via a Zod schema
- *  • Returns both the parsed data and response headers
- *
- * All steps return a typed `Result` so failures stay explicit and composable.
+ * Fetches JSON with an optional schema and a timeout covering the full body.
  */
 export const fetchJson = async <A>(
 	input: RequestInfo | URL,
@@ -102,70 +90,69 @@ export const fetchJson = async <A>(
 	}
 	if (timeoutMs !== undefined) {
 		timeoutId = setTimeout(() => {
+			if (controller.signal.aborted) return;
 			timedOut = true;
 			controller.abort();
 		}, timeoutMs);
 	}
 
-	const responseResult = await Result.tryPromise({
-		try: () =>
-			fetch(input, {
-				...init,
-				signal: controller.signal,
-			}),
-		catch: (error) => {
-			if (timedOut && timeoutMs !== undefined) {
-				return new FetchTimeoutError({ timeoutMs });
+	const toRequestError = (error: unknown) =>
+		timedOut && timeoutMs !== undefined
+			? new FetchTimeoutError({ timeoutMs })
+			: new FetchNetworkError({ error });
+
+	try {
+		const responseResult = await Result.tryPromise({
+			try: () => fetch(input, { ...init, signal: controller.signal }),
+			catch: toRequestError,
+		});
+		if (Result.isError(responseResult)) return responseResult;
+		const response = responseResult.value;
+
+		if (!response.ok) {
+			const snippetResult = await Result.tryPromise({
+				try: async () => {
+					const trimmed = (await response.clone().text()).trim();
+					return trimmed.length > 2000
+						? `${trimmed.slice(0, 2000)}...`
+						: trimmed;
+				},
+				catch: toRequestError,
+			});
+			if (Result.isError(snippetResult) && controller.signal.aborted) {
+				return snippetResult;
 			}
-			return new FetchNetworkError({ error });
-		},
-	});
-	if (timeoutId) clearTimeout(timeoutId);
-	if (externalSignal && onExternalAbort) {
-		externalSignal.removeEventListener("abort", onExternalAbort);
-	}
-	if (Result.isError(responseResult)) return responseResult;
-	const response = responseResult.value;
+			const bodySnippet = snippetResult.unwrapOr("");
+			return Result.err(new FetchResponseError({ response, bodySnippet }));
+		}
 
-	if (!response.ok) {
-		const snippetResult = await Result.tryPromise({
-			try: async () => {
-				const raw = await response.clone().text();
-				const trimmed = raw.trim();
-				if (!trimmed) return "";
-				return trimmed.length > 2000 ? `${trimmed.slice(0, 2000)}...` : trimmed;
-			},
-			catch: () => "",
+		const jsonResult = await Result.tryPromise({
+			try: (): Promise<unknown> => response.json(),
+			catch: (error) =>
+				controller.signal.aborted
+					? toRequestError(error)
+					: new JsonParseError({ error }),
 		});
-		const bodySnippet = snippetResult.unwrapOr("");
-		return Result.err(new FetchResponseError({ response, bodySnippet }));
+		if (Result.isError(jsonResult)) return jsonResult;
+		const raw = jsonResult.value;
+
+		if (!schema) {
+			return Result.ok({ data: raw as A, headers: response.headers });
+		}
+
+		const parsed = schema.safeParse(raw);
+		if (!parsed.success) {
+			return Result.err(new SchemaParseError({ error: parsed.error }));
+		}
+
+		return Result.ok({ data: parsed.data, headers: response.headers });
+	} finally {
+		if (timeoutId !== null) clearTimeout(timeoutId);
+		if (externalSignal && onExternalAbort) {
+			externalSignal.removeEventListener("abort", onExternalAbort);
+		}
 	}
-
-	const jsonResult = await Result.tryPromise({
-		try: () => response.json() as Promise<unknown>,
-		catch: (error) => new JsonParseError({ error }),
-	});
-	if (Result.isError(jsonResult)) return jsonResult;
-	const raw = jsonResult.value;
-
-	if (!schema) {
-		return Result.ok({
-			data: raw as A,
-			headers: response.headers,
-		});
-	}
-
-	const parsed = schema.safeParse(raw);
-	if (!parsed.success) {
-		return Result.err(new SchemaParseError({ error: parsed.error }));
-	}
-
-	return Result.ok({ data: parsed.data, headers: response.headers });
 };
-
-// ---------------------------------------------------------------------------
-//  Cache-policy helpers (single-object API)
-// ---------------------------------------------------------------------------
 
 export type FetchParams<A> = {
 	readonly url: RequestInfo | URL;
@@ -173,17 +160,6 @@ export type FetchParams<A> = {
 	readonly timeoutMs?: number;
 } & RequestInit;
 
-const withCache = <A>(
-	cache: RequestCache | undefined,
-	params: FetchParams<A>,
-) => {
-	const { url, schema, ...init } = params;
-	return fetchJson<A>(url, {
-		...init,
-		...(cache !== undefined ? { cache } : {}),
-		...(schema !== undefined ? { schema } : {}),
-	});
+export const fetchFresh = <A>({ url, ...init }: FetchParams<A>) => {
+	return fetchJson<A>(url, { ...init, cache: "no-store" });
 };
-
-export const fetchFresh = <A>(params: FetchParams<A>) =>
-	withCache<A>("no-store", params);

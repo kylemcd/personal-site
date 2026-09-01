@@ -1,5 +1,4 @@
 import {
-	type CSSProperties,
 	createContext,
 	useContext,
 	useEffect,
@@ -39,7 +38,12 @@ const TableOfContentsListItem = ({
 					event.preventDefault();
 					const target = document.getElementById(item.id);
 					if (!target) return;
-					target.scrollIntoView({ behavior: "smooth" });
+					const reducedMotion = window.matchMedia(
+						"(prefers-reduced-motion: reduce)",
+					).matches;
+					target.scrollIntoView({
+						behavior: reducedMotion ? "instant" : "smooth",
+					});
 				}}
 				color={isActive ? "1" : "2"}
 			>
@@ -68,7 +72,6 @@ const flattenItems = (
 const TableOfContents = ({ items }: TableOfContentsProps) => {
 	const [activeId, setActiveId] = useState<string | null>(null);
 	const flatItems = useMemo(() => flattenItems(items), [items]);
-	const [containerStyle, setContainerStyle] = useState<CSSProperties>();
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
@@ -119,8 +122,10 @@ const TableOfContents = ({ items }: TableOfContentsProps) => {
 		const TOP_ALIGNMENT_OFFSET = -1;
 		const fixedTop =
 			container.getBoundingClientRect().top + TOP_ALIGNMENT_OFFSET;
+		let animationFrame = 0;
 
 		const updatePosition = () => {
+			animationFrame = 0;
 			const tocHeight = container.getBoundingClientRect().height;
 			const layoutRect = clampContainer.getBoundingClientRect();
 			const containerRect = postContainer.getBoundingClientRect();
@@ -128,7 +133,8 @@ const TableOfContents = ({ items }: TableOfContentsProps) => {
 			const wouldOverflowBottom = fixedTop + tocHeight > maxBottom;
 
 			if (!wouldOverflowBottom) {
-				setContainerStyle({ position: "fixed", top: `${fixedTop}px` });
+				container.style.position = "fixed";
+				container.style.top = `${fixedTop}px`;
 				return;
 			}
 
@@ -139,35 +145,35 @@ const TableOfContents = ({ items }: TableOfContentsProps) => {
 				layoutBottomDoc - tocHeight - containerTopDoc,
 			);
 
-			setContainerStyle({ position: "absolute", top: `${absoluteTop}px` });
+			container.style.position = "absolute";
+			container.style.top = `${absoluteTop}px`;
 		};
 
-		updatePosition();
-		window.addEventListener("scroll", updatePosition, { passive: true });
-		window.addEventListener("resize", updatePosition);
-		const handleHoverChange = () => {
-			window.requestAnimationFrame(updatePosition);
+		const scheduleUpdate = () => {
+			if (animationFrame === 0) {
+				animationFrame = window.requestAnimationFrame(updatePosition);
+			}
 		};
-		container.addEventListener("mouseenter", handleHoverChange);
-		container.addEventListener("mouseleave", handleHoverChange);
-		const resizeObserver = new ResizeObserver(updatePosition);
+		updatePosition();
+		window.addEventListener("scroll", scheduleUpdate, { passive: true });
+		window.addEventListener("resize", scheduleUpdate);
+		container.addEventListener("mouseenter", scheduleUpdate);
+		container.addEventListener("mouseleave", scheduleUpdate);
+		const resizeObserver = new ResizeObserver(scheduleUpdate);
 		resizeObserver.observe(container);
 
 		return () => {
-			window.removeEventListener("scroll", updatePosition);
-			window.removeEventListener("resize", updatePosition);
-			container.removeEventListener("mouseenter", handleHoverChange);
-			container.removeEventListener("mouseleave", handleHoverChange);
+			window.removeEventListener("scroll", scheduleUpdate);
+			window.removeEventListener("resize", scheduleUpdate);
+			container.removeEventListener("mouseenter", scheduleUpdate);
+			container.removeEventListener("mouseleave", scheduleUpdate);
 			resizeObserver.disconnect();
+			window.cancelAnimationFrame(animationFrame);
 		};
 	}, []);
 
 	return (
-		<div
-			ref={containerRef}
-			className="table-of-contents-container"
-			style={containerStyle}
-		>
+		<div ref={containerRef} className="table-of-contents-container">
 			<TableOfContentsContext.Provider value={{ activeId }}>
 				<div className="table-of-contents">
 					<ul>
